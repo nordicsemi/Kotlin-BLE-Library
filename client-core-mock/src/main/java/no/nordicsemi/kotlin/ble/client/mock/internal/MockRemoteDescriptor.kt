@@ -253,8 +253,8 @@ class MockRemoteDescriptor(
                         // Values 0x01-00 and 0x02-00 are used to enable notifications and indications, respectively.
                         // Value 0x00-00 is used to disable both.
                         // Any other value is RFU and ignored.
-                        if (data.size == 2 && data[0] >= 0 && data[0] <= 1 && data[1] == 0.toByte()) {
-                            descriptor.enabled = data[1] > 0
+                        if (data.size == 2 && data[0] in 0..2 && data[1] == 0.toByte()) {
+                            descriptor.enabled = data[0] > 0
                         }
                         WriteResponse.Success
                     }

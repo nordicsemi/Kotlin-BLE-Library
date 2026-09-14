@@ -158,9 +158,10 @@ abstract class BaseRemoteCharacteristic(
 
         // Enable notifications or indications by writing to the CCCD descriptor.
         val value = when {
-            // Note: Indicate has priority over Notify, if both are supported.
-            enabled && CharacteristicProperty.INDICATE in properties -> BaseRemoteDescriptor.ENABLE_INDICATIONS_VALUE
-            enabled -> BaseRemoteDescriptor.ENABLE_NOTIFICATIONS_VALUE
+            // Note: Notify has priority over Indicate, if both are supported.
+            //       This is inline with the iOS native behavior.
+            enabled && CharacteristicProperty.NOTIFY in properties -> BaseRemoteDescriptor.ENABLE_NOTIFICATIONS_VALUE
+            enabled -> BaseRemoteDescriptor.ENABLE_INDICATIONS_VALUE
             else -> BaseRemoteDescriptor.DISABLE_NOTIFICATIONS_VALUE
         }
         cccd.write(value)
