@@ -59,6 +59,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import no.nordicsemi.kotlin.ble.android.sample.scanner.profile.LedButtonProfile
 import no.nordicsemi.kotlin.ble.android.sample.scanner.profile.impl.LedButtonServiceImpl
+import no.nordicsemi.kotlin.ble.client.ProfileServices
 import no.nordicsemi.kotlin.ble.client.RemoteServices
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.ConnectionPriority
@@ -519,10 +520,18 @@ class ScannerViewModel @Inject constructor(
             serviceUuid = LedButtonProfile.SERVICE_UUID,
             required = required,
             name = "LBS",
-        ) { lbs ->
-            val state = LedButtonServiceImpl(lbs, this)
-            Timber.i("LBS: LED Button Service found")
-            block(state)
+        ) { result ->
+            when (result) {
+                is ProfileServices.Found -> {
+                    val state = LedButtonServiceImpl(result.services, this)
+                    Timber.i("LBS: LED Button Service found")
+                    block(state)
+                }
+                is ProfileServices.Unsupported ->
+                    Timber.i("LBS: LED Button Service not supported by this peripheral")
+                is ProfileServices.Failed ->
+                    Timber.w("LBS: Service discovery failed (reason: ${result.reason})")
+            }
         }
     }
 
