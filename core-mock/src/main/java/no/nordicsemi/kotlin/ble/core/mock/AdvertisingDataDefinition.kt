@@ -119,10 +119,10 @@ class AdvertisingDataDefinition(
                     }
                 }
                 AdvertisingDataType.COMPLETE_LOCAL_NAME -> {
-                    completeName = String(raw, i, length)
+                    completeName = raw.decodeToString(i, i + length)
                 }
                 AdvertisingDataType.SHORTENED_LOCAL_NAME -> {
-                    shortenedName = String(raw, i, length)
+                    shortenedName = raw.decodeToString(i, i + length)
                 }
                 AdvertisingDataType.SERVICE_DATA_16_BIT -> {
                     val uuid = Uuid.fromBytes(raw, i, 2)
@@ -240,8 +240,8 @@ class AdvertisingDataDefinition(
     ) : this(
         byteArrayOf(
             *encode(AdvertisingDataType.FLAGS, flags?.value),
-            *encode(AdvertisingDataType.COMPLETE_LOCAL_NAME, completeLocalName?.toByteArray()),
-            *encode(AdvertisingDataType.SHORTENED_LOCAL_NAME, shortenedLocalName?.toByteArray()),
+            *encode(AdvertisingDataType.COMPLETE_LOCAL_NAME, completeLocalName?.encodeToByteArray()),
+            *encode(AdvertisingDataType.SHORTENED_LOCAL_NAME, shortenedLocalName?.encodeToByteArray()),
             *encode(AdvertisingDataType.TX_POWER_LEVEL, txPowerLevel?.toByte()),
             *encodeServiceUuids(serviceUuids),
             *encodeServiceSolicitationUuids(serviceSolicitationUuids),

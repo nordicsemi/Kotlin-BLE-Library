@@ -29,43 +29,11 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-plugins {
-    alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.nordic.kotlin)
-    alias(libs.plugins.nordic.publish.kmp)
-}
+package no.nordicsemi.kotlin.ble.core
 
-group = "no.nordicsemi.kotlin.ble"
-
-kotlin {
-    jvm()
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
-    macosArm64()
-
-    sourceSets {
-        commonMain {
-            kotlin.srcDir("src/main/java")
-            dependencies {
-                api(project(":core"))
-            }
-        }
-    }
-}
-
-nordicPublishing {
-    POM_ARTIFACT_ID = "advertiser-core"
-    POM_NAME = "Core Advertiser Module"
-    POM_DESCRIPTION = "A part of Kotlin BLE Library providing core, platform-independent functionality for Bluetooth LE advertising."
-    POM_URL = "https://github.com/nordicsemi/Kotlin-BLE-Library/"
-    POM_SCM_URL = "https://github.com/nordicsemi/Kotlin-BLE-Library/"
-    POM_SCM_CONNECTION = "scm:git@github.com:nordicsemi/Kotlin-BLE-Library.git"
-    POM_SCM_DEV_CONNECTION = "scm:git@github.com:nordicsemi/Kotlin-BLE-Library.git"
-}
-
-dokka {
-    dokkaSourceSets.configureEach {
-        includes.from("Module.md")
-    }
+/**
+ * Apple's alias for JVM's java.io.Closeable
+ */
+actual interface Closable {
+    actual fun close()
 }

@@ -31,6 +31,7 @@
 
 package no.nordicsemi.kotlin.ble.client.mock.internal
 
+import kotlin.time.Clock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -106,7 +107,7 @@ class MockBluetoothLeAdvertiser<ID: Any>(
                                         txPowerLevel = txPowerLevel,
                                         primaryPhy = primaryPhy,
                                         secondaryPhy = secondaryPhy,
-                                        timestamp = System.currentTimeMillis() // TODO different time
+                                        timestamp = Clock.System.now().toEpochMilliseconds() // TODO different time
                                     )
                                     _advertisingEvents.emit(scanResult)
                                 }

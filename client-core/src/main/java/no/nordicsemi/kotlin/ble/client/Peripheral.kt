@@ -33,6 +33,7 @@
 
 package no.nordicsemi.kotlin.ble.client
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -72,7 +73,6 @@ import no.nordicsemi.kotlin.ble.core.WriteType
 import no.nordicsemi.kotlin.ble.core.internal.withCallSite
 import no.nordicsemi.kotlin.ble.core.log.Layer
 import no.nordicsemi.kotlin.log.Log
-import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.uuid.Uuid
@@ -289,7 +289,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      *        false to keep collecting events.
      */
     protected fun startCollectingGattEvents(closeWhenDisconnected: Boolean = true) {
-        assert(gattEventCollector == null) {
+        check(gattEventCollector == null) {
             "Previous GATT event collector wasn't nullified before creating a new one"
         }
 
@@ -1094,7 +1094,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
                         // When the services get invalidated, of the device gets disconnected,
                         // cancel the user job (if running).
                         val cause = if (isConnected) InvalidAttributeException() else PeripheralNotConnectedException()
-                        userJob?.cancel(CancellationException(cause))
+                        userJob?.cancel(CancellationException(cause.toString(), cause))
                         // Do not cancel the user scope here. The device may get reconnected.
                         // User scope is continuing observing the services.
                     }

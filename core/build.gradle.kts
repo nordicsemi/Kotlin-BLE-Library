@@ -39,6 +39,10 @@ group = "no.nordicsemi.kotlin.ble"
 
 kotlin {
     jvm()
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+    macosArm64()
 
     sourceSets {
         commonMain {
@@ -51,6 +55,9 @@ kotlin {
         }
         jvmMain {
             kotlin.srcDir("src/jvmMain/kotlin")
+        }
+        appleMain {
+            kotlin.srcDir("src/appleMain/kotlin")
         }
     }
 

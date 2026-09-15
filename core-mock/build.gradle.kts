@@ -30,11 +30,31 @@
  */
 
 plugins {
+    alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.nordic.kotlin)
-    alias(libs.plugins.nordic.publish.jvm)
+    alias(libs.plugins.nordic.publish.kmp)
 }
 
 group = "no.nordicsemi.kotlin.ble"
+
+kotlin {
+    jvm()
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+    macosArm64()
+
+    sourceSets {
+        commonMain {
+            kotlin.srcDir("src/main/java")
+            dependencies {
+                api(project(":core"))
+                // Required for support @Range inside KMP
+                api(libs.annotations)
+            }
+        }
+    }
+}
 
 nordicPublishing {
     POM_ARTIFACT_ID = "core-mock"
@@ -44,10 +64,6 @@ nordicPublishing {
     POM_SCM_URL = "https://github.com/nordicsemi/Kotlin-BLE-Library/"
     POM_SCM_CONNECTION = "scm:git@github.com:nordicsemi/Kotlin-BLE-Library.git"
     POM_SCM_DEV_CONNECTION = "scm:git@github.com:nordicsemi/Kotlin-BLE-Library.git"
-}
-
-dependencies {
-    api(project(":core"))
 }
 
 dokka {

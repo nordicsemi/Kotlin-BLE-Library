@@ -30,11 +30,32 @@
  */
 
 plugins {
+    alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.nordic.kotlin)
-    alias(libs.plugins.nordic.publish.jvm)
+    alias(libs.plugins.nordic.publish.kmp)
 }
 
 group = "no.nordicsemi.kotlin.ble"
+
+kotlin {
+    jvm()
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+    macosArm64()
+
+    sourceSets {
+        commonMain {
+            kotlin.srcDir("src/main/java")
+            dependencies {
+                api(project(":core"))
+                api(libs.kotlinx.datetime)
+                // Required for support @Range inside KMP
+                api(libs.annotations)
+            }
+        }
+    }
+}
 
 nordicPublishing {
     POM_ARTIFACT_ID = "client-core"
@@ -47,10 +68,6 @@ nordicPublishing {
 }
 
 dependencies {
-    api(project(":core"))
-
-    api(libs.kotlinx.datetime)
-
     // Adds @hide annotation to exclude internal classes from the documentation.
     dokkaPlugin(libs.dokka.android.gradlePlugin)
 }
