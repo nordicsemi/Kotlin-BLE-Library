@@ -117,21 +117,68 @@ sealed class Profile(
     protected abstract suspend fun CoroutineScope.initialize()
 
     /**
-     * Executes the [prepare] and [initialize] methods of the profile.
+     * This method is called instead of [prepare] and [initialize] when [requiredServiceUuids]
+     * could not be found on the peripheral.
      *
-     * @param services A list of GATT services including all the [requiredServiceUuids] and
-     * some or all [optionalServiceUuids].
+     * This is purely a notification, useful for tracking whether the profile is supported by the
+     * connected peripheral (for example, to update application state for an optional profile).
+     * It does not affect the connection lifecycle: if the profile was registered as required,
+     * the peripheral will still be disconnected with reason
+     * [RequiredServiceNotFound][ConnectionState.Disconnected.Reason.RequiredServiceNotFound]
+     * regardless of what this method does.
+     *
+     * The default implementation does nothing.
+     *
+     * @see Peripheral.profile
+     */
+    protected open suspend fun CoroutineScope.unsupported() {
+        // Empty default implementation.
+    }
+
+    /**
+     * This method is called instead of [prepare] and [initialize] when service discovery failed,
+     * so it could not be determined whether [requiredServiceUuids] are present on the peripheral.
+     *
+     * As with [unsupported], this is purely a notification and does not affect the connection
+     * lifecycle: if the profile was registered as required, the peripheral will still be
+     * disconnected with reason
+     * [RequiredServiceNotFound][ConnectionState.Disconnected.Reason.RequiredServiceNotFound]
+     * regardless of what this method does.
+     *
+     * The default implementation does nothing.
+     *
+     * @param reason The reason of the service discovery failure.
+     * @see Peripheral.profile
+     */
+    protected open suspend fun CoroutineScope.failed(reason: RemoteServices.Failed.Reason) {
+        // Empty default implementation.
+    }
+
+    /**
+     * Executes the profile for the given [state]: [prepare] and [initialize] on
+     * [Found][ProfileServices.Found], or [unsupported]/[failed] otherwise.
+     *
+     * @param state The outcome of resolving the profile's services on the peripheral.
      * @param profileScope The coroutine scope of the profile. This scope gets canceled when the
      * services get invalidated or the device gets disconnected.
      */
-    internal suspend fun execute(services: List<RemoteService>, profileScope: CoroutineScope) {
-        try {
-            prepare(services)
-        } catch (e: NoSuchElementException) {
-            throw IllegalArgumentException(e)
-        }
-        with(profileScope) {
-            initialize()
+    internal suspend fun execute(
+        state: ProfileServices<List<RemoteService>>,
+        profileScope: CoroutineScope,
+    ) {
+        when (state) {
+            is ProfileServices.Found -> {
+                try {
+                    prepare(state.services)
+                } catch (e: NoSuchElementException) {
+                    throw IllegalArgumentException(e)
+                }
+                with(profileScope) {
+                    initialize()
+                }
+            }
+            is ProfileServices.Unsupported -> with(profileScope) { unsupported() }
+            is ProfileServices.Failed -> with(profileScope) { failed(state.reason) }
         }
     }
 
