@@ -44,6 +44,162 @@ import kotlin.uuid.Uuid
  * application logic and device API. For example, the profile can expose methods to turn a light
  * ON or OFF, while internally it would use Bluetooth LE connection.
  *
+ * Use [Peripheral.profile] to register a profile on a peripheral.
+ *
+ * ## Example
+ *
+ * ### Simple profile
+ *
+ * A profile based on a single GATT service extends [Simple].
+ *
+ * #### Profile definition
+ *
+ * ```kotlin
+ * /**
+ *  * API of the profile.
+ *  */
+ * interface LedButton {
+ *     /** The current button state on the DK. */
+ *     val buttonState: StateFlow<Boolean>
+ *     /** The LED state. */
+ *     val ledState: MutableStateFlow<Boolean>
+ * }
+ *
+ * class LedButtonProfile: Profile.Simple(
+ *     serviceUuid = SERVICE_UUID,
+ *     name = "LBS",
+ * ), LedButton {
+ *     companion object {
+ *         val SERVICE_UUID = Uuid.parse("00001523-1212-efde-1523-785feabcd123")
+ *         val BUTTON_CHARACTERISTIC_UUID = Uuid.parse("00001524-1212-efde-1523-785feabcd123")
+ *         val LED_CHARACTERISTIC_UUID = Uuid.parse("00001525-1212-efde-1523-785feabcd123")
+ *     }
+ *
+ *     // GATT characteristics.
+ *     private lateinit var buttonCharacteristic: RemoteCharacteristic
+ *     private lateinit var ledCharacteristic: RemoteCharacteristic
+ *
+ *     // Public API.
+ *     private val _buttonState = MutableStateFlow(false)
+ *     override val buttonState: StateFlow<Boolean> = _buttonState.asStateFlow()
+ *     override val ledState: MutableStateFlow<Boolean> = MutableStateFlow(false)
+ *
+ *     // Implementation.
+ *     override fun prepare(peripheral: Peripheral<*, *>, service: RemoteService) {
+ *         // This should always pass.
+ *         require(service.uuid == SERVICE_UUID)
+ *
+ *         // Obtain characteristics from the service.
+ *         buttonCharacteristic = service.characteristics.first { it.uuid == BUTTON_CHARACTERISTIC_UUID }
+ *         ledCharacteristic = service.characteristics.first { it.uuid == LED_CHARACTERISTIC_UUID }
+ *
+ *         // Validate properties.
+ *         require(buttonCharacteristic.isSubscribable()) { "Button characteristic must be subscribable." }
+ *         require(ledCharacteristic.isWritable()) { "LED characteristic must be writable." }
+ *     }
+ *
+ *     override suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>) {
+ *         // Subscribe to button characteristic.
+ *         buttonCharacteristic
+ *             .subscribe()
+ *             .map { value -> value.singleOrNull() == 1.toByte() }
+ *             .onEach { isPressed -> _buttonState.update { isPressed } }
+ *             .launchIn(this)
+ *
+ *         // Read current Button state.
+ *         try {
+ *             val currentState = buttonCharacteristic.read()
+ *             _buttonState.update { currentState.singleOrNull() == 1.toByte() }
+ *         } catch (e: OperationFailedException) {
+ *             println("Reading button characteristic failed: ${e.message}")
+ *         }
+ *
+ *         // Handle LED state updates.
+ *         ledState
+ *             .map { isOn -> byteArrayOf(if (isOn) 1 else 0) }
+ *             .onEach { value ->
+ *                 try {
+ *                     ledCharacteristic.write(value)
+ *                 } catch (e: OperationFailedException) {
+ *                     println("Writing LED characteristic failed: ${e.message}")
+ *                 }
+ *             }
+ *             .launchIn(this)
+ *     }
+ * }
+ * ```
+ * #### Usage
+ * ```kotlin
+ * val api: LedButton = LedButtonProfile()
+ *    .also { peripheral.profile(it) }
+ * ```
+ *
+ * ### Multiservice profile
+ *
+ * A profile based on multiple GATT services, some of which may be optional, extends
+ * [MultiService].
+ *
+ * #### Profile definition
+ *
+ * ```kotlin
+ * /**
+ *  * API of the profile.
+ *  */
+ * interface Proximity {
+ *     /** Whether the peripheral also exposes the optional Immediate Alert Service. */
+ *     val isImmediateAlertSupported: Boolean
+ *     /** Writes the given alert level to the Link Loss Service. */
+ *     suspend fun setLinkLossAlertLevel(level: Int)
+ * }
+ *
+ * class ProximityProfile : Profile.MultiService(
+ *     requiredServiceUuids = listOf(LINK_LOSS_SERVICE_UUID),
+ *     optionalServiceUuids = listOf(IMMEDIATE_ALERT_SERVICE_UUID),
+ *     name = "Proximity",
+ * ), Proximity {
+ *     companion object {
+ *         val LINK_LOSS_SERVICE_UUID = Uuid.parse("00001803-0000-1000-8000-00805f9b34fb")
+ *         val IMMEDIATE_ALERT_SERVICE_UUID = Uuid.parse("00001802-0000-1000-8000-00805f9b34fb")
+ *         val ALERT_LEVEL_UUID = Uuid.parse("00002a06-0000-1000-8000-00805f9b34fb")
+ *         const val HIGH_ALERT = 2
+ *     }
+ *
+ *     // GATT characteristics.
+ *     private lateinit var linkLossAlertLevel: RemoteCharacteristic
+ *     private var immediateAlertLevel: RemoteCharacteristic? = null
+ *
+ *     // Public API.
+ *     override val isImmediateAlertSupported: Boolean
+ *         get() = immediateAlertLevel != null
+ *
+ *     // Implementation.
+ *     override fun prepare(peripheral: Peripheral<*, *>, services: List<RemoteService>) {
+ *         // Link Loss Service is required.
+ *         val linkLossService = services.first { it.uuid == LINK_LOSS_SERVICE_UUID }
+ *         linkLossAlertLevel = linkLossService.characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+ *         require(linkLossAlertLevel.isWritable()) { "Alert Level characteristic must be writable." }
+ *
+ *         // Immediate Alert Service is optional - only present if the peripheral supports it.
+ *         immediateAlertLevel = services.firstOrNull { it.uuid == IMMEDIATE_ALERT_SERVICE_UUID }
+ *             ?.characteristics?.first { it.uuid == ALERT_LEVEL_UUID }
+ *     }
+ *
+ *     override suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>) {
+ *         // Set the Link Loss Alert Level to High as soon as the profile is initialized.
+ *         setLinkLossAlertLevel(HIGH_ALERT)
+ *     }
+ *
+ *     override suspend fun setLinkLossAlertLevel(level: Int) {
+ *         linkLossAlertLevel.write(byteArrayOf(level.toByte()))
+ *     }
+ * }
+ * ```
+ * #### Usage
+ * ```kotlin
+ * val api: Proximity = ProximityProfile()
+ *    .also { peripheral.profile(it) }
+ * ```
+ *
  * @property requiredServiceUuids A list of UUIDs of required profile GATT services.
  * @property optionalServiceUuids A list of UUIDs of optional profile GATT services.
  * @property name The name of the profile. This is for convenience, used only in logging.
@@ -55,53 +211,51 @@ sealed class Profile(
     val name: String? = null,
 ) {
     /**
+     * Validates and prepares the services to be used in [initialize].
+     *
      * This method should validate if the services contain the required characteristics,
      * validate if the characteristics have expected properties, and store the references
-     * to the characteristics in the class properties for later use.
+     * to the characteristics for later use.
      *
-     * This method is called before [initialize]. It should use [require] and [first] to validate
-     * the service and throw [IllegalArgumentException] or [NoSuchElementException] if validation fails.
-     * In that case, a required profile will cause a disconnection with
+     * This method is called before [initialize]. It should use [kotlin.require] and
+     * [kotlin.collections.List.first] to validate the service and throw
+     * [IllegalArgumentException] or [NoSuchElementException] if validation fails. In that case,
+     * the outcome is downgraded to [unsupported] - exactly as if the services had not been found
+     * in the first place - and a required profile will still cause a disconnection with
      * [RequiredServiceNotFound][ConnectionState.Disconnected.Reason.RequiredServiceNotFound].
      *
      * #### Example
+     *
+     * See [Profile] for a full worked example (`ProximityProfile`); the relevant part of its
+     * `prepare` is:
+     *
      * ```kotlin
      * override fun prepare(peripheral: Peripheral<*, *>, services: List<RemoteService>) {
-     *     // Link Loss service is required.
-     *     services.first { it.uuid == LINK_LOSS_SERVICE_UUID }.also { service ->
-     *        // Alert Characteristic is required.
-     *        linkLossCharacteristic = service.characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+     *     // Link Loss Service is required.
+     *     val linkLossService = services.first { it.uuid == LINK_LOSS_SERVICE_UUID }
+     *     linkLossAlertLevel = linkLossService.characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+     *     require(linkLossAlertLevel.isWritable()) { "Alert Level characteristic must be writable." }
      *
-     *        require(linkLossCharacteristic.isWritable()) { "Alert level characteristic in Link Loss Service must be writable" }
-     *        require(linkLossCharacteristic.isReadable()) { "Alert level characteristic in Link Loss Service must be readable" }
-     *     }
-     *
-     *     // Immediate Alert service is optional.
-     *     services.firstOrNull { it.uuid == IMMEDIATE_ALERT_SERVICE_UUID }?.also { service ->
-     *        // If this service is found, the Alert Level characteristic is required.
-     *        immediateAlertCharacteristic = service.characteristics.first { it.uuid == ALERT_LEVEL_UUID }
-     *        require(immediateAlertCharacteristic.isWritable()) { "Alert level characteristic must be writable" }
-     *     }
-     *
-     *     // TX Power service is optional.
-     *     services.firstOrNull { it.uuid == TX_POWER_SERVICE_UUID }?.also { service ->
-     *        // If this service is found, the TX Power Level characteristic is required.
-     *        txPowerCharacteristic = service.characteristics.first { it.uuid == TX_POWER_UUID }
-     *        require(txPowerCharacteristic.isReadable()) { "TX power characteristic must be readable" }
-     *     }
+     *     // Immediate Alert Service is optional - only present if the peripheral supports it.
+     *     immediateAlertLevel = services.firstOrNull { it.uuid == IMMEDIATE_ALERT_SERVICE_UUID }
+     *         ?.characteristics?.first { it.uuid == ALERT_LEVEL_UUID }
      * }
      * ```
      *
      * @param peripheral The peripheral the profile is being resolved on.
      * @param services The discovered services.
+     * @see initialize
      */
     protected abstract fun prepare(peripheral: Peripheral<*, *>, services: List<RemoteService>)
 
     /**
      * This method should initialize the profile.
      *
+     * This method is called after [prepare] if that method completed successfully.
+     *
      * The context of this method is the profile coroutine scope, which will automatically be
-     * canceled when the device gets disconnected or the services will get invalidated.
+     * canceled when the device gets disconnected or the services will get invalidated. Use
+     * a `finally` block to release whatever the profile acquired for this connection.
      *
      * #### Example
      * ```kotlin
@@ -118,38 +272,67 @@ sealed class Profile(
      * ```
      *
      * @param peripheral The peripheral the profile is being resolved on.
+     * @see prepare
      */
     protected abstract suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>)
 
     /**
-     * This method is called instead of [prepare] and [initialize] when [requiredServiceUuids]
-     * could not be found on the peripheral.
+     * Notifies the profile implementation, that the peripheral does not support the required
+     * profile services.
+     *
+     * This method is called instead of [initialize] when [requiredServiceUuids] could not be
+     * found on the peripheral, or when they were found but [prepare] rejected them (by throwing
+     * [IllegalArgumentException] or [NoSuchElementException]) - both are treated as the profile
+     * simply not being supported by this peripheral.
+     *
+     * This method runs in the profile's coroutine, same as [initialize]: it is canceled when the
+     * device gets disconnected or the services get invalidated, so calling `awaitCancellation()`
+     * and cleaning up in a `finally` block works the same way.
+     * A profile that records being unsupported can undo that in a `finally` block, instead of
+     * carrying the verdict of one connection into the next:
+     *
+     * ```kotlin
+     * override suspend fun unsupported(peripheral: Peripheral<*, *>) {
+     *     _state.update { State.Unsupported }
+     *     try {
+     *         awaitCancellation()
+     *     } finally {
+     *         _state.update { State.Unknown }
+     *     }
+     * }
+     * ```
+     *
+     * The default implementation does nothing.
+     *
+     * #### Note
      *
      * This is purely a notification, useful for tracking whether the profile is supported by the
      * connected peripheral (for example, to update application state for an optional profile).
      * It does not affect the connection lifecycle: if the profile was registered as required,
      * the peripheral will still be disconnected with reason
      * [RequiredServiceNotFound][ConnectionState.Disconnected.Reason.RequiredServiceNotFound]
-     * regardless of what this method does.
-     *
-     * The default implementation does nothing.
+     * regardless of what this method does, and without waiting for it to return.
      *
      * @param peripheral The peripheral the profile is being resolved on.
      * @see Peripheral.profile
      */
-    protected open suspend fun CoroutineScope.unsupported(peripheral: Peripheral<*, *>) {
+    protected open suspend fun unsupported(peripheral: Peripheral<*, *>) {
         // Empty default implementation.
     }
 
     /**
+     * Notifies the profile implementation that service discovery has failed.
+     *
      * This method is called instead of [prepare] and [initialize] when service discovery failed,
      * so it could not be determined whether [requiredServiceUuids] are present on the peripheral.
+     *
+     * #### Note
      *
      * As with [unsupported], this is purely a notification and does not affect the connection
      * lifecycle: if the profile was registered as required, the peripheral will still be
      * disconnected with reason
      * [RequiredServiceNotFound][ConnectionState.Disconnected.Reason.RequiredServiceNotFound]
-     * regardless of what this method does.
+     * regardless of what this method does, and without waiting for it to return.
      *
      * The default implementation does nothing.
      *
@@ -157,13 +340,36 @@ sealed class Profile(
      * @param reason The reason of the service discovery failure.
      * @see Peripheral.profile
      */
-    protected open suspend fun CoroutineScope.failed(peripheral: Peripheral<*, *>, reason: RemoteServices.Failed.Reason) {
+    protected open suspend fun failed(peripheral: Peripheral<*, *>, reason: RemoteServices.Failed.Reason) {
         // Empty default implementation.
     }
 
     /**
-     * Executes the profile for the given [state]: [prepare] and [initialize] on
-     * [Found][ProfileServices.Found], or [unsupported]/[failed] otherwise.
+     * Runs [prepare] on behalf of [Peripheral.profile], before it commits to reporting
+     * [Found][ProfileServices.Found].
+     *
+     * Running this ahead of [execute], rather than inside it, is what lets a failed [prepare]
+     * be downgraded to [unsupported] safely: by the time [execute] is called, the outcome for
+     * this discovery is already decided, so [unsupported] can call `awaitCancellation()` (as
+     * shown in its example) without ever risking a deadlock against a required disconnect that
+     * would otherwise be waiting for it to return.
+     *
+     * @param peripheral The peripheral the profile is being resolved on.
+     * @param services The discovered services.
+     * @throws IllegalArgumentException if [prepare] does, or if it throws [NoSuchElementException].
+     */
+    internal fun validate(peripheral: Peripheral<*, *>, services: List<RemoteService>) {
+        try {
+            prepare(peripheral, services)
+        } catch (e: NoSuchElementException) {
+            throw IllegalArgumentException(e)
+        }
+    }
+
+    /**
+     * Executes the profile for the given [state]: [initialize] on
+     * [Found][ProfileServices.Found] (with [prepare] already run, via [validate]), or
+     * [unsupported]/[failed] otherwise.
      *
      * @param peripheral The peripheral the profile is being resolved on.
      * @param state The outcome of resolving the profile's services on the peripheral.
@@ -176,18 +382,9 @@ sealed class Profile(
         profileScope: CoroutineScope,
     ) {
         when (state) {
-            is ProfileServices.Found -> {
-                try {
-                    prepare(peripheral, state.services)
-                } catch (e: NoSuchElementException) {
-                    throw IllegalArgumentException(e)
-                }
-                with(profileScope) {
-                    initialize(peripheral)
-                }
-            }
-            is ProfileServices.Unsupported -> with(profileScope) { unsupported(peripheral) }
-            is ProfileServices.Failed -> with(profileScope) { failed(peripheral, state.reason) }
+            is ProfileServices.Found -> with(profileScope) { initialize(peripheral) }
+            is ProfileServices.Unsupported -> unsupported(peripheral)
+            is ProfileServices.Failed -> failed(peripheral, state.reason)
         }
     }
 
@@ -199,6 +396,8 @@ sealed class Profile(
      * Note, the [prepare] method may be called with a list of services containing multiple
      * instances of the same service if returned by the service discovery. For example, if a device
      * has multiple batteries, it may expose their level with a *Battery Service* for each of them.
+     *
+     * See [Profile] for a full worked example (`ProximityProfile`).
      *
      * @param requiredServiceUuids A list of UUIDs of required profile GATT services.
      * @param optionalServiceUuids A list of UUIDs of optional profile GATT services.
@@ -219,14 +418,13 @@ sealed class Profile(
      *
      * This is intended for profiles that have a single GATT service, i.e. Battery Profile.
      *
-     * ## Multiple instances of the same service
-     *
      * In rare cases, a peripheral may have multiple instances of the same service, e.g. multiple
      * batteries reporting their level, each with a different instance of a *Battery Service*.
-     *
      * Override [instance] method to pick a desired instance of a remote service.
      *
      * Note, that the list of services contains only GATT services with specified service UUID.
+     *
+     * See [Profile] for a full worked example (`LedButtonProfile`).
      *
      * @param serviceUuid The UUID of the GATT service.
      * @param name The name of the profile. This is for convenience, used only in logging.
@@ -238,6 +436,9 @@ sealed class Profile(
         requiredServiceUuids = listOf(serviceUuid),
         name = name,
     ) {
+        /**
+         * @hide
+         */
         final override fun prepare(peripheral: Peripheral<*, *>, services: List<RemoteService>) =
             prepare(peripheral, instance(services))
 
@@ -248,8 +449,6 @@ sealed class Profile(
          * The [services] will contain only instances of GATT services with the given UUID.
          * Use [RemoteService.instanceId] to distinguish between instances.
          *
-         * ## Multiple instances of the same service
-         *
          * By default, this method should return the first service instance. However, in some cases,
          * a peripheral may have multiple instances of the same service, e.g. multiple batteries
          * reporting their level, each with a different instance of a *Battery Service*.
@@ -257,16 +456,21 @@ sealed class Profile(
         protected open fun instance(services: List<RemoteService>): RemoteService = services.first()
 
         /**
+         * Validates and prepares the services to be used in [initialize].
+         *
          * This method should validate if the services contain the required characteristics,
          * validate if the characteristics have expected properties, and store the references
          * to the characteristics in the class properties for later use.
          *
-         * This method is called before [initialize]. It should use [require] and [first] to validate
-         * the service and throw [IllegalArgumentException] or [NoSuchElementException] if validation fails.
-         * In that case, a required profile will cause a disconnection with
-         * [RequiredServiceNotFound][ConnectionState.Disconnected.Reason.RequiredServiceNotFound].
+         * This method is called before [initialize]. It should use [kotlin.require] and
+         * [kotlin.collections.List.first] to validate the service and throw
+         * [IllegalArgumentException] or [NoSuchElementException] if validation fails. In that
+         * case, the outcome is downgraded to [unsupported] - exactly as if the service had not
+         * been found in the first place - and a required profile will still cause a disconnection
+         * with [RequiredServiceNotFound][ConnectionState.Disconnected.Reason.RequiredServiceNotFound].
          *
-         * ## Example
+         * #### Example
+         *
          * ```kotlin
          * override fun prepare(peripheral: Peripheral<*, *>, service: RemoteService) {
          *     buttonCharacteristic = service.characteristics.first { it.uuid == BUTTON_CHARACTERISTIC_UUID }

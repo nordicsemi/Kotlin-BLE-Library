@@ -166,7 +166,7 @@ sealed class ConnectionState {
     val isConnected: Boolean
         get() = this is Connected
 
-    /** Whether the connection closed or getting closed. */
+    /** Whether the connection terminated. */
     val isDisconnected: Boolean
         get() = this is Disconnected
 }
