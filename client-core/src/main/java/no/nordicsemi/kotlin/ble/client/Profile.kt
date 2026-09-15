@@ -66,7 +66,7 @@ sealed class Profile(
      *
      * #### Example
      * ```kotlin
-     * override fun prepare(services: List<RemoteService>) {
+     * override fun prepare(peripheral: Peripheral<*, *>, services: List<RemoteService>) {
      *     // Link Loss service is required.
      *     services.first { it.uuid == LINK_LOSS_SERVICE_UUID }.also { service ->
      *        // Alert Characteristic is required.
@@ -91,8 +91,11 @@ sealed class Profile(
      *     }
      * }
      * ```
+     *
+     * @param peripheral The peripheral the profile is being resolved on.
+     * @param services The discovered services.
      */
-    protected abstract fun prepare(services: List<RemoteService>)
+    protected abstract fun prepare(peripheral: Peripheral<*, *>, services: List<RemoteService>)
 
     /**
      * This method should initialize the profile.
@@ -102,7 +105,7 @@ sealed class Profile(
      *
      * #### Example
      * ```kotlin
-     * override suspend fun CoroutineScope.initialize() {
+     * override suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>) {
      *     // Subscribe to button characteristic.
      *     txCharacteristic
      *         .subscribe()
@@ -113,8 +116,10 @@ sealed class Profile(
      *         .launchIn(this)
      * }
      * ```
+     *
+     * @param peripheral The peripheral the profile is being resolved on.
      */
-    protected abstract suspend fun CoroutineScope.initialize()
+    protected abstract suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>)
 
     /**
      * This method is called instead of [prepare] and [initialize] when [requiredServiceUuids]
@@ -129,9 +134,10 @@ sealed class Profile(
      *
      * The default implementation does nothing.
      *
+     * @param peripheral The peripheral the profile is being resolved on.
      * @see Peripheral.profile
      */
-    protected open suspend fun CoroutineScope.unsupported() {
+    protected open suspend fun CoroutineScope.unsupported(peripheral: Peripheral<*, *>) {
         // Empty default implementation.
     }
 
@@ -147,10 +153,11 @@ sealed class Profile(
      *
      * The default implementation does nothing.
      *
+     * @param peripheral The peripheral the profile is being resolved on.
      * @param reason The reason of the service discovery failure.
      * @see Peripheral.profile
      */
-    protected open suspend fun CoroutineScope.failed(reason: RemoteServices.Failed.Reason) {
+    protected open suspend fun CoroutineScope.failed(peripheral: Peripheral<*, *>, reason: RemoteServices.Failed.Reason) {
         // Empty default implementation.
     }
 
@@ -158,27 +165,29 @@ sealed class Profile(
      * Executes the profile for the given [state]: [prepare] and [initialize] on
      * [Found][ProfileServices.Found], or [unsupported]/[failed] otherwise.
      *
+     * @param peripheral The peripheral the profile is being resolved on.
      * @param state The outcome of resolving the profile's services on the peripheral.
      * @param profileScope The coroutine scope of the profile. This scope gets canceled when the
      * services get invalidated or the device gets disconnected.
      */
     internal suspend fun execute(
+        peripheral: Peripheral<*, *>,
         state: ProfileServices<List<RemoteService>>,
         profileScope: CoroutineScope,
     ) {
         when (state) {
             is ProfileServices.Found -> {
                 try {
-                    prepare(state.services)
+                    prepare(peripheral, state.services)
                 } catch (e: NoSuchElementException) {
                     throw IllegalArgumentException(e)
                 }
                 with(profileScope) {
-                    initialize()
+                    initialize(peripheral)
                 }
             }
-            is ProfileServices.Unsupported -> with(profileScope) { unsupported() }
-            is ProfileServices.Failed -> with(profileScope) { failed(state.reason) }
+            is ProfileServices.Unsupported -> with(profileScope) { unsupported(peripheral) }
+            is ProfileServices.Failed -> with(profileScope) { failed(peripheral, state.reason) }
         }
     }
 
@@ -229,7 +238,8 @@ sealed class Profile(
         requiredServiceUuids = listOf(serviceUuid),
         name = name,
     ) {
-        final override fun prepare(services: List<RemoteService>) = prepare(instance(services))
+        final override fun prepare(peripheral: Peripheral<*, *>, services: List<RemoteService>) =
+            prepare(peripheral, instance(services))
 
         /**
          * This method should select a single service instance from the list of identical services
@@ -258,7 +268,7 @@ sealed class Profile(
          *
          * ## Example
          * ```kotlin
-         * override fun prepare(service: RemoteService) {
+         * override fun prepare(peripheral: Peripheral<*, *>, service: RemoteService) {
          *     buttonCharacteristic = service.characteristics.first { it.uuid == BUTTON_CHARACTERISTIC_UUID }
          *     ledCharacteristic = service.characteristics.first { it.uuid == LED_CHARACTERISTIC_UUID }
          *
@@ -267,7 +277,10 @@ sealed class Profile(
          *     require(ledCharacteristic.isWritable()) { "LED characteristic must be writable." }
          * }
          * ```
+         *
+         * @param peripheral The peripheral the profile is being resolved on.
+         * @param service The discovered service.
          */
-        protected abstract fun prepare(service: RemoteService)
+        protected abstract fun prepare(peripheral: Peripheral<*, *>, service: RemoteService)
     }
 }

@@ -1268,7 +1268,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      *     override val ledState: MutableStateFlow<Boolean> = MutableStateFlow(false)
      *
      *     // Implementation.
-     *     override fun prepare(service: RemoteService) {
+     *     override fun prepare(peripheral: Peripheral<*, *>, service: RemoteService) {
      *         // This should always pass.
      *         require(service.uuid == SERVICE_UUID)
      *
@@ -1281,7 +1281,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      *         require(ledCharacteristic.isWritable()) { "LED characteristic must be writable." }
      *     }
      *
-     *     override suspend fun CoroutineScope.initialize() {
+     *     override suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>) {
      *         // Subscribe to button characteristic.
      *         buttonCharacteristic
      *             .subscribe()
@@ -1329,7 +1329,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
         required = required,
         name = profile.name,
         block = { state ->
-            profile.execute(state, this)
+            profile.execute(this@Peripheral, state, this)
         }
     )
 
@@ -1397,7 +1397,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      *     override val ledState: MutableStateFlow<Boolean> = MutableStateFlow(false)
      *
      *     // Implementation.
-     *     override fun prepare(service: RemoteService) {
+     *     override fun prepare(peripheral: Peripheral<*, *>, service: RemoteService) {
      *         // This should always pass.
      *         require(service.uuid == SERVICE_UUID)
      *
@@ -1410,7 +1410,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      *         require(ledCharacteristic.isWritable()) { "LED characteristic must be writable." }
      *     }
      *
-     *     override suspend fun CoroutineScope.initialize() {
+     *     override suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>) {
      *         // Subscribe to button characteristic.
      *         buttonCharacteristic
      *             .subscribe()
@@ -1460,7 +1460,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
         required = required,
         name = profile.name,
         block = { state ->
-            profile.execute(state, this)
+            profile.execute(this@Peripheral, state, this)
         }
     )
 
