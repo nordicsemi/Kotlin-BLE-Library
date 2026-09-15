@@ -1,3 +1,5 @@
+import org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier
+
 /*
  * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
@@ -58,5 +60,13 @@ dependencies {
 dokka {
     dokkaSourceSets.configureEach {
         includes.from("Module.md")
+
+        // Profile (and Peripheral) expose `protected` methods that subclasses are meant to
+        // override - e.g. Profile.prepare/initialize/unsupported/failed. Dokka only documents
+        // `public` members by default, so without this those methods are silently omitted.
+        documentedVisibilities(
+            VisibilityModifier.Public,
+            VisibilityModifier.Protected,
+        )
     }
 }
