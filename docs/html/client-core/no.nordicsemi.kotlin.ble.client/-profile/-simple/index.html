@@ -38,7 +38,7 @@
             </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
         </button>
         <div class="navigation-controls--break ui-kit_mobile-only"></div>
-        <div class="library-version" id="library-version">2.0.0-beta05
+        <div class="library-version" id="library-version">2.0.0-beta06
         </div>
         <div class="navigation-controls">
         <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
@@ -93,7 +93,7 @@
   <div class="breadcrumbs"><a href="../../../index.html">client-core</a><span class="delimiter">/</span><a href="../../index.html">no.nordicsemi.kotlin.ble.client</a><span class="delimiter">/</span><a href="../index.html">Profile</a><span class="delimiter">/</span><span class="current">Simple</span></div>
   <div class="cover ">
     <h1 class="cover"><span><span>Simple</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">Simple</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">serviceUuid<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.uuid/-uuid/index.html">Uuid</a><span class="token punctuation">, </span></span><span class="parameter ">name<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span> : <a href="../index.html">Profile</a></div><p class="paragraph">A class representing a simple GATT profile, based on a single GATT service.</p><p class="paragraph">This is intended for profiles that have a single GATT service, i.e. Battery Profile.</p><h2 class="">Multiple instances of the same service</h2><p class="paragraph">In rare cases, a peripheral may have multiple instances of the same service, e.g. multiple batteries reporting their level, each with a different instance of a <i>Battery Service</i>.</p><p class="paragraph">Override <a href="../../../../client-core/no.nordicsemi.kotlin.ble.client/-profile/-simple/instance.html">instance</a> method to pick a desired instance of a remote service.</p><p class="paragraph">Note, that the list of services contains only GATT services with specified service UUID.</p><h4 class="tableheader">Parameters</h4><div class="table"><div class="table-row table-row_content" data-filterable-current=":client-core/main" data-filterable-set=":client-core/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><u><span>service</span><wbr><span><span>Uuid</span></span></u></div></span></div><div><div class="title"><p class="paragraph">The UUID of the GATT service.</p></div></div></div></div><div class="table-row table-row_content" data-filterable-current=":client-core/main" data-filterable-set=":client-core/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><u><span><span>name</span></span></u></div></span></div><div><div class="title"><p class="paragraph">The name of the profile. This is for convenience, used only in logging.</p></div></div></div></div></div></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="index.html">Simple</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">serviceUuid<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.uuid/-uuid/index.html">Uuid</a><span class="token punctuation">, </span></span><span class="parameter ">name<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span> : <a href="../index.html">Profile</a></div><p class="paragraph">A class representing a simple GATT profile, based on a single GATT service.</p><p class="paragraph">This is intended for profiles that have a single GATT service, i.e. Battery Profile.</p><p class="paragraph">In rare cases, a peripheral may have multiple instances of the same service, e.g. multiple batteries reporting their level, each with a different instance of a <i>Battery Service</i>. Override <a href="instance.html">instance</a> method to pick a desired instance of a remote service.</p><p class="paragraph">Note, that the list of services contains only GATT services with specified service UUID.</p><p class="paragraph">See <a href="../index.html">Profile</a> for a full worked example (<code class="lang-kotlin">LedButtonProfile</code>).</p><h4 class="tableheader">Parameters</h4><div class="table"><div class="table-row table-row_content" data-filterable-current=":client-core/main" data-filterable-set=":client-core/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><u><span>service</span><wbr><span><span>Uuid</span></span></u></div></span></div><div><div class="title"><p class="paragraph">The UUID of the GATT service.</p></div></div></div></div><div class="table-row table-row_content" data-filterable-current=":client-core/main" data-filterable-set=":client-core/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><u><span><span>name</span></span></u></div></span></div><div><div class="title"><p class="paragraph">The name of the profile. This is for convenience, used only in logging.</p></div></div></div></div></div></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
@@ -130,6 +130,85 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="../name.html">name</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">The name of the profile. This is for convenience, used only in logging.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="1725853988%2FFunctions%2F1264259343" anchor-label="failed" id="1725853988%2FFunctions%2F1264259343" data-filterable-set=":client-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core/main" data-filterable-set=":client-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../failed.html"><span><span>failed</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1725853988%2FFunctions%2F1264259343"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core/main"><div class="symbol monospace"><span class="token keyword">protected </span><span class="token keyword">open </span><span class="token keyword">suspend </span><span class="token keyword">fun </span><a href="../failed.html"><span class="token function">failed</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">peripheral<span class="token operator">: </span><a href="../../-peripheral/index.html">Peripheral</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">reason<span class="token operator">: </span><a href="../../-remote-services/-failed/-reason/index.html">RemoteServices.Failed.Reason</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Notifies the profile implementation that service discovery has failed.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1874586624%2FFunctions%2F1264259343" anchor-label="initialize" id="-1874586624%2FFunctions%2F1264259343" data-filterable-set=":client-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core/main" data-filterable-set=":client-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../initialize.html"><span><span>initialize</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1874586624%2FFunctions%2F1264259343"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core/main"><div class="symbol monospace"><span class="token keyword">protected </span><span class="token keyword">abstract </span><span class="token keyword">suspend </span><span class="token keyword">fun </span><span data-unresolved-link="kotlinx.coroutines/CoroutineScope///PointingToDeclaration/">CoroutineScope</span><span class="token punctuation">.</span><a href="../initialize.html"><span class="token function">initialize</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">peripheral<span class="token operator">: </span><a href="../../-peripheral/index.html">Peripheral</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">This method should initialize the profile.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-550369492%2FFunctions%2F1264259343" anchor-label="instance" id="-550369492%2FFunctions%2F1264259343" data-filterable-set=":client-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core/main" data-filterable-set=":client-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="instance.html"><span><span>instance</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-550369492%2FFunctions%2F1264259343"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core/main"><div class="symbol monospace"><span class="token keyword">protected </span><span class="token keyword">open </span><span class="token keyword">fun </span><a href="instance.html"><span class="token function">instance</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">services<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../-remote-service/index.html">RemoteService</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../../-remote-service/index.html">RemoteService</a></div><div class="brief "><p class="paragraph">This method should select a single service instance from the list of identical services returned by the service discovery.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2137695440%2FFunctions%2F1264259343" anchor-label="prepare" id="2137695440%2FFunctions%2F1264259343" data-filterable-set=":client-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core/main" data-filterable-set=":client-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="prepare.html"><span><span>prepare</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2137695440%2FFunctions%2F1264259343"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core/main"><div class="symbol monospace"><span class="token keyword">protected </span><span class="token keyword">abstract </span><span class="token keyword">fun </span><a href="prepare.html"><span class="token function">prepare</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">peripheral<span class="token operator">: </span><a href="../../-peripheral/index.html">Peripheral</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">service<span class="token operator">: </span><a href="../../-remote-service/index.html">RemoteService</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Validates and prepares the services to be used in <a href="../initialize.html">initialize</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-842399201%2FFunctions%2F1264259343" anchor-label="unsupported" id="-842399201%2FFunctions%2F1264259343" data-filterable-set=":client-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core/main" data-filterable-set=":client-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../unsupported.html"><span><span>unsupported</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-842399201%2FFunctions%2F1264259343"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core/main"><div class="symbol monospace"><span class="token keyword">protected </span><span class="token keyword">open </span><span class="token keyword">suspend </span><span class="token keyword">fun </span><a href="../unsupported.html"><span class="token function">unsupported</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">peripheral<span class="token operator">: </span><a href="../../-peripheral/index.html">Peripheral</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Notifies the profile implementation, that the peripheral does not support the required profile services.</p></div></div></div>
                 </div>
               </div>
             </div>

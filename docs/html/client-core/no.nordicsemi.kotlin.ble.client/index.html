@@ -38,7 +38,7 @@
             </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
         </button>
         <div class="navigation-controls--break ui-kit_mobile-only"></div>
-        <div class="library-version" id="library-version">2.0.0-beta05
+        <div class="library-version" id="library-version">2.0.0-beta06
         </div>
         <div class="navigation-controls">
         <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
@@ -215,7 +215,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-monitoring-event/index.html">MonitoringEvent</a><span class="token operator">&lt;</span><a href="-monitoring-event/index.html">P</a><span class="token operator"> : </span><a href="-peripheral/index.html">Peripheral</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">An event indicating that the scanning device entered region of the monitored peripheral.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-monitoring-event/index.html">MonitoringEvent</a><span class="token operator">&lt;</span><a href="-monitoring-event/index.html">P</a><span class="token operator"> : </span><a href="-peripheral/index.html">Peripheral</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>peripheral<span class="token operator">: </span><a href="-monitoring-event/index.html">P</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">An event indicating that the scanning device entered region of the monitored peripheral.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -305,7 +305,22 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-profile/index.html">Profile</a></div><div class="brief "><p class="paragraph">A class representing a Bluetooth LE profile.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-profile/index.html">Profile</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">requiredServiceUuids<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.uuid/-uuid/index.html">Uuid</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">optionalServiceUuids<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.uuid/-uuid/index.html">Uuid</a><span class="token operator">&gt;</span><span class="token operator"> = </span>emptyList()<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>name<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">A class representing a Bluetooth LE profile.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1689644084%2FClasslikes%2F1264259343" anchor-label="ProfileServices" id="1689644084%2FClasslikes%2F1264259343" data-filterable-set=":client-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core/main" data-filterable-set=":client-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-profile-services/index.html"><span>Profile</span><wbr><span><span>Services</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1689644084%2FClasslikes%2F1264259343"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-profile-services/index.html">ProfileServices</a><span class="token operator">&lt;</span><span class="token keyword">out </span><a href="-profile-services/index.html">T</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The outcome of resolving a profile's services on a peripheral, passed to the <code class="lang-kotlin">block</code> parameter of <a href="-peripheral/profile.html">Peripheral.profile</a>.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -335,7 +350,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-range-event/index.html">RangeEvent</a><span class="token operator">&lt;</span><a href="-range-event/index.html">P</a><span class="token operator"> : </span><a href="-peripheral/index.html">Peripheral</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">An event indicating ranging events for the peripheral.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-range-event/index.html">RangeEvent</a><span class="token operator">&lt;</span><a href="-range-event/index.html">P</a><span class="token operator"> : </span><a href="-peripheral/index.html">Peripheral</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token punctuation">, </span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>peripheral<span class="token operator">: </span><a href="-range-event/index.html">P</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">An event indicating ranging events for the peripheral.</p></div></div></div>
                 </div>
               </div>
             </div>
