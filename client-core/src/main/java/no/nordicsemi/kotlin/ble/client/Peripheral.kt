@@ -690,10 +690,18 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      * The [block] is called with a [ProfileServices] describing the outcome of service discovery:
      * [Found][ProfileServices.Found] when the service was found, or
      * [Unsupported][ProfileServices.Unsupported]/[Failed][ProfileServices.Failed]
-     * otherwise. If the profile was marked as [required] and the service is not found, or discovery
-     * fails, or `block` throws [IllegalArgumentException] during service validation, the connection
-     * will be terminated (right after `block` returns) with reason
-     * [RequiredServiceNotFound][ConnectionState.Disconnected.Reason.RequiredServiceNotFound].
+     * otherwise. If the profile was marked as [required] and the service is not found, or
+     * discovery fails, the connection will be terminated (right after `block` returns) with
+     * reason [RequiredServiceNotFound][ConnectionState.Disconnected.Reason.RequiredServiceNotFound].
+     *
+     * As there is no separate validation step for this overload, `block` is also responsible for
+     * rejecting a service found to be structurally invalid: throwing [IllegalArgumentException]
+     * or [NoSuchElementException] while handling [Found][ProfileServices.Found] is treated
+     * exactly like the service not being found in the first place. Any other exception - or
+     * either of these two, thrown while handling
+     * [Unsupported][ProfileServices.Unsupported]/[Failed][ProfileServices.Failed] - is logged and
+     * does not affect the connection; it is not rethrown, so it cannot cancel [scope] or any
+     * other profile registered on it.
      *
      * ## Block completion
      *
@@ -877,16 +885,22 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      * The [block] is called with a [ProfileServices] describing the outcome of service discovery:
      * [Found][ProfileServices.Found] when all required services were found, or
      * [Unsupported][ProfileServices.Unsupported]/[Failed][ProfileServices.Failed]
-     * otherwise. If the profile was marked as [required] and at least one required service is not
-     * found, or discovery fails, or `block` throws [IllegalArgumentException] during service
-     * validation, the connection will be terminated (right after `block` returns) with reason
+     * otherwise. If the profile was marked as [required] and at least one required service is
+     * not found, or discovery fails, the connection will be terminated (right after `block`
+     * returns) with reason
      * [RequiredServiceNotFound][ConnectionState.Disconnected.Reason.RequiredServiceNotFound].
      *
-     * Note, that here `block` throwing is the only way to reject services found to be
-     * structurally invalid, since it is the only code running for
-     * [Found][ProfileServices.Found]. [Profile] gets a safer variant of this, since it can run
-     * its synchronous [Profile.prepare] check before committing to `Found` at all, downgrading a
-     * rejection to [Unsupported][ProfileServices.Unsupported] instead - see [Profile.unsupported].
+     * As there is no separate validation step for this overload, `block` throwing
+     * [IllegalArgumentException] or [NoSuchElementException] while handling
+     * [Found][ProfileServices.Found] is the only way to reject services found to be structurally
+     * invalid, and is treated exactly like the services not being found in the first place - it
+     * is the only code running for `Found`. [Profile] gets a safer variant of this, since it can
+     * run its synchronous [Profile.prepare] check before committing to `Found` at all, downgrading
+     * a rejection to [Unsupported][ProfileServices.Unsupported] instead - see
+     * [Profile.unsupported]. Any other exception - or either of these two, thrown while handling
+     * [Unsupported][ProfileServices.Unsupported]/[Failed][ProfileServices.Failed] - is logged and
+     * does not affect the connection; it is not rethrown, so it cannot cancel [scope] or any
+     * other profile registered on it.
      *
      * ## Block completion
      *
@@ -1065,16 +1079,23 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
                 } catch (e: CancellationException) {
                     // Rethrow cancellation exceptions, without any action.
                     throw e
-                } catch (e: IllegalArgumentException) {
-                    // The implementation may use require(...) methods to verify the services.
-                    // Catch them and report as if the service was not found.
-                    logger?.warn(Layer.GATT, e) { "$name: Validation failed" }
-                    if (required) {
-                        disconnect(ConnectionState.Disconnected.Reason.RequiredServiceNotFound)
-                    }
                 } catch (e: Exception) {
-                    logger?.error(Layer.GATT, e) { "$name: Block failed with exception" }
-                    throw e
+                    // The implementation may use require(...)/first(...) methods to verify
+                    // the services. Catch them and report as if the service was not found.
+                    // If the validation was already done, skip it, as it would go to Unsupported
+                    // before.
+                    val alreadyHandled = validate != null || services !is ProfileServices.Found
+                    if (!alreadyHandled && (e is IllegalArgumentException || e is NoSuchElementException)) {
+                        logger?.warn(Layer.GATT, e) { "$name: Validation failed" }
+                        if (required) {
+                            disconnect(ConnectionState.Disconnected.Reason.RequiredServiceNotFound)
+                        }
+                    } else {
+                        // An unexpected failure in the profile's own implementation. Contained
+                        // here - logged, but not rethrown, so it cannot cancel the (possibly
+                        // shared) outer scope or any sibling profile registered on it.
+                        logger?.error(Layer.GATT, e) { "$name: Block failed with exception" }
+                    }
                 }
             }
         }
@@ -1215,6 +1236,11 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      * accepted, or discovery fails, the connection will be terminated (right after
      * [unsupported][Profile.unsupported]/[failed][Profile.failed] returns) with reason
      * [RequiredServiceNotFound][ConnectionState.Disconnected.Reason.RequiredServiceNotFound].
+     * Unlike [prepare][Profile.prepare], [initialize][Profile.initialize],
+     * [unsupported][Profile.unsupported] and [failed][Profile.failed] have no "throw this to
+     * reject" contract - if any of them throws, it is only logged and does not affect the
+     * connection; it is not rethrown, so it cannot cancel [scope] or any other profile registered
+     * on it.
      *
      * See [Profile] for how to implement one, with examples for both single- and multi-service
      * profiles.
