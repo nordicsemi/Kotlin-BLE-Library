@@ -351,7 +351,6 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
         gattEventCollector?.cancel() ?: run {
             handleDisconnection()
             handleClose()
-            serviceDiscoveryRequested = false
             impl.close()
         }
         gattEventCollector = null
