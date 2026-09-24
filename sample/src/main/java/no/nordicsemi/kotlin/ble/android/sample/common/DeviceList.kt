@@ -31,8 +31,10 @@
 
 package no.nordicsemi.kotlin.ble.android.sample.common
 
-import android.content.res.Configuration
+import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -40,11 +42,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CardDefaults
@@ -68,7 +72,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
 import no.nordicsemi.kotlin.ble.android.sample.theme.Nordic
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
@@ -142,7 +148,8 @@ fun DeviceItem(
             colors = CardDefaults.elevatedCardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            )
+            ),
+            modifier = Modifier.zIndex(1.0f),
         ) {
             ListItem(
                 colors = ListItemDefaults.colors(
@@ -203,11 +210,21 @@ fun DeviceItem(
                 }
             )
         }
-        if (state.isConnected) {
+        // As the services lay "behind" the device card, draw them first.
+        AnimatedVisibility(
+            visible = state.isConnected,
+            modifier = Modifier
+                .offset(y = (-2).dp)
+                .animateContentSize()
+        )  {
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, top = 8.dp),
+                    .padding(start = 16.dp, end = 8.dp),
+                shape = MaterialTheme.shapes.medium.copy(
+                    topStart = CornerSize(0.dp),
+                    topEnd = CornerSize(0.dp),
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(8.dp)

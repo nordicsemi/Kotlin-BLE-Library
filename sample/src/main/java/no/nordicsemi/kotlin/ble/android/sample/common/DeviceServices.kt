@@ -31,14 +31,39 @@
 
 package no.nordicsemi.kotlin.ble.android.sample.common
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -47,7 +72,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
+import no.nordicsemi.kotlin.ble.android.sample.view.LabeledSwitch
 import no.nordicsemi.kotlin.ble.client.AnyRemoteService
 import no.nordicsemi.kotlin.ble.client.RemoteCharacteristic
 import no.nordicsemi.kotlin.ble.client.RemoteDescriptor
@@ -56,7 +84,9 @@ import no.nordicsemi.kotlin.ble.client.android.preview.PreviewRemoteCharacterist
 import no.nordicsemi.kotlin.ble.client.android.preview.PreviewRemoteDescriptor
 import no.nordicsemi.kotlin.ble.client.android.preview.PreviewRemoteService
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
+import no.nordicsemi.kotlin.ble.core.WriteType
 import no.nordicsemi.kotlin.ble.core.util.toShortString
+import timber.log.Timber
 import kotlin.uuid.Uuid
 
 @Composable
@@ -110,13 +140,99 @@ private fun Service(service: AnyRemoteService) {
 
 @Composable
 private fun Characteristic(characteristic: RemoteCharacteristic) {
+    val scope = rememberCoroutineScope()
+    val isNotifying by characteristic.isNotifying.collectAsStateWithLifecycle()
+    var showWriteDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier.indent(12.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
     ) {
-        Text(
-            text = characteristic.uuid.toShortString(),
-            style = MaterialTheme.typography.bodySmall
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = characteristic.uuid.toShortString(),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f)
+            )
+
+            if (characteristic.isReadable()) {
+                ActionButton(
+                    text = "R",
+                    onClick = {
+                        scope.launch {
+                            try {
+                                val value = characteristic.read()
+                                Timber.d("Read value from ${characteristic.uuid}: ${value.size} bytes")
+                            } catch (e: Exception) {
+                                Timber.e(e, "Failed to read characteristic ${characteristic.uuid}")
+                            }
+                        }
+                    }
+                )
+            }
+
+            if (characteristic.isWritable()) {
+                ActionButton(
+                    text = "W",
+                    onClick = {
+                        showWriteDialog = true
+                    }
+                )
+            }
+
+            if (CharacteristicProperty.NOTIFY in characteristic.properties) {
+                ActionButton(
+                    text = "N",
+                    isSelected = isNotifying,
+                    onClick = {
+                        scope.launch {
+                            try {
+                                characteristic.setNotifying(!isNotifying)
+                            } catch (e: Exception) {
+                                Timber.e(e, "Failed to set notifying on characteristic ${characteristic.uuid}")
+                            }
+                        }
+                    }
+                )
+            }
+
+            if (CharacteristicProperty.INDICATE in characteristic.properties) {
+                ActionButton(
+                    text = "I",
+                    isSelected = isNotifying,
+                    onClick = {
+                        scope.launch {
+                            try {
+                                characteristic.setNotifying(!isNotifying)
+                            } catch (e: Exception) {
+                                Timber.e(e, "Failed to set indicating on characteristic ${characteristic.uuid}")
+                            }
+                        }
+                    }
+                )
+            }
+        }
+
+        if (showWriteDialog) {
+            WriteDialog(
+                characteristic = characteristic,
+                initialValue = lastUsedWriteValue,
+                onDismissRequest = { showWriteDialog = false },
+                onWrite = { bytes, writeType, text ->
+                    lastUsedWriteValue = text
+                    scope.launch {
+                        try {
+                            characteristic.write(bytes, writeType)
+                            Timber.d("Wrote ${bytes.size} bytes to ${characteristic.uuid} with $writeType")
+                        } catch (e: Exception) {
+                            Timber.e(e, "Failed to write characteristic ${characteristic.uuid}")
+                        }
+                    }
+                }
+            )
+        }
 
         if (characteristic.descriptors.isNotEmpty()) {
             characteristic.descriptors.forEach { descriptor ->
@@ -125,6 +241,37 @@ private fun Characteristic(characteristic: RemoteCharacteristic) {
                 Spacer(modifier = Modifier.height(4.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun ActionButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isSelected: Boolean = false,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(24.dp)
+            .clip(CircleShape)
+            .border(
+                width = 1.dp,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                shape = CircleShape
+            )
+            .background(
+                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                shape = CircleShape
+            )
+            .clickable(onClick = onClick)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+        )
     }
 }
 
@@ -222,7 +369,15 @@ private fun PreviewDeviceServices() {
 private fun PreviewCharacteristics() {
     AppTheme {
         Characteristic(
-            characteristic = PreviewRemoteCharacteristic(0x2A00) {
+            characteristic = PreviewRemoteCharacteristic(
+                shortUuid = 0x2A00,
+                properties = setOf(
+                    CharacteristicProperty.READ,
+                    CharacteristicProperty.WRITE,
+                    CharacteristicProperty.NOTIFY,
+                    CharacteristicProperty.INDICATE
+                )
+            ) {
                 CharacteristicUserDescriptionDescriptor("Description")
                 ClientCharacteristicConfigurationDescriptor()
                 Descriptor(Uuid.random())
@@ -237,6 +392,172 @@ private fun PreviewDescriptor() {
     AppTheme {
         Descriptor(
             descriptor = PreviewRemoteDescriptor(Uuid.random())
+        )
+    }
+}
+
+private var lastUsedWriteValue = "01"
+
+private data class PresetValue(val label: String, val hex: String)
+
+private val genericPresetValues = listOf(
+    PresetValue("0x00", "00"),
+    PresetValue("0x01", "01"),
+    PresetValue("0xFF", "FF"),
+    PresetValue("ASCII \"Hello\"", "48656C6C6F"),
+)
+
+private val smpPresetValues = listOf(
+    PresetValue("Echo (Hello)",  "0A00000A00000000A161646648656C6C6F21"),
+    PresetValue("McuMgr Params", "0800000100000006A0"),
+    PresetValue("Memory Pools",  "0800000100000003A0"),
+    PresetValue("Reset",         "0A00000100000005A0"),
+    PresetValue("Image List",    "0800000100010000A0"),
+)
+
+private val smpUuid = Uuid.parse("da2e7828-fbce-4e01-ae9e-261174997c48")
+private val RemoteCharacteristic.isSmp: Boolean
+    get() = uuid == smpUuid
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun WriteDialog(
+    characteristic: RemoteCharacteristic,
+    initialValue: String,
+    onDismissRequest: () -> Unit,
+    onWrite: (ByteArray, WriteType, String) -> Unit,
+) {
+    var text by remember(initialValue) { mutableStateOf(initialValue) }
+    val defaultResponseRequired = CharacteristicProperty.WRITE in characteristic.properties
+    var responseRequired by remember { mutableStateOf(defaultResponseRequired) }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = {
+            Text(text = "Write Characteristic")
+        },
+        text = {
+            CompositionLocalProvider(
+                LocalTextStyle provides MaterialTheme.typography.bodySmall,
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Text(
+                        text = characteristic.uuid.toShortString(),
+                    )
+
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = { newValue ->
+                            text = newValue.filter { c ->
+                                c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F'
+                            }
+                        },
+                        label = { Text("Value (Hex)") },
+                        placeholder = { Text("e.g. 0102 or FF") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Presets",
+                        )
+                        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                if (characteristic.isSmp) {
+                                    smpPresetValues.forEach { preset ->
+                                        SuggestionChip(
+                                            onClick = { text = preset.hex },
+                                            label = { Text(preset.label) }
+                                        )
+                                    }
+                                } else {
+                                    genericPresetValues.forEach { preset ->
+                                        SuggestionChip(
+                                            onClick = { text = preset.hex },
+                                            label = { Text(preset.label) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    LabeledSwitch(
+                        title = "Response required",
+                        enabled = true,
+                        checked = responseRequired,
+                        onCheckedChange = { responseRequired = it },
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val bytes = text.toHexByteArray()
+                    val writeType = if (responseRequired) {
+                        WriteType.WITH_RESPONSE
+                    } else {
+                        WriteType.WITHOUT_RESPONSE
+                    }
+                    onWrite(bytes, writeType, text)
+                    onDismissRequest()
+                }
+            ) {
+                Text("Write")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+private fun String.toHexByteArray(): ByteArray {
+    val cleanHex = filter { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }
+    if (cleanHex.isEmpty()) return byteArrayOf()
+    val formatted = if (cleanHex.length % 2 != 0) "0$cleanHex" else cleanHex
+    return formatted.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PreviewWriteDialog() {
+    AppTheme {
+        WriteDialog(
+            characteristic = PreviewRemoteCharacteristic(
+                shortUuid = 0x2A00,
+                properties = setOf(CharacteristicProperty.WRITE)
+            ),
+            initialValue = "01",
+            onDismissRequest = {},
+            onWrite = { _, _, _ -> }
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PreviewWriteDialog_smp() {
+    AppTheme {
+        WriteDialog(
+            characteristic = PreviewRemoteCharacteristic(
+                uuid = Uuid.parse("8d53dc1d-e380-4e46-a10a-d157b28b0000"),
+                properties = setOf(CharacteristicProperty.WRITE_WITHOUT_RESPONSE)
+            ),
+            initialValue = "01",
+            onDismissRequest = {},
+            onWrite = { _, _, _ -> }
         )
     }
 }
