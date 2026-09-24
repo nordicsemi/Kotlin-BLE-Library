@@ -133,7 +133,9 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      */
     protected var _services: MutableStateFlow<RemoteServices> = MutableStateFlow(
         value = impl.takeIf { it.initialState == ConnectionState.Connected }?.initialServices
-            ?.let { RemoteServices.Discovered(it) }
+            ?.let { initialServices ->
+                RemoteServices.Discovered(initialServices.onEach { it.owner = this })
+            }
             ?: RemoteServices.Unknown
     )
 
@@ -610,7 +612,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
         requestedServiceUuids = (requestedServiceUuids + uuids).distinct()
 
         // First call to this method triggers service discovery.
-        if (isConnected) {
+        if (isConnected && _services.value == RemoteServices.Unknown) {
             discoverServices(uuids)
         }
 
