@@ -32,6 +32,7 @@
 package no.nordicsemi.kotlin.ble.client
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import no.nordicsemi.kotlin.ble.client.exception.InvalidAttributeException
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.client.exception.ValueDoesNotMatchException
@@ -58,12 +59,12 @@ interface RemoteCharacteristic: Characteristic<RemoteDescriptor> {
         get() = service.owner
 
     /**
-     * Returns whether the characteristic is notifying or indicating.
+     * Current state whether the characteristic is notifying or indicating.
      *
      * Use [subscribe] or [waitForValueChange] to subscribe for value changes, or
      * [setNotifying] to enable or disable notifications or indications manually.
      */
-    val isNotifying: Boolean
+    val isNotifying: StateFlow<Boolean>
 
     /**
      * Enables notifications or indications, depending on the characteristic's properties.

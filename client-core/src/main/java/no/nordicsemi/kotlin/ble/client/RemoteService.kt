@@ -31,6 +31,7 @@
 
 package no.nordicsemi.kotlin.ble.client
 
+import no.nordicsemi.kotlin.ble.client.internal.BaseRemoteCharacteristic
 import no.nordicsemi.kotlin.ble.core.AnyService
 import no.nordicsemi.kotlin.ble.core.IncludedService
 import no.nordicsemi.kotlin.ble.core.PrimaryService
@@ -48,7 +49,15 @@ sealed interface AnyRemoteService: AnyService<RemoteCharacteristic> {
  */
 abstract class RemoteService: PrimaryService<RemoteCharacteristic>, AnyRemoteService {
     override var owner: Peripheral<*, *>? = null
-        internal set
+        internal set(newValue) {
+            field = newValue
+            // Setting owner to null means, that the characteristic has been invalidated.
+            if (newValue == null) {
+                characteristics.forEach {
+                    (it as? BaseRemoteCharacteristic)?.reset()
+                }
+            }
+        }
 }
 
 /**

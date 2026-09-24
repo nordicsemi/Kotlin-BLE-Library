@@ -301,16 +301,6 @@ private class StubRemoteCharacteristic(
     private val permissions: Set<Permission>,
     descriptors: List<DescriptorDefinition> = emptyList(),
 ): RemoteCharacteristic {
-    private var _isNotifying = false
-
-    override val isNotifying: Boolean
-        get() = _isNotifying && isSubscribable()
-
-    override suspend fun setNotifying(enabled: Boolean) = when {
-        owner == null -> throw InvalidAttributeException()
-        isSubscribable() -> _isNotifying = enabled
-        else -> throw OperationFailedException(OperationStatus.SubscribeNotPermitted)
-    }
 
     override val descriptors: List<RemoteDescriptor> = descriptors
         .map { dd ->
@@ -323,6 +313,16 @@ private class StubRemoteCharacteristic(
         }
 
     private val _value = MutableStateFlow(byteArrayOf())
+
+    private var _isNotifying = MutableStateFlow(false)
+    override val isNotifying: StateFlow<Boolean>
+        get() = _isNotifying.asStateFlow()
+
+    override suspend fun setNotifying(enabled: Boolean) = when {
+        owner == null -> throw InvalidAttributeException()
+        isSubscribable() -> _isNotifying.update { enabled }
+        else -> throw OperationFailedException(OperationStatus.SubscribeNotPermitted)
+    }
 
     override suspend fun read(): ByteArray = when {
         owner == null -> throw InvalidAttributeException()
@@ -349,7 +349,7 @@ private class StubRemoteCharacteristic(
 
     override fun subscribe(onSubscription: suspend RemoteCharacteristic.() -> Unit): Flow<ByteArray> = when {
         owner == null -> throw InvalidAttributeException()
-        isSubscribable() -> _value.filter { _isNotifying }.onStart { onSubscription() }
+        isSubscribable() -> _value.filter { _isNotifying.value }.onStart { onSubscription() }
         else -> throw OperationFailedException(OperationStatus.SubscribeNotPermitted)
     }
 

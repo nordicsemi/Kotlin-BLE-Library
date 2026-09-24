@@ -34,13 +34,17 @@ package no.nordicsemi.kotlin.ble.client.internal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.flow.update
 import no.nordicsemi.kotlin.ble.client.AnyRemoteService
 import no.nordicsemi.kotlin.ble.client.GattEvent
 import no.nordicsemi.kotlin.ble.client.RemoteCharacteristic
@@ -118,10 +122,14 @@ abstract class BaseRemoteCharacteristic(
      */
     abstract fun OperationEvent.matches(): Boolean
 
-    /** A flag indicating whether notifications or indications are enabled.  */
-    private var _isNotifying: Boolean = false
-    final override val isNotifying: Boolean
-        get() = owner != null && _isNotifying
+    /** A mutable state of notifications or indications. */
+    private var _isNotifying: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    final override val isNotifying: StateFlow<Boolean>
+        get() = _isNotifying.asStateFlow()
+
+    internal fun reset() {
+        _isNotifying.update { false }
+    }
 
     final override suspend fun setNotifying(enabled: Boolean) = withCallSite("setNotifying") {
         // Check whether the characteristic wasn't invalidated.
@@ -135,7 +143,7 @@ abstract class BaseRemoteCharacteristic(
         }
 
         // If the current state of notifications is the same as the requested state, return.
-        if (enabled == isNotifying)
+        if (enabled == isNotifying.value)
             return@withCallSite
 
         // Verify that the characteristic can be subscribed to.
@@ -165,7 +173,7 @@ abstract class BaseRemoteCharacteristic(
             else -> BaseRemoteDescriptor.DISABLE_NOTIFICATIONS_VALUE
         }
         cccd.write(value)
-        _isNotifying = enabled
+        _isNotifying.update { enabled }
     }
 
     final override suspend fun read(): ByteArray = withCallSite("read") {
@@ -338,7 +346,7 @@ abstract class BaseRemoteCharacteristic(
             }
             .takeWhile { !it.isServiceInvalidatedEvent }
             .filterIsInstance(CharacteristicChanged::class)
-            .filter { isNotifying && it.matches() }
+            .filter { isNotifying.value && it.matches() }
             .map { it.value }
     }
 
