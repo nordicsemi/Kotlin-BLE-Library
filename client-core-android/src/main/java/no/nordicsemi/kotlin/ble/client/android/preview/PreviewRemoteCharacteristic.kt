@@ -32,7 +32,11 @@
 package no.nordicsemi.kotlin.ble.client.android.preview
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.update
 import no.nordicsemi.kotlin.ble.client.AnyRemoteService
 import no.nordicsemi.kotlin.ble.client.RemoteCharacteristic
 import no.nordicsemi.kotlin.ble.client.RemoteDescriptor
@@ -48,14 +52,15 @@ import kotlin.uuid.Uuid
 /**
  * A remote characteristic that can be used for compose previews.
  *
- * If has no-op implementation.
+ * It has no-op implementation.
  */
 class PreviewRemoteCharacteristic : RemoteCharacteristic {
     override val service: AnyRemoteService
     override val uuid: Uuid
     override val instanceId: Int
-    override var isNotifying: Boolean
-        private set
+    private val _isNotifying = MutableStateFlow(false)
+    override val isNotifying: StateFlow<Boolean>
+        get() = _isNotifying.asStateFlow()
     override val properties: Set<CharacteristicProperty>
 
     override val descriptors: List<RemoteDescriptor>
@@ -86,7 +91,6 @@ class PreviewRemoteCharacteristic : RemoteCharacteristic {
         this.definition = definition
         this.descriptor = null
         this.instanceId = 0
-        this.isNotifying = false
     }
 
     internal constructor(
@@ -103,7 +107,6 @@ class PreviewRemoteCharacteristic : RemoteCharacteristic {
         this.definition = null
         this.descriptor = descriptor
         this.instanceId = 0
-        this.isNotifying = false
     }
 
     /**
@@ -150,14 +153,14 @@ class PreviewRemoteCharacteristic : RemoteCharacteristic {
         this.service = PreviewRemoteService(serviceDefinition.uuid, 0, this)
         this.uuid = uuid
         this.instanceId = instanceId
-        this.isNotifying = isNotifying
+        this._isNotifying.update { isNotifying }
         this.properties = properties
         this.definition = serviceDefinition.characteristics.first()
         this.descriptor = null
     }
 
     override suspend fun setNotifying(enabled: Boolean) {
-        this.isNotifying = enabled
+        this._isNotifying.update { enabled }
     }
 
     override suspend fun read(): ByteArray = byteArrayOf()

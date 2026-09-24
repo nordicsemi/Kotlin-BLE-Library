@@ -44,6 +44,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
@@ -448,6 +449,14 @@ class ScannerViewModel @Inject constructor(
                             // notifications or indications.
                             val expectError = !remoteCharacteristic.isSubscribable()
                             try {
+                                // Observe notifications or indications state.
+                                remoteCharacteristic.isNotifying
+                                    .drop(1) // Skip the initial value.
+                                    .onEach { isNotifying ->
+                                        Timber.i("($ce) Notifications for ${remoteCharacteristic.uuid} are now ${if (isNotifying) "enabled" else "disabled"}")
+                                    }
+                                    .launchIn(scope)
+
                                 remoteCharacteristic
                                     // Note, that subscriber() method is no longer suspending.
                                     // Notifications are enabled in onSubscription of the StateFlow.
@@ -456,7 +465,7 @@ class ScannerViewModel @Inject constructor(
                                     .subscribe(
                                         // This is called when the notifications were enabled.
                                         onSubscription = {
-                                            Timber.i("($ce) Notifications for $uuid are now ${if (isNotifying) "enabled" else "disabled"}")
+                                            Timber.i("($ce) Subscribed to $uuid")
                                         }
                                     )
                                     .onStart {
