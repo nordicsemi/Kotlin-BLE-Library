@@ -39,7 +39,6 @@ import no.nordicsemi.kotlin.ble.client.RemoteCharacteristic
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.client.exception.ValueDoesNotMatchException
 import no.nordicsemi.kotlin.ble.client.internal.BaseRemoteDescriptor
-import no.nordicsemi.kotlin.ble.client.internal.CharacteristicWrite
 import no.nordicsemi.kotlin.ble.client.internal.DescriptorRead
 import no.nordicsemi.kotlin.ble.client.internal.DescriptorWrite
 import no.nordicsemi.kotlin.ble.client.internal.OperationEvent
@@ -186,9 +185,11 @@ class MockRemoteDescriptor(
         val truncatedData = data.take(512).toByteArray()
 
         val mtu = checkNotNull(peripheralSpec.mtu)
-        // Reliable Write is enabled manually by the user.
-        val useReliableWrite = isReliableWriteEnabled
         // Long Write is used automatically when the data size exceeds (MTU - 3) bytes.
+        // Note: Reliable Write does not apply to descriptors. Android sends a Write Request
+        //       when writing a descriptor, even when Reliable Write is in progress.
+        //       Bluetooth Core Specification 6.2, Vol 3 (Host), Part G (GATT), 4.9.5 Reliable Writes
+        //       is defined only for Characteristic Values.
         val useLongWrite = truncatedData.size > (mtu - 3)
 
         // Notify the event handler about the write request.
@@ -199,38 +200,34 @@ class MockRemoteDescriptor(
         // as we need to know whether the write operation was successful or not.
         // We assume, that possible error was sent after first Prepare Write Request,
         // so only one connection interval delay is added below in case of failure.
-        when (useLongWrite || useReliableWrite) {
+        when (useLongWrite) {
             true -> {
                 val result = eventHandler.onPrepareWriteRequest(this@MockRemoteDescriptor, truncatedData)
                 when (result) {
                     is PrepareWriteResponse.Success -> {
-                        // Writing characteristic value takes time depending on the size of the value
+                        // Writing descriptor value takes time depending on the size of the value
                         // and connection parameters.
                         val duration =
                             peripheralSpec.estimateTransferDuration(data, isWrite = true, withResponse = true)
                         delay(duration)
                         // Validate received data. In case of an incorrect data, throw an exception.
                         val match = truncatedData.contentEquals(result.value)
-                        // When not in Reliable Write, Long Write automatically executes or
-                        // aborts all prepared writes.
-                        var result: WriteResponse = WriteResponse.Success
-                        if (!useReliableWrite) {
-                            result = eventHandler.onExecuteWriteRequest(match)
-                            delay(connectionInterval)
-                        }
+                        // Long Write automatically executes or aborts all prepared writes.
+                        val result = eventHandler.onExecuteWriteRequest(match)
+                        delay(connectionInterval)
                         if (!match) {
                             throw ValueDoesNotMatchException()
                         }
                         when (result) {
                             is WriteResponse.Success -> {
-                                emit(CharacteristicWrite(
-                                    characteristic = this@MockRemoteDescriptor,
+                                emit(DescriptorWrite(
+                                    descriptor = this@MockRemoteDescriptor,
                                     status = OperationStatus.Success,
                                 ))
                             }
                             is WriteResponse.Failure -> {
-                                emit(CharacteristicWrite(
-                                    characteristic = this@MockRemoteDescriptor,
+                                emit(DescriptorWrite(
+                                    descriptor = this@MockRemoteDescriptor,
                                     status = result.status,
                                 ))
                             }
@@ -240,25 +237,21 @@ class MockRemoteDescriptor(
                     is PrepareWriteResponse.Failure -> {
                         // The write response is delivered in the next connection interval.
                         delay(connectionInterval)
-                        emit(CharacteristicWrite(
-                            characteristic = this@MockRemoteDescriptor,
+                        emit(DescriptorWrite(
+                            descriptor = this@MockRemoteDescriptor,
                             status = result.status,
                         ))
                     }
                 }
             }
             false -> {
-                val result = when (descriptor) {
-                    is CCCD -> {
-                        // Values 0x01-00 and 0x02-00 are used to enable notifications and indications, respectively.
-                        // Value 0x00-00 is used to disable both.
-                        // Any other value is RFU and ignored.
-                        if (data.size == 2 && data[0] in 0..2 && data[1] == 0.toByte()) {
-                            descriptor.enabled = data[0] > 0
-                        }
-                        WriteResponse.Success
-                    }
-                    else -> eventHandler.onWriteRequest(this@MockRemoteDescriptor, truncatedData)
+                val result = eventHandler.onWriteRequest(this@MockRemoteDescriptor, truncatedData)
+                // Values 0x01-00 and 0x02-00 are used to enable notifications and indications, respectively.
+                // Value 0x00-00 is used to disable both.
+                // Any other value is RFU and ignored.
+                if (descriptor is CCCD && result is WriteResponse.Success &&
+                    data.size == 2 && data[0] in 0..2 && data[1] == 0.toByte()) {
+                    descriptor.enabled = data[0] > 0
                 }
                 when (result) {
                     is WriteResponse.Success -> {
