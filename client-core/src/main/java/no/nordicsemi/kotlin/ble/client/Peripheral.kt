@@ -405,8 +405,17 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
                 if (_state.value == event.newState) {
                     return
                 }
-                if (event.disconnected) {
-                    logger?.info(Layer.GAP) { "Disconnected from $this" }
+                val previousState = _state.value
+                when (event.newState) {
+                    is ConnectionState.Connecting ->
+                        if (previousState.isConnected) {
+                            logger?.info(Layer.GAP) { "Disconnected from $this, reconnecting" }
+                        }
+                    is ConnectionState.Connected ->
+                        logger?.info(Layer.GAP) { "Connected to $this" }
+                    is ConnectionState.Disconnecting -> {}
+                    is ConnectionState.Disconnected ->
+                        logger?.info(Layer.GAP) { "Disconnected from $this" }
                 }
                 _state.update { event.newState }
                 when (event.newState) {

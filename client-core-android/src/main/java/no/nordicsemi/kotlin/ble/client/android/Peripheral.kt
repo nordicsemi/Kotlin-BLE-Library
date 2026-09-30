@@ -349,7 +349,7 @@ open class Peripheral(
                 } catch (e: TimeoutCancellationException) {
                     // Although the connection using AutoConnect does not time out on its own,
                     // it's still possible to wrap it in withTimeout. Report this as a timeout, not cancellation.
-                    logger?.warn(Layer.GAP, e)
+                    logger?.warn(Layer.GAP) { "Connection attempt timed out" }
                     _state.update { ConnectionState.Disconnected(Reason.Timeout(e.timeout ?: Duration.ZERO)) }
                     close()
                     throw e
