@@ -204,7 +204,7 @@ class MockRemoteDescriptor(
                 val result = eventHandler.onPrepareWriteRequest(this@MockRemoteDescriptor, truncatedData)
                 when (result) {
                     is PrepareWriteResponse.Success -> {
-                        // Writing characteristic value takes time depending on the size of the value
+                        // Writing descriptor value takes time depending on the size of the value
                         // and connection parameters.
                         val duration =
                             peripheralSpec.estimateTransferDuration(data, isWrite = true, withResponse = true)
@@ -223,14 +223,14 @@ class MockRemoteDescriptor(
                         }
                         when (result) {
                             is WriteResponse.Success -> {
-                                emit(CharacteristicWrite(
-                                    characteristic = this@MockRemoteDescriptor,
+                                emit(DescriptorWrite(
+                                    descriptor = this@MockRemoteDescriptor,
                                     status = OperationStatus.Success,
                                 ))
                             }
                             is WriteResponse.Failure -> {
-                                emit(CharacteristicWrite(
-                                    characteristic = this@MockRemoteDescriptor,
+                                emit(DescriptorWrite(
+                                    descriptor = this@MockRemoteDescriptor,
                                     status = result.status,
                                 ))
                             }
@@ -240,8 +240,8 @@ class MockRemoteDescriptor(
                     is PrepareWriteResponse.Failure -> {
                         // The write response is delivered in the next connection interval.
                         delay(connectionInterval)
-                        emit(CharacteristicWrite(
-                            characteristic = this@MockRemoteDescriptor,
+                        emit(DescriptorWrite(
+                            descriptor = this@MockRemoteDescriptor,
                             status = result.status,
                         ))
                     }
