@@ -59,7 +59,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,11 +68,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.launch
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
 import no.nordicsemi.kotlin.ble.android.sample.view.LabeledSwitch
 import no.nordicsemi.kotlin.ble.client.AnyRemoteService
@@ -86,11 +85,17 @@ import no.nordicsemi.kotlin.ble.client.android.preview.PreviewRemoteService
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.WriteType
 import no.nordicsemi.kotlin.ble.core.util.toShortString
-import timber.log.Timber
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.uuid.Uuid
 
 @Composable
-fun DeviceServices(services: RemoteServices) {
+fun DeviceServices(
+    services: RemoteServices,
+    values: Map<Any, AttributeValue>,
+    onAction: (AttributeAction) -> Unit,
+) {
     when (services) {
         is RemoteServices.Unknown -> {
             Text(text = "Unknown")
@@ -101,7 +106,7 @@ fun DeviceServices(services: RemoteServices) {
         is RemoteServices.Discovered -> {
             Column {
                 services.services.forEach { service ->
-                    Service(service)
+                    Service(service, values, onAction)
                 }
             }
         }
@@ -112,7 +117,11 @@ fun DeviceServices(services: RemoteServices) {
 }
 
 @Composable
-private fun Service(service: AnyRemoteService) {
+private fun Service(
+    service: AnyRemoteService,
+    values: Map<Any, AttributeValue>,
+    onAction: (AttributeAction) -> Unit,
+) {
     Column(
         modifier = Modifier.indent(12.dp, MaterialTheme.colorScheme.primary)
     ) {
@@ -122,14 +131,14 @@ private fun Service(service: AnyRemoteService) {
         )
         if (service.characteristics.isNotEmpty()) {
             service.characteristics.forEach { characteristic ->
-                Characteristic(characteristic)
+                Characteristic(characteristic, values, onAction)
 
                 Spacer(modifier = Modifier.height(4.dp))
             }
         }
         if (service.includedServices.isNotEmpty()) {
             service.includedServices.forEach { service ->
-                Service(service)
+                Service(service, values, onAction)
 
                 Spacer(modifier = Modifier.height(4.dp))
             }
@@ -139,8 +148,11 @@ private fun Service(service: AnyRemoteService) {
 }
 
 @Composable
-private fun Characteristic(characteristic: RemoteCharacteristic) {
-    val scope = rememberCoroutineScope()
+private fun Characteristic(
+    characteristic: RemoteCharacteristic,
+    values: Map<Any, AttributeValue>,
+    onAction: (AttributeAction) -> Unit,
+) {
     val isNotifying by characteristic.isNotifying.collectAsStateWithLifecycle()
     var showWriteDialog by remember { mutableStateOf(false) }
 
@@ -160,16 +172,7 @@ private fun Characteristic(characteristic: RemoteCharacteristic) {
             if (characteristic.isReadable()) {
                 ActionButton(
                     text = "R",
-                    onClick = {
-                        scope.launch {
-                            try {
-                                val value = characteristic.read()
-                                Timber.d("Read value from ${characteristic.uuid}: ${value.size} bytes")
-                            } catch (e: Exception) {
-                                Timber.e(e, "Failed to read characteristic ${characteristic.uuid}")
-                            }
-                        }
-                    }
+                    onClick = { onAction(AttributeAction.Read(characteristic)) }
                 )
             }
 
@@ -182,19 +185,12 @@ private fun Characteristic(characteristic: RemoteCharacteristic) {
                 )
             }
 
+            // Mind, that if both are supported, the library enables notifications.
             if (CharacteristicProperty.NOTIFY in characteristic.properties) {
                 ActionButton(
                     text = "N",
                     isSelected = isNotifying,
-                    onClick = {
-                        scope.launch {
-                            try {
-                                characteristic.setNotifying(!isNotifying)
-                            } catch (e: Exception) {
-                                Timber.e(e, "Failed to set notifying on characteristic ${characteristic.uuid}")
-                            }
-                        }
-                    }
+                    onClick = { onAction(AttributeAction.ToggleNotifications(characteristic)) }
                 )
             }
 
@@ -202,18 +198,12 @@ private fun Characteristic(characteristic: RemoteCharacteristic) {
                 ActionButton(
                     text = "I",
                     isSelected = isNotifying,
-                    onClick = {
-                        scope.launch {
-                            try {
-                                characteristic.setNotifying(!isNotifying)
-                            } catch (e: Exception) {
-                                Timber.e(e, "Failed to set indicating on characteristic ${characteristic.uuid}")
-                            }
-                        }
-                    }
+                    onClick = { onAction(AttributeAction.ToggleNotifications(characteristic)) }
                 )
             }
         }
+
+        AttributeValueView(values[characteristic])
 
         if (showWriteDialog) {
             WriteDialog(
@@ -222,21 +212,14 @@ private fun Characteristic(characteristic: RemoteCharacteristic) {
                 onDismissRequest = { showWriteDialog = false },
                 onWrite = { bytes, writeType, text ->
                     lastUsedWriteValue = text
-                    scope.launch {
-                        try {
-                            characteristic.write(bytes, writeType)
-                            Timber.d("Wrote ${bytes.size} bytes to ${characteristic.uuid} with $writeType")
-                        } catch (e: Exception) {
-                            Timber.e(e, "Failed to write characteristic ${characteristic.uuid}")
-                        }
-                    }
+                    onAction(AttributeAction.Write(characteristic, bytes, writeType))
                 }
             )
         }
 
         if (characteristic.descriptors.isNotEmpty()) {
             characteristic.descriptors.forEach { descriptor ->
-                Descriptor(descriptor)
+                Descriptor(descriptor, values[descriptor], onAction)
 
                 Spacer(modifier = Modifier.height(4.dp))
             }
@@ -276,13 +259,97 @@ private fun ActionButton(
 }
 
 @Composable
-private fun Descriptor(descriptor: RemoteDescriptor) {
-    Text(
-        text = descriptor.uuid.toShortString(),
-        style = MaterialTheme.typography.bodySmall,
+private fun Descriptor(
+    descriptor: RemoteDescriptor,
+    value: AttributeValue?,
+    onAction: (AttributeAction) -> Unit,
+) {
+    Column(
         modifier = Modifier.indent(12.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
-    )
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = descriptor.uuid.toShortString(),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f)
+            )
+
+            ActionButton(
+                text = "R",
+                onClick = { onAction(AttributeAction.ReadDescriptor(descriptor)) }
+            )
+        }
+
+        AttributeValueView(value)
+    }
 }
+
+/**
+ * Shows the last received value, the last sent value and the last error of an attribute.
+ */
+@Composable
+private fun AttributeValueView(value: AttributeValue?) {
+    value ?: return
+    value.received?.let { received ->
+        ValueRow(
+            symbol = "↙",
+            text = received.value.toDisplayString(),
+            timestamp = received.timestamp,
+            count = value.notificationCount,
+        )
+    }
+    value.sent?.let { sent ->
+        ValueRow(
+            symbol = "↗",
+            text = sent.value.toDisplayString(),
+            timestamp = sent.timestamp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    value.error?.let { error ->
+        ValueRow(
+            symbol = "✕",
+            text = error.value,
+            timestamp = error.timestamp,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
+}
+
+@Composable
+private fun ValueRow(
+    symbol: String,
+    text: String,
+    timestamp: Long,
+    count: Int = 0,
+    color: Color = MaterialTheme.colorScheme.onSurface,
+) {
+    val style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace)
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(text = symbol, style = style, color = color)
+        Text(
+            text = text,
+            style = style,
+            color = color,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = timeFormat.format(Date(timestamp)) + if (count > 0) " (x$count)" else "",
+            style = style,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+        )
+    }
+}
+
+private val timeFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
+
+private fun ByteArray.toDisplayString(): String =
+    if (isEmpty()) "(empty)" else toHexString(HexFormat.UpperCase)
 
 /**
  * A modifier that draws a vertical line on the left side of the content.
@@ -312,7 +379,11 @@ private fun Modifier.indent(strokeWidth: Dp = 12.dp, color: Color): Modifier {
 @Composable
 private fun PreviewDeviceServices_discovery() {
     AppTheme {
-        DeviceServices(RemoteServices.Discovering)
+        DeviceServices(
+            services = RemoteServices.Discovering,
+            values = emptyMap(),
+            onAction = {},
+        )
     }
 }
 
@@ -359,7 +430,9 @@ private fun PreviewDeviceServices() {
                         }
                     }
                 )
-            )
+            ),
+            values = emptyMap(),
+            onAction = {},
         )
     }
 }
@@ -368,20 +441,38 @@ private fun PreviewDeviceServices() {
 @Composable
 private fun PreviewCharacteristics() {
     AppTheme {
+        val characteristic = PreviewRemoteCharacteristic(
+            shortUuid = 0x2A00,
+            properties = setOf(
+                CharacteristicProperty.READ,
+                CharacteristicProperty.WRITE,
+                CharacteristicProperty.NOTIFY,
+                CharacteristicProperty.INDICATE
+            )
+        ) {
+            CharacteristicUserDescriptionDescriptor("Description")
+            ClientCharacteristicConfigurationDescriptor()
+            Descriptor(Uuid.random())
+        }
         Characteristic(
-            characteristic = PreviewRemoteCharacteristic(
-                shortUuid = 0x2A00,
-                properties = setOf(
-                    CharacteristicProperty.READ,
-                    CharacteristicProperty.WRITE,
-                    CharacteristicProperty.NOTIFY,
-                    CharacteristicProperty.INDICATE
-                )
-            ) {
-                CharacteristicUserDescriptionDescriptor("Description")
-                ClientCharacteristicConfigurationDescriptor()
-                Descriptor(Uuid.random())
-            }
+            characteristic = characteristic,
+            values = mapOf(
+                characteristic to AttributeValue(
+                    received = Timestamped(byteArrayOf(0x01, 0x02, 0x03)),
+                    notificationCount = 23,
+                    sent = Timestamped(byteArrayOf(0x01)),
+                ),
+                characteristic.descriptors[0] to AttributeValue(
+                    received = Timestamped("Description".encodeToByteArray()),
+                ),
+                characteristic.descriptors[1] to AttributeValue(
+                    sent = Timestamped(byteArrayOf(0x01, 0x00)),
+                ),
+                characteristic.descriptors[2] to AttributeValue(
+                    error = Timestamped("Read not permitted"),
+                ),
+            ),
+            onAction = {},
         )
     }
 }
@@ -391,7 +482,9 @@ private fun PreviewCharacteristics() {
 private fun PreviewDescriptor() {
     AppTheme {
         Descriptor(
-            descriptor = PreviewRemoteDescriptor(Uuid.random())
+            descriptor = PreviewRemoteDescriptor(Uuid.random()),
+            value = null,
+            onAction = {},
         )
     }
 }

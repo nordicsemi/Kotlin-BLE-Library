@@ -39,12 +39,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
@@ -55,12 +58,19 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.withIndex
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import no.nordicsemi.kotlin.ble.android.sample.common.AttributeAction
+import no.nordicsemi.kotlin.ble.android.sample.common.AttributeValue
+import no.nordicsemi.kotlin.ble.android.sample.common.Timestamped
 import no.nordicsemi.kotlin.ble.android.sample.scanner.profile.LedButtonProfile
 import no.nordicsemi.kotlin.ble.android.sample.scanner.profile.impl.LedButtonServiceImpl
 import no.nordicsemi.kotlin.ble.client.ProfileServices
+import no.nordicsemi.kotlin.ble.client.RemoteCharacteristic
+import no.nordicsemi.kotlin.ble.client.RemoteDescriptor
 import no.nordicsemi.kotlin.ble.client.RemoteServices
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.ConnectionPriority
@@ -69,14 +79,13 @@ import no.nordicsemi.kotlin.ble.client.android.ScanResult
 import no.nordicsemi.kotlin.ble.client.android.preview.PreviewPeripheral
 import no.nordicsemi.kotlin.ble.client.android.preview.PreviewScanResult
 import no.nordicsemi.kotlin.ble.client.distinctByPeripheral
-import no.nordicsemi.kotlin.ble.client.exception.InvalidAttributeException
-import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
+import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.ConnectionState
-import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PhyInUse
 import no.nordicsemi.kotlin.ble.core.WriteType
 import timber.log.Timber
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -113,6 +122,17 @@ class ScannerViewModel @Inject constructor(
 
     private val _isScanning: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
+
+    /**
+     * The last values of characteristics and descriptors, keyed by the attribute instance.
+     */
+    private val _attributeValues: MutableStateFlow<Map<Any, AttributeValue>> = MutableStateFlow(emptyMap())
+    val attributeValues: StateFlow<Map<Any, AttributeValue>> = _attributeValues.asStateFlow()
+
+    /**
+     * Subscriptions to notifications or indications started from the UI.
+     */
+    private val subscriptions = ConcurrentHashMap<RemoteCharacteristic, Job>()
 
     private var connectionScopeMap = mutableMapOf<Peripheral, CoroutineScope>()
 
@@ -192,7 +212,7 @@ class ScannerViewModel @Inject constructor(
                         try {
                             // This could be wrapped in withTimeout, but the Direct option
                             // already specifies a timeout.
-                            connect(peripheral, false)
+                            connect(peripheral, true)
 
                             // The first time the app connects to the peripheral it needs to initiate
                             // observers for various parameters.
@@ -307,6 +327,15 @@ class ScannerViewModel @Inject constructor(
         }
     }
 
+    fun onAttributeAction(action: AttributeAction) {
+        when (action) {
+            is AttributeAction.Read -> read(action.characteristic)
+            is AttributeAction.Write -> write(action.characteristic, action.value, action.writeType)
+            is AttributeAction.ToggleNotifications -> toggleNotifications(action.characteristic)
+            is AttributeAction.ReadDescriptor -> read(action.descriptor)
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         centralManager.close()
@@ -400,113 +429,32 @@ class ScannerViewModel @Inject constructor(
                 event += 1
                 Timber.i("($event) Services changed: $services")
             }
+            .onEach {
+                // Forget values of invalidated attributes.
+                _attributeValues.update { values ->
+                    values.filterKeys { attribute ->
+                        when (attribute) {
+                            is RemoteCharacteristic -> attribute.owner != null
+                            is RemoteDescriptor -> attribute.owner != null
+                            else -> false
+                        }
+                    }
+                }
+            }
             .mapNotNull { (it as? RemoteServices.Discovered)?.services }
             .onEach { services ->
                 // Keep the current event fixed in this block.
                 val ce = event
 
-                try {
-                    // Read values of all characteristics.
-                    services.forEach { remoteService ->
-                        Timber.i("($ce) Reading characteristics of ${remoteService.uuid}:")
-                        remoteService.characteristics.forEach { remoteCharacteristic ->
-                            val expectError = !remoteCharacteristic.isReadable()
-                            try {
-                                val value = remoteCharacteristic.read()
-                                Timber.i("- Value of ${remoteCharacteristic.uuid}: 0x${value.toHexString()}")
-                            } catch (e: Exception) {
-                                if (e is CancellationException) throw e
-                                if (e is InvalidAttributeException) throw e
-                                if (expectError) {
-                                    Timber.w("- Value of ${remoteCharacteristic.uuid}: Read not permitted")
-                                } else {
-                                    Timber.e(e, "- Failed to read ${remoteCharacteristic.uuid}: ${e.message}")
-                                }
-                            }
-
-                            for (descriptor in remoteCharacteristic.descriptors) {
-                                try {
-                                    val descValue = descriptor.read()
-                                    Timber.i("   - Value of descriptor ${descriptor.uuid}: 0x${descValue.toHexString()}")
-                                } catch (e: Exception) {
-                                    if (e is CancellationException) throw e
-                                    if (e is InvalidAttributeException) throw e
-                                    if (e is OperationFailedException && e.reason == OperationStatus.ReadNotPermitted) {
-                                        // This is expected for Client Characteristic Configuration Descriptor of non-notifiable characteristics.
-                                        Timber.w("   - Value of descriptor ${descriptor.uuid}: Read not permitted")
-                                    } else {
-                                        Timber.e(e, "   - Failed to read descriptor ${descriptor.uuid}: ${e.message}")
-                                    }
-                                }
-                            }
+                // Values are not read and notifications are not enabled automatically.
+                // Use R, W, N and I buttons in the UI instead.
+                services.forEach { remoteService ->
+                    remoteService.characteristics.forEach { remoteCharacteristic ->
+                        // Observe notifications or indications state.
+                        if (remoteCharacteristic.isSubscribable()) {
+                            observeNotificationState(remoteCharacteristic, ce, scope)
                         }
                     }
-
-                    services.forEach { remoteService ->
-                        remoteService.characteristics.forEach { remoteCharacteristic ->
-                            // subscribe() will throw OperationFailedException with reason
-                            // SUBSCRIPTION_NOT_SUPPORTED if the characteristic doesn't support
-                            // notifications or indications.
-                            val expectError = !remoteCharacteristic.isSubscribable()
-                            try {
-                                // Observe notifications or indications state.
-                                remoteCharacteristic.isNotifying
-                                    .drop(1) // Skip the initial value.
-                                    .onEach { isNotifying ->
-                                        Timber.i("($ce) Notifications for ${remoteCharacteristic.uuid} are now ${if (isNotifying) "enabled" else "disabled"}")
-                                    }
-                                    .launchIn(scope)
-
-                                remoteCharacteristic
-                                    // Note, that subscriber() method is no longer suspending.
-                                    // Notifications are enabled in onSubscription of the StateFlow.
-                                    // To get a callback when they are actually enabled, use the
-                                    // onSubscription parameter in subscribe().
-                                    .subscribe(
-                                        // This is called when the notifications were enabled.
-                                        onSubscription = {
-                                            Timber.i("($ce) Subscribed to $uuid")
-                                        }
-                                    )
-                                    .onStart {
-                                        // This is called before the notifications are enabled.
-                                        Timber.w("($ce) Subscribing to ${remoteCharacteristic.uuid}...")
-                                    }
-                                    .onEach { newValue ->
-                                        // This is called when a notification or indication is received.
-                                        Timber.i("($ce) Value of ${remoteCharacteristic.uuid} changed: 0x${newValue.toHexString()}")
-                                    }
-                                    .catch { e ->
-                                        // This is called when subscription fails.
-                                        Timber.e("($ce) Subscription to ${remoteCharacteristic.uuid} failed: ${e.message}")
-                                    }
-                                    .onEmpty {
-                                        // This is called when the characteristic sent no notifications.
-                                        Timber.w("($ce) No updates from ${remoteCharacteristic.uuid}")
-                                    }
-                                    .onCompletion {
-                                        // This is called when the characteristic becomes invalid,
-                                        // that is on disconnection or service change.
-                                        Timber.d("($ce) Stopped observing updates from ${remoteCharacteristic.uuid}")
-                                    }
-                                    .launchIn(scope)
-                            } catch (e: Exception) {
-                                if (e is CancellationException) throw e
-                                if (e is InvalidAttributeException) throw e
-                                if (!expectError) {
-                                    Timber.e(e, "($ce) Failed to subscribe to ${remoteCharacteristic.uuid}: ${e.message}")
-                                }
-                            }
-                        }
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: InvalidAttributeException) {
-                    // InvalidAttributeException is thrown when the peripheral is disconnected
-                    // or services got invalidated when a notification is awaited (waitForValueChange).
-                    Timber.w("Services invalidated during an operation")
-                } catch (t: Throwable) {
-                    Timber.e(t, "GATT operation failed: ${t.message}")
                 }
             }
             // This catch would cancel the flow and stop collecting.
@@ -519,6 +467,172 @@ class ScannerViewModel @Inject constructor(
             }
             .launchIn(scope)
     }
+
+    private fun read(characteristic: RemoteCharacteristic) {
+        launchOperation(characteristic, "Reading ${characteristic.uuid}") {
+            val value = characteristic.read()
+            Timber.i("Value of ${characteristic.uuid}: 0x${value.toHexString()}")
+            updateValue(characteristic) {
+                copy(received = Timestamped(value), notificationCount = 0, error = null)
+            }
+        }
+    }
+
+    private fun write(characteristic: RemoteCharacteristic, value: ByteArray, writeType: WriteType) {
+        launchOperation(characteristic, "Writing to ${characteristic.uuid}") {
+            characteristic.write(value, writeType)
+            Timber.i("Wrote 0x${value.toHexString()} to ${characteristic.uuid} using $writeType")
+            updateValue(characteristic) { copy(sent = Timestamped(value), error = null) }
+        }
+    }
+
+    private fun read(descriptor: RemoteDescriptor) {
+        launchOperation(descriptor, "Reading descriptor ${descriptor.uuid}") {
+            val value = descriptor.read()
+            Timber.i("Value of descriptor ${descriptor.uuid}: 0x${value.toHexString()}")
+            updateValue(descriptor) { copy(received = Timestamped(value), error = null) }
+        }
+    }
+
+    private fun toggleNotifications(characteristic: RemoteCharacteristic) {
+        // If the notifications are enabled, or are being enabled, disable them.
+        // Mind, that they could have been enabled elsewhere, e.g. by the LBS profile.
+        if (characteristic.isNotifying.value || subscriptions.containsKey(characteristic)) {
+            val job = subscriptions.remove(characteristic)
+            launchOperation(characteristic, "Disabling notifications on ${characteristic.uuid}") {
+                // Cancelling the subscription stops collecting values, but does not
+                // disable notifications on the peripheral. This has to be done manually.
+                job?.cancelAndJoin()
+                if (characteristic.isNotifying.value) {
+                    characteristic.setNotifying(false)
+                }
+                updateValue(characteristic) { copy(error = null) }
+            }
+            return
+        }
+
+        // subscribe() enables notifications or indications when the Flow starts being collected.
+        subscriptions.computeIfAbsent(characteristic) { collectValues(it) }
+    }
+
+    /**
+     * Observes the state of notifications or indications of the given characteristic.
+     *
+     * Notifications may be enabled from the UI, or elsewhere, e.g. by the LBS profile.
+     * Whenever they get enabled, the values are collected, so that they can be shown in the UI.
+     * When they get disabled, collection is stopped.
+     */
+    private fun observeNotificationState(
+        characteristic: RemoteCharacteristic,
+        event: Int,
+        scope: CoroutineScope,
+    ) {
+        characteristic.isNotifying
+            .withIndex()
+            .onEach { (index, isNotifying) ->
+                // Skip the initial value, unless the notifications were already enabled.
+                if (index == 0 && !isNotifying) return@onEach
+                Timber.i("($event) Notifications for ${characteristic.uuid} are now ${if (isNotifying) "enabled" else "disabled"}")
+
+                // The state is also reset when the characteristic gets invalidated.
+                if (characteristic.owner == null) return@onEach
+
+                // isNotifying changes right after the CCCD was written.
+                recordCccdWrite(characteristic, isNotifying)
+
+                if (isNotifying) {
+                    // If the notifications were enabled elsewhere, start collecting values.
+                    // They are already enabled, so subscribe() won't write the CCCD again.
+                    // Mind, that values received before the collection starts are missed.
+                    subscriptions.computeIfAbsent(characteristic) { collectValues(it) }
+                } else {
+                    // If the notifications were disabled elsewhere, stop collecting values.
+                    subscriptions.remove(characteristic)?.cancel()
+                }
+            }
+            .launchIn(scope)
+    }
+
+    /**
+     * Subscribes to value changes of the given characteristic and records received values.
+     *
+     * @return The job collecting the values.
+     */
+    private fun collectValues(characteristic: RemoteCharacteristic): Job =
+        flow {
+            // subscribe() throws immediately if the characteristic is invalid or not subscribable.
+            // Wrapping it in a flow allows to handle all errors in catch below.
+            emitAll(
+                characteristic.subscribe {
+                    // This is called when the notifications are enabled.
+                    Timber.i("Subscribed to $uuid")
+                    updateValue(this) { copy(notificationCount = 0, error = null) }
+                }
+            )
+        }
+            .onEach { value ->
+                // This is called when a notification or indication is received.
+                Timber.i("Value of ${characteristic.uuid} changed: 0x${value.toHexString()}")
+                updateValue(characteristic) {
+                    copy(received = Timestamped(value), notificationCount = notificationCount + 1)
+                }
+            }
+            .catch { e ->
+                // This is called when subscription fails.
+                Timber.e(e, "Subscription to ${characteristic.uuid} failed: ${e.message}")
+                updateValue(characteristic) { copy(error = Timestamped(e.describe())) }
+            }
+            .onCompletion {
+                // This is called when notifications were disabled, or when the characteristic
+                // becomes invalid, that is on disconnection or service change.
+                Timber.d("Stopped observing updates from ${characteristic.uuid}")
+                // Don't remove a newer subscription, if the user toggled quickly.
+                subscriptions.remove(characteristic, currentCoroutineContext().job)
+            }
+            .launchIn(scope)
+
+    /**
+     * Records the value written to the Client Characteristic Configuration descriptor.
+     *
+     * The CCCD is written internally by the library, so the value is recreated here
+     * the same way.
+     */
+    private fun recordCccdWrite(characteristic: RemoteCharacteristic, enabled: Boolean) {
+        val cccd = characteristic.descriptors
+            .firstOrNull { it.isClientCharacteristicConfiguration }
+            ?: return
+        val value = when {
+            !enabled -> byteArrayOf(0x00, 0x00)
+            // Notifications have priority over indications, if both are supported.
+            CharacteristicProperty.NOTIFY in characteristic.properties -> byteArrayOf(0x01, 0x00)
+            else -> byteArrayOf(0x02, 0x00)
+        }
+        updateValue(cccd) { copy(sent = Timestamped(value), error = null) }
+    }
+
+    /**
+     * Launches a GATT operation and records an error, if it fails.
+     */
+    private fun launchOperation(attribute: Any, name: String, block: suspend () -> Unit) {
+        scope.launch {
+            try {
+                block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.e(e, "$name failed: ${e.message}")
+                updateValue(attribute) { copy(error = Timestamped(e.describe())) }
+            }
+        }
+    }
+
+    private fun updateValue(attribute: Any, transform: AttributeValue.() -> AttributeValue) {
+        _attributeValues.update { values ->
+            values + (attribute to (values[attribute] ?: AttributeValue()).transform())
+        }
+    }
+
+    private fun Throwable.describe(): String = message ?: javaClass.simpleName
 
     private suspend fun installLbsProfile(
         peripheral: Peripheral,

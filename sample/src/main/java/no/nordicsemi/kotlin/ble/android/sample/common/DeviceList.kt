@@ -94,6 +94,8 @@ fun DeviceList(
     onClearCacheRequested: (Peripheral) -> Unit,
     onReadRssi: (Peripheral) -> Unit,
     onReadPhy: (Peripheral) -> Unit,
+    attributeValues: Map<Any, AttributeValue>,
+    onAttributeAction: (AttributeAction) -> Unit,
     modifier: Modifier = Modifier,
     verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(8.dp),
     contentPadding: PaddingValues = PaddingValues(0.dp),
@@ -113,6 +115,8 @@ fun DeviceList(
                 onClearCacheRequested = { onClearCacheRequested(result.peripheral) },
                 onReadRssi = { onReadRssi(result.peripheral) },
                 onReadPhy = { onReadPhy(result.peripheral) },
+                attributeValues = attributeValues,
+                onAttributeAction = onAttributeAction,
             )
         }
     }
@@ -128,6 +132,8 @@ fun DeviceItem(
     onClearCacheRequested: () -> Unit,
     onReadRssi: () -> Unit,
     onReadPhy: () -> Unit,
+    attributeValues: Map<Any, AttributeValue>,
+    onAttributeAction: (AttributeAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -230,7 +236,11 @@ fun DeviceItem(
                     modifier = Modifier.padding(8.dp)
                 ) {
                     val services by peripheral.services().collectAsStateWithLifecycle()
-                    DeviceServices(services = services)
+                    DeviceServices(
+                        services = services,
+                        values = attributeValues,
+                        onAction = onAttributeAction,
+                    )
                 }
             }
         }
@@ -293,6 +303,8 @@ fun GreetingPreview() {
             onClearCacheRequested = {},
             onReadRssi = {},
             onReadPhy = {},
+            attributeValues = emptyMap(),
+            onAttributeAction = {},
             contentPadding = PaddingValues(16.dp),
         )
     }

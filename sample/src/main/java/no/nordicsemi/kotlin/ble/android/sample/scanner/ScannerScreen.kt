@@ -60,6 +60,7 @@ fun ScannerScreen() {
     val state by vm.state.collectAsStateWithLifecycle()
     val results by vm.peripherals.collectAsStateWithLifecycle()
     val isScanning by vm.isScanning.collectAsStateWithLifecycle()
+    val attributeValues by vm.attributeValues.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -126,6 +127,8 @@ fun ScannerScreen() {
                 onClearCacheRequested = vm::onClearCacheRequested,
                 onRssiRead = vm::onRssiRead,
                 onReadPhy = vm::onReadPhy,
+                attributeValues = attributeValues,
+                onAttributeAction = vm::onAttributeAction,
             )
         } else {
             Button(

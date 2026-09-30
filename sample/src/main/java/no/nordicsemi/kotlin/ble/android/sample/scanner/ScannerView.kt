@@ -54,6 +54,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import no.nordicsemi.kotlin.ble.android.sample.common.AttributeAction
+import no.nordicsemi.kotlin.ble.android.sample.common.AttributeValue
 import no.nordicsemi.kotlin.ble.android.sample.common.DeviceList
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
@@ -73,6 +75,8 @@ fun ScannerView(
     onClearCacheRequested: (Peripheral) -> Unit,
     onRssiRead: (Peripheral) -> Unit,
     onReadPhy: (Peripheral) -> Unit,
+    attributeValues: Map<Any, AttributeValue>,
+    onAttributeAction: (AttributeAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -117,6 +121,8 @@ fun ScannerView(
             onClearCacheRequested = onClearCacheRequested,
             onReadRssi = onRssiRead,
             onReadPhy = onReadPhy,
+            attributeValues = attributeValues,
+            onAttributeAction = onAttributeAction,
             contentPadding = PaddingValues(bottom = 56.dp, top = 16.dp),
         )
     }
@@ -180,6 +186,8 @@ private fun ScannerScreenPreview() {
             onClearCacheRequested = {},
             onRssiRead = {},
             onReadPhy = {},
+            attributeValues = emptyMap(),
+            onAttributeAction = {},
         )
     }
 }
