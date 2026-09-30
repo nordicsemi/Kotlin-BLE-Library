@@ -45,6 +45,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import no.nordicsemi.kotlin.ble.client.AnyRemoteService
 import no.nordicsemi.kotlin.ble.client.GattEvent
 import no.nordicsemi.kotlin.ble.client.RemoteCharacteristic
@@ -60,6 +62,7 @@ import no.nordicsemi.kotlin.ble.core.internal.CallSiteException
 import no.nordicsemi.kotlin.ble.core.internal.withCallSite
 import no.nordicsemi.kotlin.ble.core.util.MergeResult
 import no.nordicsemi.kotlin.ble.core.util.mergeIndexed
+import java.util.concurrent.atomic.AtomicBoolean
 
 abstract class BaseRemoteCharacteristic(
     parent: AnyRemoteService,
@@ -122,12 +125,33 @@ abstract class BaseRemoteCharacteristic(
      */
     abstract fun OperationEvent.matches(): Boolean
 
-    /** A mutable state of notifications or indications. */
+    /**
+     * A mutable state of notifications or indications.
+     *
+     * This is updated only after the CCCD write has been confirmed by the peripheral.
+     */
     private var _isNotifying: MutableStateFlow<Boolean> = MutableStateFlow(false)
     final override val isNotifying: StateFlow<Boolean>
         get() = _isNotifying.asStateFlow()
 
+    /**
+     * A flag indicating whether received notifications or indications should be passed to
+     * subscribers.
+     *
+     * This emulates the local registration done using [setCharacteristicNotification]:
+     * a peripheral may send notifications even if they weren't enabled, but they are passed
+     * to the app only when enabled locally.
+     *
+     * On contrary to [isNotifying], this is set before the CCCD is written, so that
+     * a notification sent by the peripheral immediately after enabling is not dropped.
+     */
+    private val isDelivering = AtomicBoolean(false)
+
+    /** A mutex ensuring that the state of notifications is changed by one caller at a time. */
+    private val notificationMutex = Mutex()
+
     internal fun reset() {
+        isDelivering.set(false)
         _isNotifying.update { false }
     }
 
@@ -142,38 +166,54 @@ abstract class BaseRemoteCharacteristic(
             throw SecurityException("Subscribing to value changes from characteristic $uuid is not permitted")
         }
 
-        // If the current state of notifications is the same as the requested state, return.
-        if (enabled == isNotifying.value)
-            return@withCallSite
+        // If notifications are being enabled or disabled, wait until that's complete.
+        notificationMutex.withLock {
+            // If the current state of notifications is the same as the requested state, return.
+            if (enabled == isNotifying.value)
+                return@withCallSite
 
-        // Verify that the characteristic can be subscribed to.
-        require(isSubscribable()) {
-            throw OperationFailedException(OperationStatus.SubscribeNotPermitted)
+            // Verify that the characteristic can be subscribed to.
+            require(isSubscribable()) {
+                throw OperationFailedException(OperationStatus.SubscribeNotPermitted)
+            }
+
+            // Check if the CCCD descriptor exists.
+            val cccd = descriptors.cccd()
+                ?: throw OperationFailedException(OperationStatus.SubscribeNotPermitted)
+
+            // Enable handling of notifications or indications locally.
+            try {
+                setCharacteristicNotification(enabled)
+            } catch (e: OperationFailedException) {
+                throw e
+            } catch (e: Exception) {
+                throw BluetoothException(e)
+            }
+            isDelivering.set(enabled)
+
+            // Enable notifications or indications by writing to the CCCD descriptor.
+            val value = when {
+                // Note: Notify has priority over Indicate, if both are supported.
+                //       This is inline with the iOS native behavior.
+                enabled && CharacteristicProperty.NOTIFY in properties -> BaseRemoteDescriptor.ENABLE_NOTIFICATIONS_VALUE
+                enabled -> BaseRemoteDescriptor.ENABLE_INDICATIONS_VALUE
+                else -> BaseRemoteDescriptor.DISABLE_NOTIFICATIONS_VALUE
+            }
+            try {
+                cccd.write(value)
+            } catch (e: Exception) {
+                // Restore the previous state of local notification handling, unless the
+                // characteristic got invalidated in the meantime.
+                isDelivering.set(!enabled && this@BaseRemoteCharacteristic.owner != null)
+                try {
+                    setCharacteristicNotification(!enabled)
+                } catch (suppressed: Exception) {
+                    e.addSuppressed(suppressed)
+                }
+                throw e
+            }
+            _isNotifying.update { enabled }
         }
-
-        // Check if the CCCD descriptor exists.
-        val cccd = descriptors.cccd()
-            ?: throw OperationFailedException(OperationStatus.SubscribeNotPermitted)
-
-        // Enable handling of notifications or indications locally.
-        try {
-            setCharacteristicNotification(enabled)
-        } catch (e: OperationFailedException) {
-            throw e
-        } catch (e: Exception) {
-            throw BluetoothException(e)
-        }
-
-        // Enable notifications or indications by writing to the CCCD descriptor.
-        val value = when {
-            // Note: Notify has priority over Indicate, if both are supported.
-            //       This is inline with the iOS native behavior.
-            enabled && CharacteristicProperty.NOTIFY in properties -> BaseRemoteDescriptor.ENABLE_NOTIFICATIONS_VALUE
-            enabled -> BaseRemoteDescriptor.ENABLE_INDICATIONS_VALUE
-            else -> BaseRemoteDescriptor.DISABLE_NOTIFICATIONS_VALUE
-        }
-        cccd.write(value)
-        _isNotifying.update { enabled }
     }
 
     final override suspend fun read(): ByteArray = withCallSite("read") {
@@ -346,7 +386,7 @@ abstract class BaseRemoteCharacteristic(
             }
             .takeWhile { !it.isServiceInvalidatedEvent }
             .filterIsInstance(CharacteristicChanged::class)
-            .filter { isNotifying.value && it.matches() }
+            .filter { isDelivering.get() && it.matches() }
             .map { it.value }
     }
 

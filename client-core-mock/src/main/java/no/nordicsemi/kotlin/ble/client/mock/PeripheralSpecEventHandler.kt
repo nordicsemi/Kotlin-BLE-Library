@@ -478,6 +478,19 @@ interface PeripheralSpecEventHandler {
      * Read more in Bluetooth Code Specification 6.2, Vol 3 (Host), Part G (GATT), 4.9.3 Write Characteristic Value:
      * [link](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core-62/out/en/host/generic-attribute-profile--gatt-.html#UUID-ba4b856a-6994-01e4-97f6-357f9be40990).
      *
+     * ### Client Characteristic Configuration descriptor
+     *
+     * This method is also called when the client enables or disables notifications or indications
+     * by writing to the Client Characteristic Configuration descriptor (CCCD). The state of the CCCD
+     * is updated by the mock implementation only when [WriteResponse.Success] is returned.
+     * Return [WriteResponse.Failure] to reject the request, e.g. with
+     * [OperationStatus.InsufficientAuthentication]. Mind, that returning an error for unknown
+     * descriptors will also reject writes to the CCCD.
+     *
+     * This method is called before the Write Response is sent to the client, so notifications
+     * sent from here using [PeripheralSpec.simulateValueUpdate] may be received by the client
+     * before the response.
+     *
      * ### Exceptions
      *
      * Exceptions thrown by this method are rethrown immediately, without the simulated transfer time,
@@ -511,7 +524,9 @@ interface PeripheralSpecEventHandler {
      *
      * ### Prepare Write
      *
-     * Prepare Write request is used in *Long Write* procedure and in *Reliable Write* procedure.
+     * For descriptors, Prepare Write request is used only in *Long Write* procedure.
+     * *Reliable Write* applies to characteristic values only. Descriptors written while
+     * Reliable Write is in progress are sent using a Write Request, see [onWriteRequest].
      * On contrary to how Bluetooth LE works, this mock implementation sends all prepared writes
      * in a single request. This is done to simplify the implementation and avoid the need for
      * queuing multiple requests.
