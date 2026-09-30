@@ -913,7 +913,7 @@ class PeripheralSpec<ID: Any> private constructor(
                             ConnectionParameters.Specified(
                                 connectionInterval = 6, // 7.5 ms
                                 // TODO Are those kept the same?
-                                latency = connectionParameters.supervisionTimeout,
+                                latency = connectionParameters.latency,
                                 supervisionTimeout = connectionParameters.supervisionTimeout,
                             )
                         ))
