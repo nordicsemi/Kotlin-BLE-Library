@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
@@ -275,6 +276,44 @@ object Nordic {
             }
 
         private var _encrypted: ImageVector? = null
+
+        /** Material icon "wifi_tethering". */
+        val Advertising: ImageVector by lazy {
+            materialIcon(
+                name = "advertising",
+                pathData = "M12,11c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM18,13c0,-3.31 -2.69,-6 -6,-6s-6,2.69 -6,6c0,2.22 1.21,4.15 3,5.19l1,-1.74c-1.19,-0.7 -2,-1.97 -2,-3.45 0,-2.21 1.79,-4 4,-4s4,1.79 4,4c0,1.48 -0.81,2.75 -2,3.45l1,1.74c1.79,-1.04 3,-2.97 3,-5.19zM12,3C6.48,3 2,7.48 2,13c0,3.7 2.01,6.92 4.99,8.65l1,-1.73C5.61,18.53 4,15.96 4,13c0,-4.42 3.58,-8 8,-8s8,3.58 8,8c0,2.96 -1.61,5.53 -4,6.92l1,1.73c2.99,-1.73 5,-4.95 5,-8.65 0,-5.52 -4.48,-10 -10,-10z",
+            )
+        }
+
+        /** Material icon "bluetooth_connected". */
+        val BluetoothConnected: ImageVector by lazy {
+            materialIcon(
+                name = "bluetooth_connected",
+                pathData = "M7,12l-2,-2 -2,2 2,2 2,-2zM17.71,7.71L12,2h-1v7.59L6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 11,14.41L11,22h1l5.71,-5.71 -4.3,-4.29 4.3,-4.29zM13,5.83l1.88,1.88L13,9.59L13,5.83zM14.88,16.29L13,18.17v-3.76l1.88,1.88zM19,10l-2,2 2,2 2,-2 -2,-2z",
+            )
+        }
+
+        /** Material icon "show_chart". */
+        val Chart: ImageVector by lazy {
+            materialIcon(
+                name = "chart",
+                pathData = "M3.5,18.49l6,-6.01 4,4L22,6.92l-1.41,-1.41 -7.09,7.97 -4,-4L2,16.99z",
+            )
+        }
+
+        private fun materialIcon(name: String, pathData: String): ImageVector =
+            ImageVector.Builder(
+                name = name,
+                defaultWidth = 24.dp,
+                defaultHeight = 24.dp,
+                viewportWidth = 24f,
+                viewportHeight = 24f,
+            )
+                .addPath(
+                    pathData = PathParser().parsePathString(pathData).toNodes(),
+                    fill = SolidColor(Color.Black),
+                )
+                .build()
     }
 }
 

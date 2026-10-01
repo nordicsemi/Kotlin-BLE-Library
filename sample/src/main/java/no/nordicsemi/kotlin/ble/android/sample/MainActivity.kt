@@ -42,8 +42,8 @@ import javax.inject.Inject
 
 const val NAV_MENU = "Menu"
 const val NAV_ADVERTISER = "Advertiser"
-const val NAV_SCANNER = "Scanner"
-const val NAV_GRAPH = "Graph"
+const val NAV_SCANNER = "Connection"
+const val NAV_GRAPH = "RSSI graph"
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
