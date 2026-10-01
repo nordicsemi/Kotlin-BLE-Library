@@ -50,6 +50,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import no.nordicsemi.kotlin.ble.android.sample.view.AppBarActions
+import no.nordicsemi.kotlin.ble.android.sample.view.AppBarToggleButton
+import no.nordicsemi.kotlin.ble.android.sample.view.BluetoothStateWarning
 import no.nordicsemi.kotlin.ble.core.android.AndroidEnvironment
 import no.nordicsemi.kotlin.ble.environment.android.compose.LocalEnvironmentOwner
 
@@ -69,8 +72,6 @@ fun ScannerScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(text = "Bluetooth state: $state")
-
         var permissions = arrayOf<String>()
         if (environment.isLocationRequiredForScanning) {
             // Location permission is required to scan for Bluetooth LE devices on Android 12 and below,
@@ -109,18 +110,28 @@ fun ScannerScreen() {
             }
         )
 
+        BluetoothStateWarning(state)
+
         if (permissionGranted) {
             // Both Bluetooth and Location permissions are granted.
             // We can now start scanning.
+            AppBarActions {
+                AppBarToggleButton(
+                    isActive = isScanning,
+                    startLabel = "Scan",
+                    stopLabel = "Stop",
+                    onClick = {
+                        if (!isScanning)
+                            vm.onScanRequested()
+                        else
+                            vm.onStopScanRequested()
+                    },
+                )
+            }
+
             ScannerView(
                 results = results,
                 isScanning = isScanning,
-                onStartScan = {
-                    if (!isScanning)
-                        vm.onScanRequested()
-                    else
-                        vm.onStopScanRequested()
-                },
                 onPeripheralClicked = vm::onPeripheralSelected,
                 onBondRequested = vm::onBondRequested,
                 onRemoveBondRequested = vm::onRemoveBondRequested,
@@ -139,3 +150,4 @@ fun ScannerScreen() {
         }
     }
 }
+

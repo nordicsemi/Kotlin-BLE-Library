@@ -31,67 +31,29 @@
 
 package no.nordicsemi.kotlin.ble.android.sample.view
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
+import no.nordicsemi.kotlin.ble.core.Manager
 
+/**
+ * Shows the state of Bluetooth, but only if it's not ready to be used.
+ */
 @Composable
-fun Title(
-    icon: ImageVector,
-    title: @Composable () -> Unit,
+fun BluetoothStateWarning(
+    state: Manager.State,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    textStyle: TextStyle = MaterialTheme.typography.titleLarge,
-    rightContent: @Composable () -> Unit = {},
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .background(color = backgroundColor)
-            .then(modifier)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-        )
+    if (state == Manager.State.POWERED_ON) return
 
-        Spacer(modifier = Modifier.padding(8.dp))
-
-        CompositionLocalProvider(
-            value = LocalTextStyle.provides(textStyle),
-            content = title,
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        rightContent()
-    }
-}
-
-@Preview
-@Composable
-fun TitlePreview() {
-    AppTheme {
-        Title(
-            icon = Icons.Default.Home,
-            title = { Text("Home") }
-        )
-    }
+    Text(
+        text = when (state) {
+            Manager.State.POWERED_OFF -> "Bluetooth is turned off"
+            Manager.State.UNSUPPORTED -> "Bluetooth LE is not supported"
+            else -> "Bluetooth state: $state"
+        },
+        color = MaterialTheme.colorScheme.error,
+        modifier = modifier,
+    )
 }

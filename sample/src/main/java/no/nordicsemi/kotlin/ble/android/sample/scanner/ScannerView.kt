@@ -31,25 +31,13 @@
 
 package no.nordicsemi.kotlin.ble.android.sample.scanner
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -68,7 +56,6 @@ import no.nordicsemi.kotlin.ble.core.ConnectionState
 fun ScannerView(
     results: List<ScanResult>,
     isScanning: Boolean,
-    onStartScan: () -> Unit,
     onPeripheralClicked: (Peripheral) -> Unit,
     onBondRequested: (Peripheral) -> Unit,
     onRemoveBondRequested: (Peripheral) -> Unit,
@@ -79,59 +66,37 @@ fun ScannerView(
     onAttributeAction: (AttributeAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+    if (results.isEmpty()) {
+        Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
         ) {
-            Button(
-                onClick = onStartScan,
-                enabled = true,//!isScanning,
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(text = if (isScanning) "Stop scan" else "Start scan")
-            }
-
-            AnimatedVisibility(visible = isScanning) {
-                CircularProgressIndicator(
-                    modifier = Modifier.padding(start = 16.dp),
-                )
-            }
+            Text(
+                text = if (isScanning) "Scanning..." else "Start scanning to find devices",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
-
-        if (results.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(text = "Tap on a device to connect.")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        HorizontalDivider()
-
-        DeviceList(
-            modifier = Modifier.fillMaxSize(),
-            results = results,
-            onItemClick = onPeripheralClicked,
-            onBondRequested = onBondRequested,
-            onRemoveBondRequested = onRemoveBondRequested,
-            onClearCacheRequested = onClearCacheRequested,
-            onReadRssi = onRssiRead,
-            onReadPhy = onReadPhy,
-            attributeValues = attributeValues,
-            onAttributeAction = onAttributeAction,
-            contentPadding = PaddingValues(bottom = 56.dp, top = 16.dp),
-        )
+        return
     }
+
+    DeviceList(
+        modifier = modifier.fillMaxSize(),
+        results = results,
+        onItemClick = onPeripheralClicked,
+        onBondRequested = onBondRequested,
+        onRemoveBondRequested = onRemoveBondRequested,
+        onClearCacheRequested = onClearCacheRequested,
+        onReadRssi = onRssiRead,
+        onReadPhy = onReadPhy,
+        attributeValues = attributeValues,
+        onAttributeAction = onAttributeAction,
+        contentPadding = PaddingValues(top = 8.dp, bottom = 56.dp),
+    )
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun ScannerScreenPreview() {
-    var isScanning by remember { mutableStateOf(false) }
     AppTheme {
         val scope = rememberCoroutineScope()
         ScannerView(
@@ -178,8 +143,7 @@ private fun ScannerScreenPreview() {
                     isConnectable = false,
                 )
             ),
-            isScanning = isScanning,
-            onStartScan = { isScanning = !isScanning },
+            isScanning = false,
             onPeripheralClicked = {},
             onBondRequested = {},
             onRemoveBondRequested = {},

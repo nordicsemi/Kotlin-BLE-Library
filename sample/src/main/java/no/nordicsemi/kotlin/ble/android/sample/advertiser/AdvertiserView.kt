@@ -33,19 +33,13 @@ package no.nordicsemi.kotlin.ble.android.sample.advertiser
 
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -59,9 +53,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
+import no.nordicsemi.kotlin.ble.android.sample.view.AppBarActions
+import no.nordicsemi.kotlin.ble.android.sample.view.AppBarToggleButton
 import no.nordicsemi.kotlin.ble.android.sample.view.ExposedDropdownMenu
 import no.nordicsemi.kotlin.ble.android.sample.view.LabeledSwitch
-import no.nordicsemi.kotlin.ble.android.sample.view.Title
 import no.nordicsemi.kotlin.ble.core.AdvertisingInterval
 import no.nordicsemi.kotlin.ble.core.AdvertisingSetParameters
 import no.nordicsemi.kotlin.ble.core.Bluetooth5AdvertisingSetParameters
@@ -86,7 +81,6 @@ fun AdvertiserView(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        var propertiesVisible by rememberSaveable { mutableStateOf(true) }
         var legacy by rememberSaveable { mutableStateOf(true) }
         var connectable by rememberSaveable { mutableStateOf(true) }
         var txPowerLevelMenuExpanded by rememberSaveable { mutableStateOf(false) }
@@ -102,167 +96,154 @@ fun AdvertiserView(
         var secondaryPhyMenuExpanded by rememberSaveable { mutableStateOf(false) }
         var secondaryPhy by rememberSaveable { mutableStateOf(Phy.PHY_LE_1M) }
 
-        OutlinedCard {
-            Title(
-                icon = Icons.Default.Settings,
-                title = { Text(text = "Parameters") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { propertiesVisible = !propertiesVisible }
-                    .padding(16.dp),
-                rightContent = {
-                    Icon(
-                        imageVector = if (propertiesVisible) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = null
-                    )
-                }
-            )
+        ElevatedCard(
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ),
+        ) {
+            Column(
+                modifier = Modifier.padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
 
-            AnimatedVisibility(visible = propertiesVisible) {
-                Column(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-
-                    LabeledSwitch(
-                        title = "Connectable",
-                        enabled = !isAdvertising,
-                        checked = connectable,
-                        onCheckedChange = {
-                            connectable = !connectable
-                            if (connectable) {
-                                // Packets advertised using Advertising Extension can
-                                // be either scannable or connectable, but not both.
-                                scannable = false
-                                // Anonymous advertising doesn't support scan requests
-                                // or connection requests.
-                                anonymous = false
-                            }
-                        },
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = txPowerLevelMenuExpanded,
-                        onExpandedChange = { txPowerLevelMenuExpanded = it },
-                        text = "Tx Power Level",
-                        enabled = !isAdvertising,
-                        values = listOf(TxPowerLevel.ULTRA_LOW, TxPowerLevel.LOW, TxPowerLevel.MEDIUM, TxPowerLevel.HIGH),
-                        labels = listOf(
-                            "Ultra Low (-21 dBm)",
-                            "Low (-15 dBm)",
-                            "Medium (-7 dBm)",
-                            "High (1 dBm)"
-                        ),
-                        selectedValue = txPowerLevel,
-                        onValueChanged = { txPowerLevel = it },
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = intervalMenuExpanded,
-                        onExpandedChange = { intervalMenuExpanded = it },
-                        text = "Advertising Interval",
-                        enabled = !isAdvertising,
-                        values = listOf(
-                            AdvertisingInterval.LOW.inWholeMilliseconds,
-                            AdvertisingInterval.MEDIUM.inWholeMilliseconds,
-                            AdvertisingInterval.HIGH.inWholeMilliseconds
-                        ),
-                        labels = listOf("Low (~100 ms)", "Medium (~250 ms)", "High (~1 sec)"),
-                        selectedValue = interval,
-                        onValueChanged = { interval = it },
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-
-                    LabeledSwitch(
-                        title = "Advertising Extension",
-                        subtitle = "Requires Android 8+",
-                        enabled = !isAdvertising && environment.androidSdkVersion >= Build.VERSION_CODES.O,
-                        checked = !legacy,
-                        onCheckedChange = { legacy = !legacy },
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-
-                    AnimatedVisibility(visible = !legacy) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            LabeledSwitch(
-                                title = "Scannable",
-                                enabled = !isAdvertising,
-                                checked = scannable,
-                                onCheckedChange = {
-                                    scannable = !scannable
-                                    if (scannable) {
-                                        // Packets advertised using Advertising Extension can
-                                        // be either scannable or connectable, but not both.
-                                        connectable = false
-                                        // Anonymous advertising doesn't support scan requests
-                                        // or connection requests.
-                                        anonymous = false
-                                    }
-                                },
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                            )
-
-                            LabeledSwitch(
-                                title = "Discoverable",
-                                subtitle = "Requires Android 14+",
-                                enabled = !isAdvertising && environment.androidSdkVersion >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE,
-                                checked = discoverable,
-                                onCheckedChange = { discoverable = !discoverable },
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                            )
-
-                            LabeledSwitch(
-                                title = "Anonymous",
-                                enabled = !isAdvertising,
-                                checked = anonymous,
-                                onCheckedChange = {
-                                    anonymous = !anonymous
-                                    if (anonymous) {
-                                        // Anonymous advertising doesn't support scan requests
-                                        // or connection requests.
-                                        connectable = false
-                                        scannable = false
-                                    }
-                                },
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                            )
-
-                            LabeledSwitch(
-                                title = "Include Tx Power",
-                                enabled = !isAdvertising,
-                                checked = includeTxPowerLevel,
-                                onCheckedChange = { includeTxPowerLevel = !includeTxPowerLevel },
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                            )
-
-                            ExposedDropdownMenu(
-                                expanded = primaryPhyMenuExpanded,
-                                onExpandedChange = { primaryPhyMenuExpanded = it },
-                                text = "Primary PHY",
-                                enabled = !isAdvertising,
-                                values = PrimaryPhy.entries,
-                                labels = listOf("PHY LE 1M", "PHY LE Coded"),
-                                selectedValue = primaryPhy,
-                                onValueChanged = { primaryPhy = it },
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                            )
-
-                            ExposedDropdownMenu(
-                                expanded = secondaryPhyMenuExpanded,
-                                onExpandedChange = { secondaryPhyMenuExpanded = it },
-                                text = "Secondary PHY",
-                                enabled = !isAdvertising,
-                                values = Phy.entries,
-                                labels = listOf("PHY LE 1M", "PHY LE 2M", "PHY LE Coded"),
-                                selectedValue = secondaryPhy,
-                                onValueChanged = { secondaryPhy = it },
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                            )
+                LabeledSwitch(
+                    title = "Connectable",
+                    enabled = !isAdvertising,
+                    checked = connectable,
+                    onCheckedChange = {
+                        connectable = !connectable
+                        if (connectable) {
+                            // Packets advertised using Advertising Extension can
+                            // be either scannable or connectable, but not both.
+                            scannable = false
+                            // Anonymous advertising doesn't support scan requests
+                            // or connection requests.
+                            anonymous = false
                         }
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+
+                ExposedDropdownMenu(
+                    expanded = txPowerLevelMenuExpanded,
+                    onExpandedChange = { txPowerLevelMenuExpanded = it },
+                    text = "Tx Power Level",
+                    enabled = !isAdvertising,
+                    values = listOf(TxPowerLevel.ULTRA_LOW, TxPowerLevel.LOW, TxPowerLevel.MEDIUM, TxPowerLevel.HIGH),
+                    labels = listOf(
+                        "Ultra Low (-21 dBm)",
+                        "Low (-15 dBm)",
+                        "Medium (-7 dBm)",
+                        "High (1 dBm)"
+                    ),
+                    selectedValue = txPowerLevel,
+                    onValueChanged = { txPowerLevel = it },
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+
+                ExposedDropdownMenu(
+                    expanded = intervalMenuExpanded,
+                    onExpandedChange = { intervalMenuExpanded = it },
+                    text = "Advertising Interval",
+                    enabled = !isAdvertising,
+                    values = listOf(
+                        AdvertisingInterval.LOW.inWholeMilliseconds,
+                        AdvertisingInterval.MEDIUM.inWholeMilliseconds,
+                        AdvertisingInterval.HIGH.inWholeMilliseconds
+                    ),
+                    labels = listOf("Low (~100 ms)", "Medium (~250 ms)", "High (~1 sec)"),
+                    selectedValue = interval,
+                    onValueChanged = { interval = it },
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+
+                LabeledSwitch(
+                    title = "Advertising Extension",
+                    subtitle = "Requires Android 8+",
+                    enabled = !isAdvertising && environment.androidSdkVersion >= Build.VERSION_CODES.O,
+                    checked = !legacy,
+                    onCheckedChange = { legacy = !legacy },
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+
+                AnimatedVisibility(visible = !legacy) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        LabeledSwitch(
+                            title = "Scannable",
+                            enabled = !isAdvertising,
+                            checked = scannable,
+                            onCheckedChange = {
+                                scannable = !scannable
+                                if (scannable) {
+                                    // Packets advertised using Advertising Extension can
+                                    // be either scannable or connectable, but not both.
+                                    connectable = false
+                                    // Anonymous advertising doesn't support scan requests
+                                    // or connection requests.
+                                    anonymous = false
+                                }
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+
+                        LabeledSwitch(
+                            title = "Discoverable",
+                            subtitle = "Requires Android 14+",
+                            enabled = !isAdvertising && environment.androidSdkVersion >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE,
+                            checked = discoverable,
+                            onCheckedChange = { discoverable = !discoverable },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+
+                        LabeledSwitch(
+                            title = "Anonymous",
+                            enabled = !isAdvertising,
+                            checked = anonymous,
+                            onCheckedChange = {
+                                anonymous = !anonymous
+                                if (anonymous) {
+                                    // Anonymous advertising doesn't support scan requests
+                                    // or connection requests.
+                                    connectable = false
+                                    scannable = false
+                                }
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+
+                        LabeledSwitch(
+                            title = "Include Tx Power",
+                            enabled = !isAdvertising,
+                            checked = includeTxPowerLevel,
+                            onCheckedChange = { includeTxPowerLevel = !includeTxPowerLevel },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = primaryPhyMenuExpanded,
+                            onExpandedChange = { primaryPhyMenuExpanded = it },
+                            text = "Primary PHY",
+                            enabled = !isAdvertising,
+                            values = PrimaryPhy.entries,
+                            labels = listOf("PHY LE 1M", "PHY LE Coded"),
+                            selectedValue = primaryPhy,
+                            onValueChanged = { primaryPhy = it },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = secondaryPhyMenuExpanded,
+                            onExpandedChange = { secondaryPhyMenuExpanded = it },
+                            text = "Secondary PHY",
+                            enabled = !isAdvertising,
+                            values = Phy.entries,
+                            labels = listOf("PHY LE 1M", "PHY LE 2M", "PHY LE Coded"),
+                            selectedValue = secondaryPhy,
+                            onValueChanged = { secondaryPhy = it },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
                     }
                 }
             }
@@ -277,40 +258,37 @@ fun AdvertiserView(
             )
         }
 
-        Button(
-            onClick = {
-                val parameters = when (legacy) {
-                    true -> LegacyAdvertisingSetParameters(
-                        connectable = connectable,
-                        txPowerLevel = txPowerLevel,
-                        interval = interval.milliseconds,
-                    )
-                    false -> Bluetooth5AdvertisingSetParameters(
-                        connectable = connectable,
-                        txPowerLevel = txPowerLevel,
-                        interval = interval.milliseconds,
-                        anonymous = anonymous,
-                        scannable = scannable,
-                        discoverable = discoverable,
-                        includeTxPowerLevel = includeTxPowerLevel,
-                        primaryPhy = primaryPhy,
-                        secondaryPhy = secondaryPhy,
-                    )
-                }
-                onStartClicked(parameters)
-            },
-            enabled = !isAdvertising,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(text = "Start advertising")
-        }
-
-        Button(
-            onClick = onStopClicked,
-            enabled = isAdvertising,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(text = "Stop advertising")
+        AppBarActions {
+            AppBarToggleButton(
+                isActive = isAdvertising,
+                startLabel = "Advertise",
+                stopLabel = "Stop",
+                onClick = {
+                    if (isAdvertising) {
+                        onStopClicked()
+                    } else {
+                        val parameters = when (legacy) {
+                            true -> LegacyAdvertisingSetParameters(
+                                connectable = connectable,
+                                txPowerLevel = txPowerLevel,
+                                interval = interval.milliseconds,
+                            )
+                            false -> Bluetooth5AdvertisingSetParameters(
+                                connectable = connectable,
+                                txPowerLevel = txPowerLevel,
+                                interval = interval.milliseconds,
+                                anonymous = anonymous,
+                                scannable = scannable,
+                                discoverable = discoverable,
+                                includeTxPowerLevel = includeTxPowerLevel,
+                                primaryPhy = primaryPhy,
+                                secondaryPhy = secondaryPhy,
+                            )
+                        }
+                        onStartClicked(parameters)
+                    }
+                },
+            )
         }
     }
 }
