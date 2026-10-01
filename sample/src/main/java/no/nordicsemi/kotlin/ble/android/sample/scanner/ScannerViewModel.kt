@@ -68,6 +68,7 @@ import no.nordicsemi.kotlin.ble.android.sample.common.AttributeValue
 import no.nordicsemi.kotlin.ble.android.sample.common.Timestamped
 import no.nordicsemi.kotlin.ble.android.sample.scanner.profile.LedButtonProfile
 import no.nordicsemi.kotlin.ble.android.sample.scanner.profile.impl.LedButtonServiceImpl
+import no.nordicsemi.kotlin.ble.client.AnyRemoteService
 import no.nordicsemi.kotlin.ble.client.ProfileServices
 import no.nordicsemi.kotlin.ble.client.RemoteCharacteristic
 import no.nordicsemi.kotlin.ble.client.RemoteDescriptor
@@ -448,12 +449,10 @@ class ScannerViewModel @Inject constructor(
 
                 // Values are not read and notifications are not enabled automatically.
                 // Use R, W, N and I buttons in the UI instead.
-                services.forEach { remoteService ->
-                    remoteService.characteristics.forEach { remoteCharacteristic ->
-                        // Observe notifications or indications state.
-                        if (remoteCharacteristic.isSubscribable()) {
-                            observeNotificationState(remoteCharacteristic, ce, scope)
-                        }
+                services.allCharacteristics().forEach { remoteCharacteristic ->
+                    // Observe notifications or indications state.
+                    if (remoteCharacteristic.isSubscribable()) {
+                        observeNotificationState(remoteCharacteristic, ce, scope)
                     }
                 }
             }
@@ -522,6 +521,14 @@ class ScannerViewModel @Inject constructor(
      * Whenever they get enabled, the values are collected, so that they can be shown in the UI.
      * When they get disabled, collection is stopped.
      */
+    /**
+     * Returns all characteristics of the services, including those in included services.
+     */
+    private fun List<AnyRemoteService>.allCharacteristics(): List<RemoteCharacteristic> =
+        flatMap { service ->
+            service.characteristics + service.includedServices.allCharacteristics()
+        }.distinct()
+
     private fun observeNotificationState(
         characteristic: RemoteCharacteristic,
         event: Int,
