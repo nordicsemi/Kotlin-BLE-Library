@@ -737,7 +737,7 @@ open class Peripheral(
             logger?.warn(Layer.GATT) { "Reliable write not in progress, nothing to execute" }
             return
         }
-        withCallSite("executeReliableWrite") {
+        val _ = withCallSite("executeReliableWrite") {
             OperationMutex.withLock {
                 impl.events
                     .onSubscription {
@@ -756,7 +756,10 @@ open class Peripheral(
                     .takeWhile { !it.isDisconnectionEvent }
                     .filterIsInstance<ReliableWriteCompleted>()
                     // TODO add .timeout(...)?
-                    .firstOrNull()?.let {
+                    // Note: Here we can't use `.let`. It returns the result of `when`, which is
+                    //       `null` if `logger` is not set, causing the whole method to throw
+                    //       `PeripheralNotConnectedException`.
+                    .firstOrNull()?.also {
                         when (it.status) {
                             OperationStatus.Success -> logger?.info(Layer.GATT) { "Reliable write executed successfully" }
                             else -> {
@@ -785,7 +788,7 @@ open class Peripheral(
             logger?.warn(Layer.GATT) { "Reliable write not in progress, nothing to abort" }
             return
         }
-        withCallSite("abortReliableWrite") {
+        val _ = withCallSite("abortReliableWrite") {
             OperationMutex.withLock {
                 impl.events
                     .onSubscription {
@@ -804,7 +807,10 @@ open class Peripheral(
                     .takeWhile { !it.isDisconnectionEvent }
                     .filterIsInstance<ReliableWriteCompleted>()
                     // TODO add .timeout(...)?
-                    .firstOrNull()?.let {
+                    // Note: Here we can't use `.let`. It returns the result of `when`, which is
+                    //       `null` if `logger` is not set, causing the whole method to throw
+                    //       `PeripheralNotConnectedException`.
+                    .firstOrNull()?.also {
                         when (it.status) {
                             OperationStatus.Success -> logger?.info(Layer.GATT) { "Reliable write aborted successfully" }
                             else -> {
