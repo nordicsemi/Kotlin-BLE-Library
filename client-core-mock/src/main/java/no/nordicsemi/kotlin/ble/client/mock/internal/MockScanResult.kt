@@ -34,6 +34,7 @@ package no.nordicsemi.kotlin.ble.client.mock.internal
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
+import kotlin.time.Instant
 
 class MockScanResult<ID: Any>(
     val peripheralSpec: PeripheralSpec<ID>,
@@ -44,7 +45,7 @@ class MockScanResult<ID: Any>(
     val txPowerLevel: Int?,
     val primaryPhy: PrimaryPhy,
     val secondaryPhy: Phy?,
-    val timestamp: Long,
+    val timestamp: Instant,
 ) {
     override fun toString(): String = "MockScanResult(" +
             "id=${peripheralSpec.identifier}, " +

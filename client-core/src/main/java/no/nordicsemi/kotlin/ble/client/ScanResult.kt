@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.flow
 import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
 import org.jetbrains.annotations.Range
+import kotlin.time.Instant
 
 /**
  * A Scan Result represents a single advertisement found during the scan.
@@ -53,7 +54,11 @@ import org.jetbrains.annotations.Range
  * packet; `null` if not present.
  * @property primaryPhy The primary PHY used to transmit the advertisement.
  * @property secondaryPhy The secondary PHY used to transmit the advertisement, or `null` if not used.
- * @property timestamp The timestamp since boot when the scan record was observed, in milliseconds.
+ * @property timestamp The time when the scan record was received.
+ *
+ * The timestamp is based on the system clock (wall-clock time), so it can be compared between
+ * platforms and with times from other sources. It may jump when the system time is changed,
+ * e.g. when the clock gets synchronized with the network.
  */
 interface ScanResult<P: Peripheral<*, *>, AD: AdvertisingData> {
     val peripheral: P
@@ -63,7 +68,7 @@ interface ScanResult<P: Peripheral<*, *>, AD: AdvertisingData> {
     val txPowerLevel: @Range(from = -127, to = 126) Int?
     val primaryPhy: PrimaryPhy
     val secondaryPhy: Phy?
-    val timestamp: Long
+    val timestamp: Instant
 }
 
 /**

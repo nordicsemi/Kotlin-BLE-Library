@@ -36,6 +36,8 @@ import no.nordicsemi.kotlin.ble.client.android.Peripheral
 import no.nordicsemi.kotlin.ble.client.android.ScanResult
 import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * Preview implementation of [ScanResult] for showing scan results on Compose previews.
@@ -49,7 +51,7 @@ import no.nordicsemi.kotlin.ble.core.PrimaryPhy
  * @param txPowerLevel The transmission power level.
  * @param primaryPhy The primary PHY used to transmit the advertisement, defaults to PHY LE 1M.
  * @param secondaryPhy The secondary PHY used to transmit the advertisement, or `null` (default) if not used.
- * @param timestamp The timestamp since when the scan record was observed.
+ * @param timestamp The time when the scan record was received, defaults to now.
  */
 class PreviewScanResult(
     peripheral: Peripheral,
@@ -59,7 +61,7 @@ class PreviewScanResult(
     txPowerLevel: Int? = null,
     primaryPhy: PrimaryPhy = PrimaryPhy.PHY_LE_1M,
     secondaryPhy: Phy? = null,
-    timestamp: Long = 0L,
+    timestamp: Instant = Clock.System.now(),
 ): ScanResult(
     peripheral = peripheral,
     isConnectable = isConnectable,
