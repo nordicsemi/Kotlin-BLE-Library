@@ -113,8 +113,9 @@ class GraphViewModel @Inject constructor(
                     val address = result.peripheral.address
                     // The time of the scan result is not used, as its time base differs
                     // between the native and mock implementations.
-                    graphState.add(key = address, rssi = result.rssi)
+                    // The lock makes sure the legend and the graph are cleared together.
                     synchronized(names) {
+                        graphState.add(key = address, rssi = result.rssi)
                         names[address] = result.peripheral.name
                     }
                 }
@@ -125,6 +126,15 @@ class GraphViewModel @Inject constructor(
 
     fun onStopScanRequested() {
         scanningJob?.cancel()
+    }
+
+    fun onClearRequested() {
+        synchronized(names) {
+            names.clear()
+            graphState.clear()
+        }
+        _selected.update { emptySet() }
+        refreshDevices()
     }
 
     fun onDeviceClicked(address: String) {

@@ -35,6 +35,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -66,6 +68,9 @@ fun GraphScreen() {
 
         RequireScanPermissions {
             AppBarActions {
+                TextButton(onClick = vm::onClearRequested) {
+                    Text(text = "Clear")
+                }
                 AppBarToggleButton(
                     isActive = isScanning,
                     startLabel = "Scan",
