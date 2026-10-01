@@ -104,7 +104,10 @@ fun DeviceList(
         verticalArrangement = verticalArrangement,
         contentPadding = contentPadding,
     ) {
-        items(results) { result ->
+        items(
+            items = results,
+            key = { it.peripheral.address },
+        ) { result ->
             DeviceItem(
                 peripheral = result.peripheral,
                 onClick = { onItemClick(result.peripheral) },

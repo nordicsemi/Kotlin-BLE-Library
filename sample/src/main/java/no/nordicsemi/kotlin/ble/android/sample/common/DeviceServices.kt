@@ -73,6 +73,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -112,6 +113,18 @@ import kotlin.uuid.Uuid
 
 @Composable
 fun DeviceServices(
+    services: RemoteServices,
+    values: Map<Any, AttributeValue>,
+    onAction: (AttributeAction) -> Unit,
+) {
+    // Measure the width of a value row once, instead of in each row.
+    CompositionLocalProvider(LocalValueRowMinWidth provides rememberValueRowMinWidth()) {
+        DeviceServicesContent(services, values, onAction)
+    }
+}
+
+@Composable
+private fun DeviceServicesContent(
     services: RemoteServices,
     values: Map<Any, AttributeValue>,
     onAction: (AttributeAction) -> Unit,
@@ -518,7 +531,8 @@ private fun ValueRow(
                 color = mutedColor,
             )
             else -> Text(
-                text = bytes.toHexDump(),
+                // A new value is always a new array, so it's enough to compare references.
+                text = remember(bytes) { bytes.toHexDump() },
                 style = valueTextStyle,
             )
         }
@@ -538,14 +552,7 @@ private fun ValueRow(
     content: @Composable () -> Unit,
 ) {
     val style = valueTextStyle
-    val textMeasurer = rememberTextMeasurer()
-    val density = LocalDensity.current
-    // The width of a full line of a value. The timestamp is shown only if it fits next to it,
-    // so that it is shown, or not, in all rows.
-    val minContentWidth = remember(style, density) {
-        textMeasurer.measure(FULL_LINE_SAMPLE, style).size.width +
-                with(density) { (ICON_SIZE + ICON_GAP).roundToPx() }
-    }
+    val minContentWidth = LocalValueRowMinWidth.current ?: rememberValueRowMinWidth()
     ValueLayout(
         minStartWidth = minContentWidth,
         start = {
@@ -574,6 +581,25 @@ private fun ValueRow(
             }
         },
     )
+}
+
+/**
+ * The width of a full line of a value, including the icon.
+ *
+ * The timestamp is shown only if it fits next to it, so that it is shown, or not, in all rows.
+ * If not provided, it is measured by each row.
+ */
+private val LocalValueRowMinWidth = staticCompositionLocalOf<Int?> { null }
+
+@Composable
+private fun rememberValueRowMinWidth(): Int {
+    val style = valueTextStyle
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    return remember(style, density) {
+        textMeasurer.measure(FULL_LINE_SAMPLE, style).size.width +
+                with(density) { (ICON_SIZE + ICON_GAP).roundToPx() }
+    }
 }
 
 /**
