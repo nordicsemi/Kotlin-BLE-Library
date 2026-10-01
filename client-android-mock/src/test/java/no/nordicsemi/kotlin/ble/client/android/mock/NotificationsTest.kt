@@ -79,6 +79,8 @@ class NotificationsTest {
     private val serviceUuid = Uuid.random()
     private val characteristicUuid = Uuid.random()
     private val descriptorUuid = Uuid.random()
+    private val includedServiceUuid = Uuid.random()
+    private val includedCharacteristicUuid = Uuid.random()
     private val value = byteArrayOf(0x01, 0x02, 0x03)
 
     private lateinit var scope: CoroutineScope
@@ -140,6 +142,13 @@ class NotificationsTest {
                     ) {
                         // CCCD is added automatically
                         Descriptor(descriptorUuid, permission = Permission.WRITE)
+                    }
+                    IncludedService(uuid = includedServiceUuid) {
+                        Characteristic(
+                            uuid = includedCharacteristicUuid,
+                            property = CharacteristicProperty.NOTIFY,
+                            permission = Permission.READ,
+                        )
                     }
                 }
             }
@@ -304,6 +313,29 @@ class NotificationsTest {
             withTimeout(2.seconds) {
                 descriptor.write(ByteArray(40) { it.toByte() })
             }
+        }
+    }
+
+    @Test
+    fun `notifications in included service are reset on disconnection`() = runBlocking {
+        withTimeout(10.seconds) {
+            val characteristic = connect()
+                .first { it.uuid == serviceUuid }
+                .includedServices
+                .first { it.uuid == includedServiceUuid }
+                .characteristics
+                .first { it.uuid == includedCharacteristicUuid }
+
+            characteristic.setNotifying(true)
+            assertTrue(characteristic.isNotifying.value)
+
+            peripheral.disconnect()
+
+            // Invalidating services should reset characteristics of included services as well.
+            withTimeout(2.seconds) {
+                characteristic.isNotifying.first { !it }
+            }
+            assertFalse(characteristic.isNotifying.value)
         }
     }
 
