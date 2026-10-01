@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
@@ -76,7 +77,11 @@ class GraphViewModel @Inject constructor(
     val state = centralManager.state
 
     /** The samples shown on the graph. */
-    val graphState = RssiGraphState()
+    val graphState = RssiGraphState(
+        // timeWindow = 30.seconds,
+        // timeout = 2.seconds,
+        // averagingWindow = 1.seconds,
+    )
 
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
@@ -102,11 +107,11 @@ class GraphViewModel @Inject constructor(
                     delay(LEGEND_REFRESH_INTERVAL)
                 }
             }
-            centralManager
-                .scan()
+            centralManager.scan()
                 .onStart { _isScanning.update { true } }
                 .catch { t -> Timber.e("Scan failed: $t") }
                 .onCompletion { _isScanning.update { false } }
+                .filter { it.advertisingData.name != null || names[it.peripheral.address] != null }
                 .collect { result ->
                     // Android reports 127 if RSSI is not available.
                     if (result.rssi > MAX_RSSI) return@collect
@@ -164,7 +169,7 @@ class GraphViewModel @Inject constructor(
     }
 
     private companion object {
-        val LEGEND_REFRESH_INTERVAL = 500L.milliseconds
+        val LEGEND_REFRESH_INTERVAL = 500.milliseconds
         const val MAX_RSSI = 20
     }
 }
