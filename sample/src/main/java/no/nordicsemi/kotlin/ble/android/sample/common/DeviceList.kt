@@ -31,8 +31,10 @@
 
 package no.nordicsemi.kotlin.ble.android.sample.common
 
-import android.content.res.Configuration
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -40,11 +42,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CardDefaults
@@ -68,6 +72,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
 import no.nordicsemi.kotlin.ble.android.sample.theme.Nordic
@@ -88,6 +93,8 @@ fun DeviceList(
     onClearCacheRequested: (Peripheral) -> Unit,
     onReadRssi: (Peripheral) -> Unit,
     onReadPhy: (Peripheral) -> Unit,
+    attributeValues: Map<Any, AttributeValue>,
+    onAttributeAction: (AttributeAction) -> Unit,
     modifier: Modifier = Modifier,
     verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(8.dp),
     contentPadding: PaddingValues = PaddingValues(0.dp),
@@ -97,7 +104,10 @@ fun DeviceList(
         verticalArrangement = verticalArrangement,
         contentPadding = contentPadding,
     ) {
-        items(results) { result ->
+        items(
+            items = results,
+            key = { it.peripheral.address },
+        ) { result ->
             DeviceItem(
                 peripheral = result.peripheral,
                 onClick = { onItemClick(result.peripheral) },
@@ -107,6 +117,8 @@ fun DeviceList(
                 onClearCacheRequested = { onClearCacheRequested(result.peripheral) },
                 onReadRssi = { onReadRssi(result.peripheral) },
                 onReadPhy = { onReadPhy(result.peripheral) },
+                attributeValues = attributeValues,
+                onAttributeAction = onAttributeAction,
             )
         }
     }
@@ -122,6 +134,8 @@ fun DeviceItem(
     onClearCacheRequested: () -> Unit,
     onReadRssi: () -> Unit,
     onReadPhy: () -> Unit,
+    attributeValues: Map<Any, AttributeValue>,
+    onAttributeAction: (AttributeAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -129,10 +143,11 @@ fun DeviceItem(
     ) {
         val state by peripheral.state.collectAsStateWithLifecycle()
         val animatedColor by animateColorAsState(
+            animationSpec = tween(durationMillis = 500),
             targetValue = when (state) {
-                is ConnectionState.Connected -> Nordic.Color.Blue
-                is ConnectionState.Connecting -> Nordic.Color.Sky
-                else -> MaterialTheme.colorScheme.surfaceVariant
+                is ConnectionState.Connected -> Nordic.Color.Lake
+                is ConnectionState.Connecting -> Nordic.Color.Blue
+                else -> Nordic.Color.MiddleGrey
             },
             label = "background color animation"
         )
@@ -142,7 +157,8 @@ fun DeviceItem(
             colors = CardDefaults.elevatedCardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            )
+            ),
+            modifier = Modifier.zIndex(1.0f),
         ) {
             ListItem(
                 colors = ListItemDefaults.colors(
@@ -160,7 +176,7 @@ fun DeviceItem(
                     Icon(
                         imageVector = Nordic.Icons.Bluetooth,
                         contentDescription = "Device Icon",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = Color.White,
                         modifier = Modifier
                             .size(32.dp)
                             .clip(CircleShape)
@@ -203,17 +219,31 @@ fun DeviceItem(
                 }
             )
         }
-        if (state.isConnected) {
+        // As the services lay "behind" the device card, draw them first.
+        AnimatedVisibility(
+            visible = state.isConnected,
+            modifier = Modifier
+                .offset(y = (-2).dp)
+                .animateContentSize()
+        )  {
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, top = 8.dp),
+                    .padding(start = 16.dp, end = 8.dp),
+                shape = MaterialTheme.shapes.medium.copy(
+                    topStart = CornerSize(0.dp),
+                    topEnd = CornerSize(0.dp),
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(8.dp)
                 ) {
                     val services by peripheral.services().collectAsStateWithLifecycle()
-                    DeviceServices(services = services)
+                    DeviceServices(
+                        services = services,
+                        values = attributeValues,
+                        onAction = onAttributeAction,
+                    )
                 }
             }
         }
@@ -276,6 +306,8 @@ fun GreetingPreview() {
             onClearCacheRequested = {},
             onReadRssi = {},
             onReadPhy = {},
+            attributeValues = emptyMap(),
+            onAttributeAction = {},
             contentPadding = PaddingValues(16.dp),
         )
     }

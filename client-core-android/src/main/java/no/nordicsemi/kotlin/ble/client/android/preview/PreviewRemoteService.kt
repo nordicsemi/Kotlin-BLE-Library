@@ -50,25 +50,8 @@ class PreviewRemoteService: RemoteService {
     override val uuid: Uuid
     override val instanceId: Int
     private val definition: ServiceDefinition?
-
     override val characteristics: List<RemoteCharacteristic>
-        get() = definition?.characteristics?.map {
-            PreviewRemoteCharacteristic(
-                service = this,
-                uuid = it.uuid,
-                properties = it.properties,
-                definition = it,
-            )
-        } ?: listOfNotNull(characteristic)
-
     override val includedServices: List<RemoteIncludedService>
-        get() = definition?.includedServices?.map {
-            PreviewIncludedRemoteService(
-                service = this,
-                uuid = it.uuid,
-                definition = it,
-            )
-        } ?: emptyList()
 
     // This instance is not null if the service is created as a parent of a characteristic
     // or a descriptor.
@@ -86,6 +69,8 @@ class PreviewRemoteService: RemoteService {
         this.instanceId = instanceId
         this.definition = null
         this.characteristic = characteristic
+        this.characteristics = listOf(characteristic)
+        this.includedServices = emptyList()
     }
 
     /**
@@ -100,6 +85,8 @@ class PreviewRemoteService: RemoteService {
         this.instanceId = instanceId
         this.definition = null
         this.characteristic = PreviewRemoteCharacteristic(this, Uuid.random(), emptySet(), descriptor)
+        this.characteristics = listOf(characteristic)
+        this.includedServices = emptyList()
     }
 
     /**
@@ -138,6 +125,21 @@ class PreviewRemoteService: RemoteService {
             .build()
             .first()
         this.characteristic = null
+        this.characteristics = definition.characteristics.map {
+            PreviewRemoteCharacteristic(
+                service = this,
+                uuid = it.uuid,
+                properties = it.properties,
+                definition = it,
+            )
+        }
+        this.includedServices = definition.includedServices.map {
+            PreviewIncludedRemoteService(
+                service = this,
+                uuid = it.uuid,
+                definition = it,
+            )
+        }
     }
 }
 
@@ -148,21 +150,19 @@ class PreviewIncludedRemoteService internal constructor(
     private val definition: ServiceDefinition,
 ): RemoteIncludedService {
 
-    override val characteristics: List<RemoteCharacteristic>
-        get() = definition.characteristics.map {
-            PreviewRemoteCharacteristic(
-                service = this,
-                uuid = it.uuid,
-                properties = it.properties,
-                definition = it,
-            )
-        }
-    override val includedServices: List<RemoteIncludedService>
-        get() = definition.includedServices.map {
-            PreviewIncludedRemoteService(
-                service = this,
-                uuid = it.uuid,
-                definition = it,
-            )
-        }
+    override val characteristics: List<RemoteCharacteristic> = definition.characteristics.map {
+        PreviewRemoteCharacteristic(
+            service = this,
+            uuid = it.uuid,
+            properties = it.properties,
+            definition = it,
+        )
+    }
+    override val includedServices: List<RemoteIncludedService> = definition.includedServices.map {
+        PreviewIncludedRemoteService(
+            service = this,
+            uuid = it.uuid,
+            definition = it,
+        )
+    }
 }

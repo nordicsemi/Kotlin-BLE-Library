@@ -51,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import no.nordicsemi.kotlin.ble.android.sample.view.BluetoothStateWarning
 import no.nordicsemi.kotlin.ble.core.android.AndroidEnvironment
 import no.nordicsemi.kotlin.ble.environment.android.compose.LocalEnvironmentOwner
 
@@ -69,7 +70,7 @@ fun AdvertiserScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(text = "Bluetooth state: $state")
+        BluetoothStateWarning(state)
 
         // Advertising requires BLUETOOTH_ADVERTISE permission.
         val permissions = arrayOf(
@@ -98,7 +99,6 @@ fun AdvertiserScreen() {
                 errorMessage = error,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp)
                     .verticalScroll(rememberScrollState())
                     .padding(top = 16.dp, bottom = 32.dp),
                 environment = environment,
