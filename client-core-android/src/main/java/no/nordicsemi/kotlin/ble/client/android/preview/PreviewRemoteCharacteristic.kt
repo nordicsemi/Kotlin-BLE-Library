@@ -62,11 +62,7 @@ class PreviewRemoteCharacteristic : RemoteCharacteristic {
     override val isNotifying: StateFlow<Boolean>
         get() = _isNotifying.asStateFlow()
     override val properties: Set<CharacteristicProperty>
-
     override val descriptors: List<RemoteDescriptor>
-        get() = definition?.descriptors?.map {
-            PreviewRemoteDescriptor(this, it.uuid)
-        } ?: listOfNotNull(descriptor)
 
     /**
      * The characteristic definition, when defined by a user.
@@ -90,6 +86,12 @@ class PreviewRemoteCharacteristic : RemoteCharacteristic {
         this.properties = properties
         this.definition = definition
         this.descriptor = null
+        this.descriptors = definition.descriptors.map {
+            PreviewRemoteDescriptor(
+                characteristic = this,
+                uuid = it.uuid
+            )
+        }
         this.instanceId = 0
     }
 
@@ -106,6 +108,7 @@ class PreviewRemoteCharacteristic : RemoteCharacteristic {
         this.properties = properties
         this.definition = null
         this.descriptor = descriptor
+        this.descriptors = listOf(descriptor)
         this.instanceId = 0
     }
 
@@ -156,6 +159,12 @@ class PreviewRemoteCharacteristic : RemoteCharacteristic {
         this._isNotifying.update { isNotifying }
         this.properties = properties
         this.definition = serviceDefinition.characteristics.first()
+        this.descriptors = definition.descriptors.map {
+            PreviewRemoteDescriptor(
+                characteristic = this,
+                uuid = it.uuid
+            )
+        }
         this.descriptor = null
     }
 
