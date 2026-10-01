@@ -30,6 +30,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import no.nordicsemi.kotlin.ble.android.sample.advertiser.AdvertiserScreen
+import no.nordicsemi.kotlin.ble.android.sample.graph.GraphScreen
 import no.nordicsemi.kotlin.ble.android.sample.menu.MenuScreen
 import no.nordicsemi.kotlin.ble.android.sample.scanner.ScannerScreen
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
@@ -42,6 +43,7 @@ import javax.inject.Inject
 const val NAV_MENU = "Menu"
 const val NAV_ADVERTISER = "Advertiser"
 const val NAV_SCANNER = "Scanner"
+const val NAV_GRAPH = "Graph"
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -121,6 +123,9 @@ class MainActivity : ComponentActivity() {
                             }
                             composable(NAV_SCANNER) {
                                 ScannerScreen()
+                            }
+                            composable(NAV_GRAPH) {
+                                GraphScreen()
                             }
                         }
                     }

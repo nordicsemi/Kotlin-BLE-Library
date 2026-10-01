@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -29,64 +29,64 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package no.nordicsemi.kotlin.ble.android.sample.menu
+package no.nordicsemi.kotlin.ble.android.sample.graph
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import no.nordicsemi.kotlin.ble.android.sample.NAV_ADVERTISER
-import no.nordicsemi.kotlin.ble.android.sample.NAV_GRAPH
-import no.nordicsemi.kotlin.ble.android.sample.NAV_SCANNER
-import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import no.nordicsemi.kotlin.ble.android.sample.view.AppBarActions
+import no.nordicsemi.kotlin.ble.android.sample.view.AppBarToggleButton
+import no.nordicsemi.kotlin.ble.android.sample.view.BluetoothStateWarning
+import no.nordicsemi.kotlin.ble.android.sample.view.RequireScanPermissions
 
 @Composable
-fun MenuScreen(
-    onMenuClicked: (String) -> Unit,
-) {
+fun GraphScreen() {
+    val vm = hiltViewModel<GraphViewModel>()
+    val state by vm.state.collectAsStateWithLifecycle()
+    val isScanning by vm.isScanning.collectAsStateWithLifecycle()
+    val devices by vm.devices.collectAsStateWithLifecycle()
+    val selected by vm.selected.collectAsStateWithLifecycle()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // Add buttons here
-        Button(
-            onClick = { onMenuClicked(NAV_ADVERTISER) },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(text = "Advertiser")
-        }
-        Button(
-            onClick = { onMenuClicked(NAV_SCANNER) },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(text = "Scanner")
-        }
-        Button(
-            onClick = { onMenuClicked(NAV_GRAPH) },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(text = "Graph")
-        }
-    }
-}
+        BluetoothStateWarning(state)
 
-@Preview
-@Composable
-fun PreviewMenuScreen() {
-    AppTheme {
-        MenuScreen(
-            onMenuClicked = { },
-        )
+        RequireScanPermissions {
+            AppBarActions {
+                AppBarToggleButton(
+                    isActive = isScanning,
+                    startLabel = "Scan",
+                    stopLabel = "Stop",
+                    onClick = {
+                        if (!isScanning)
+                            vm.onScanRequested()
+                        else
+                            vm.onStopScanRequested()
+                    },
+                )
+            }
+
+            GraphView(
+                graphState = vm.graphState,
+                devices = devices,
+                selected = selected,
+                isScanning = isScanning,
+                onDeviceClicked = vm::onDeviceClicked,
+                onClearSelectionRequested = vm::onClearSelectionRequested,
+            )
+        }
     }
 }
