@@ -47,13 +47,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -261,6 +259,10 @@ fun RssiGraph(
 ) {
     val textMeasurer = rememberTextMeasurer()
     val style = labelStyle.copy(color = colors.label)
+    // Measuring text is expensive, and the labels are drawn on every frame.
+    // The cache of the TextMeasurer is too small to keep all of them.
+    val labels = remember(textMeasurer, style) { HashMap<String, TextLayoutResult>() }
+    fun label(text: String) = labels.getOrPut(text) { textMeasurer.measure(text, style) }
 
     // The time of the right edge of the graph, updated every frame.
     // It is read only in the draw phase, so moving the graph does not cause recomposition.
@@ -289,8 +291,8 @@ fun RssiGraph(
 
         // Plot area, leaving space for labels.
         val labelPadding = 4.dp.toPx()
-        val yLabelWidth = textMeasurer.measure("-100", style).size.width
-        val xLabelHeight = textMeasurer.measure("0", style).size.height
+        val yLabelWidth = label("-100").size.width
+        val xLabelHeight = label("0").size.height
         val left = yLabelWidth + labelPadding
         val right = size.width - 1.dp.toPx()
         val plotTop = xLabelHeight / 2f
@@ -303,7 +305,7 @@ fun RssiGraph(
         while (r >= bottom) {
             val ry = y(r.toFloat())
             drawLine(colors.grid, Offset(left, ry), Offset(right, ry), strokeWidth = 1.dp.toPx())
-            val label = textMeasurer.measure(r.toString(), style)
+            val label = label(r.toString())
             drawText(label, topLeft = Offset(left - labelPadding - label.size.width, ry - label.size.height / 2f))
             r -= rssiStep
         }
@@ -315,7 +317,7 @@ fun RssiGraph(
         while (t <= window) {
             val tx = x(now - t)
             drawLine(colors.grid, Offset(tx, plotTop), Offset(tx, plotBottom), strokeWidth = 1.dp.toPx())
-            val label = textMeasurer.measure(if (t == 0L) "now" else "-${t / 1000}s", style)
+            val label = label(if (t == 0L) "now" else "-${t / 1000}s")
             val lx = (tx - label.size.width / 2f).coerceIn(left, size.width - label.size.width)
             drawText(label, topLeft = Offset(lx, plotBottom + labelPadding))
             t += timeStep
@@ -331,26 +333,34 @@ fun RssiGraph(
             state.forEachSeries(now, selected) { color, isSelected, times, rssi, count ->
                 val c = if (!hasSelection || isSelected) color else colors.inactive
 
-                val path = buffers.path
-                path.reset()
-                if (buffers.dots.size < count * 2) buffers.dots = FloatArray(count * 4)
+                if (buffers.dots.size < count * 2) {
+                    buffers.dots = FloatArray(count * 4)
+                    buffers.lines = FloatArray(count * 8)
+                }
                 val dots = buffers.dots
+                val lines = buffers.lines
+                var lineCount = 0
                 for (i in 0 until count) {
                     val px = x(times[i])
                     val py = y(rssi[i])
-                    if (i > 0 && times[i] - times[i - 1] < timeout) path.lineTo(px, py) else path.moveTo(px, py)
+                    if (i > 0 && times[i] - times[i - 1] < timeout) {
+                        lines[lineCount * 4] = dots[(i - 1) * 2]
+                        lines[lineCount * 4 + 1] = dots[(i - 1) * 2 + 1]
+                        lines[lineCount * 4 + 2] = px
+                        lines[lineCount * 4 + 3] = py
+                        lineCount++
+                    }
                     dots[i * 2] = px
                     dots[i * 2 + 1] = py
                 }
-                drawPath(
-                    path = path,
-                    color = c,
-                    style = Stroke(
-                        width = if (isSelected) selectedLineWidth else lineWidth,
-                        join = StrokeJoin.Round,
-                    ),
-                )
+                // Separate line segments are drawn on the GPU. A single stroked Path with many
+                // points would be rasterized by Skia on the CPU, which is much slower.
                 drawIntoCanvas { canvas ->
+                    val linePaint = buffers.linePaint
+                    linePaint.color = c
+                    linePaint.strokeWidth = if (isSelected) selectedLineWidth else lineWidth
+                    canvas.nativeCanvas.drawLines(lines, 0, lineCount * 4, linePaint.asFrameworkPaint())
+
                     val dotPaint = buffers.dotPaint
                     dotPaint.color = c
                     dotPaint.strokeWidth = if (isSelected) selectedDotSize else dotSize
@@ -362,7 +372,8 @@ fun RssiGraph(
 }
 
 private class DrawBuffers {
-    val path = Path()
+    val linePaint = Paint().apply { strokeCap = StrokeCap.Butt }
     val dotPaint = Paint().apply { strokeCap = StrokeCap.Round }
+    var lines = FloatArray(0)
     var dots = FloatArray(0)
 }
