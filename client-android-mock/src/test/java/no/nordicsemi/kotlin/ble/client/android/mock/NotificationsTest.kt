@@ -47,6 +47,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import no.nordicsemi.kotlin.ble.client.RemoteCharacteristic
+import no.nordicsemi.kotlin.ble.client.RemoteService
 import no.nordicsemi.kotlin.ble.client.RemoteServices
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
@@ -151,9 +152,9 @@ class NotificationsTest {
     }
 
     /**
-     * Connects to the mock peripheral and returns the tested characteristic.
+     * Connects to the mock peripheral and returns the discovered services.
      */
-    private suspend fun connect(): RemoteCharacteristic {
+    private suspend fun connect(): List<RemoteService> {
         val centralManager = CentralManager.mock(scope = scope)
             .apply { simulatePeripherals(listOf(peripheralSpec)) }
         peripheral = centralManager.getPeripheralById(peripheralSpec.identifier)!!
@@ -162,15 +163,15 @@ class NotificationsTest {
             .filterIsInstance<RemoteServices.Discovered>()
             .first()
             .services
-            .first { it.uuid == serviceUuid }
-            .characteristics
-            .first { it.uuid == characteristicUuid }
     }
 
     @Test
     fun `notification sent immediately after enabling is received`() = runBlocking {
         withTimeout(10.seconds) {
             val characteristic = connect()
+                .first { it.uuid == serviceUuid }
+                .characteristics
+                .first { it.uuid == characteristicUuid }
 
             val received = withTimeout(2.seconds) {
                 characteristic.subscribe().first()
@@ -187,6 +188,9 @@ class NotificationsTest {
     fun `notification sent immediately after re-enabling reaches active subscriber`() = runBlocking {
         withTimeout(10.seconds) {
             val characteristic = connect()
+                .first { it.uuid == serviceUuid }
+                .characteristics
+                .first { it.uuid == characteristicUuid }
 
             val received = Channel<ByteArray>(Channel.UNLIMITED)
             val subscription = characteristic.subscribe()
@@ -209,6 +213,9 @@ class NotificationsTest {
     fun `active subscriber receives no values after disabling`() = runBlocking {
         withTimeout(10.seconds) {
             val characteristic = connect()
+                .first { it.uuid == serviceUuid }
+                .characteristics
+                .first { it.uuid == characteristicUuid }
 
             val received = Channel<ByteArray>(Channel.UNLIMITED)
             val subscription = characteristic.subscribe()
@@ -233,6 +240,9 @@ class NotificationsTest {
     fun `rejected CCCD write does not enable notifications`() = runBlocking {
         withTimeout(10.seconds) {
             val characteristic = connect()
+                .first { it.uuid == serviceUuid }
+                .characteristics
+                .first { it.uuid == characteristicUuid }
             cccdWriteResponse = WriteResponse.Failure(OperationStatus.InsufficientAuthentication)
 
             val exception = assertFailsWith<OperationFailedException> {
@@ -262,6 +272,9 @@ class NotificationsTest {
     fun `setNotifying during Reliable Write enables notifications immediately`() = runBlocking {
         withTimeout(10.seconds) {
             val characteristic = connect()
+                .first { it.uuid == serviceUuid }
+                .characteristics
+                .first { it.uuid == characteristicUuid }
 
             // Reliable Write applies only to characteristic values. The CCCD is written
             // using a Write Request, and not queued until Execute Write.
@@ -280,8 +293,12 @@ class NotificationsTest {
     @Test
     fun `Long Write to a descriptor completes`() = runBlocking {
         withTimeout(10.seconds) {
-            val characteristic = connect()
-            val descriptor = characteristic.descriptors.first { it.uuid == descriptorUuid }
+            val descriptor = connect()
+                .first { it.uuid == serviceUuid }
+                .characteristics
+                .first { it.uuid == characteristicUuid }
+                .descriptors
+                .first { it.uuid == descriptorUuid }
 
             // The value is longer than MTU - 3, so Long Write is used.
             withTimeout(2.seconds) {
@@ -294,6 +311,9 @@ class NotificationsTest {
     fun `concurrent setNotifying writes CCCD once`() = runBlocking {
         withTimeout(10.seconds) {
             val characteristic = connect()
+                .first { it.uuid == serviceUuid }
+                .characteristics
+                .first { it.uuid == characteristicUuid }
 
             List(3) { async { characteristic.setNotifying(true) } }.awaitAll()
 
