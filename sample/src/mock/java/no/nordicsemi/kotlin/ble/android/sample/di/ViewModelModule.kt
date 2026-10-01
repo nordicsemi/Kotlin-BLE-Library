@@ -57,6 +57,7 @@ import no.nordicsemi.kotlin.ble.client.mock.ServiceDiscoveryResult
 import no.nordicsemi.kotlin.ble.client.mock.WriteResponse
 import no.nordicsemi.kotlin.ble.client.mock.internal.MockRemoteCharacteristic
 import no.nordicsemi.kotlin.ble.core.AdvertisingDataFlag
+import no.nordicsemi.kotlin.ble.core.mock.AdvertisingDataScope
 import no.nordicsemi.kotlin.ble.core.Bluetooth5AdvertisingSetParameters
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.ConnectionParameters
@@ -320,6 +321,33 @@ object ViewModelModule {
         }
     }
 
+    /**
+     * Many non-connectable devices, to test the RSSI graph.
+     *
+     * Each device advertises with a different interval and proximity. Every third one stops
+     * advertising for a while, to show breaks in the graph.
+     */
+    private val sensors = (1..48).map { i ->
+        PeripheralSpec.simulatePeripheral(
+            identifier = "00:00:00:00:00:%02X".format(i),
+            proximity = Proximity.entries[i % 3],
+        ) {
+            val parameters = LegacyAdvertisingSetParameters(
+                connectable = false,
+                interval = (100 + (i * 97) % 900).milliseconds,
+            )
+            fun AdvertisingDataScope.data() {
+                CompleteLocalName("Sensor %02d".format(i))
+            }
+            if (i % 3 == 0) {
+                advertising(parameters = parameters, timeout = 10.seconds) { data() }
+                advertising(parameters = parameters, delay = 18.seconds) { data() }
+            } else {
+                advertising(parameters = parameters, delay = (i * 300).milliseconds) { data() }
+            }
+        }
+    }
+
     @ViewModelScoped
     @Provides
     fun provideViewModelCoroutineScope(lifecycle: ViewModelLifecycle): CoroutineScope {
@@ -343,7 +371,7 @@ object ViewModelModule {
     ): CentralManager = CentralManager.mock(environment, scope)
         .apply {
             logger = Log.Sink.Timber { _, _ -> true }
-            simulatePeripherals(listOf(blinky, beacon))
+            simulatePeripherals(listOf(blinky, beacon) + sensors)
         }
 
 }
