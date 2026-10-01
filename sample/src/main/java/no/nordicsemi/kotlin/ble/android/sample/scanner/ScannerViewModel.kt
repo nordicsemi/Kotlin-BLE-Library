@@ -151,10 +151,11 @@ class ScannerViewModel @Inject constructor(
                     Name("Pixel 5")
                     Name("Pixel 7")
                     Name("DFU1A06")
-                    Name("nRFConnect")
                     Name("HR Sensor")
+                    Name("Zephyr")
                     Name(Regex("Mesh.*"))
                     Name(Regex("Nordic.*"))
+                    Name(Regex("nRF.*"))
                 }
             }
             .onStart {
