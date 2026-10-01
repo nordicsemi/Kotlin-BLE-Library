@@ -31,7 +31,6 @@
 
 package no.nordicsemi.kotlin.ble.android.sample.graph
 
-import android.os.SystemClock
 import androidx.compose.foundation.Canvas
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -80,7 +79,8 @@ import kotlin.time.Duration.Companion.seconds
  * and the device is reported as inactive.
  * @param averagingWindow Samples received within this time are averaged into a single point.
  * @param palette Colors assigned to devices. When exhausted, more colors are generated.
- * @param clock The time source, in milliseconds. Samples added without a time use it as well.
+ * @param clock The current time, in milliseconds since epoch. It must have the same time base as
+ * the samples, which by default use it as well.
  */
 @Stable
 class RssiGraphState(
@@ -88,7 +88,7 @@ class RssiGraphState(
     val timeout: Duration = 4.seconds,
     val averagingWindow: Duration = 200.milliseconds,
     private val palette: List<Color> = RssiGraphDefaults.Palette,
-    val clock: () -> Long = SystemClock::elapsedRealtime,
+    val clock: () -> Long = System::currentTimeMillis,
 ) {
     private class Point(val time: Long, var sum: Int, var count: Int) {
         val rssi: Float get() = sum.toFloat() / count

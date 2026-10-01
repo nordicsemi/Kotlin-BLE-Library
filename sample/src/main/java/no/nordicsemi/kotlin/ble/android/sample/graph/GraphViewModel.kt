@@ -50,6 +50,7 @@ import kotlinx.coroutines.launch
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import timber.log.Timber
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * A device shown in the legend of the RSSI graph.
@@ -111,11 +112,13 @@ class GraphViewModel @Inject constructor(
                     if (result.rssi > MAX_RSSI) return@collect
 
                     val address = result.peripheral.address
-                    // The time of the scan result is not used, as its time base differs
-                    // between the native and mock implementations.
                     // The lock makes sure the legend and the graph are cleared together.
                     synchronized(names) {
-                        graphState.add(key = address, rssi = result.rssi)
+                        graphState.add(
+                            key = address,
+                            rssi = result.rssi,
+                            time = result.timestamp.toEpochMilliseconds(),
+                        )
                         names[address] = result.peripheral.name
                     }
                 }
@@ -161,7 +164,7 @@ class GraphViewModel @Inject constructor(
     }
 
     private companion object {
-        const val LEGEND_REFRESH_INTERVAL = 500L
+        val LEGEND_REFRESH_INTERVAL = 500L.milliseconds
         const val MAX_RSSI = 20
     }
 }
