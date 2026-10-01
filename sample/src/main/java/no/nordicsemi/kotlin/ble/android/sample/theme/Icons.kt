@@ -44,13 +44,21 @@ object Nordic {
     object Color {
         val Black = Color(0xFF000000)
         val Blue = Color(0xFF00A9CE)
+        val Blue80 = Color(0xFF33B4D1)
+        val Blueslate = Color(0xFF0033A0)
         val Sky = Color(0xFF6AD1E3)
         val Lake = Color(0xFF0077C8)
-        val Grass = Color(0xFFD0DF00)
+        val Lake80 = Color(0xFF3392D3)
         val Green = Color(0xFF00A651)
+        val Grass = Color(0xFFD0DF00)
         val Sun = Color(0xFFFFCD00)
-        val Red = Color(0xFFEE2F4E)
+        val Fall70 = Color(0xFFF8A763)
         val Fall = Color(0xFFF58220)
+        val Red = Color(0xFFEE2F4E)
+        val Pink = Color(0xFFC6007E)
+        val LightGrey = Color(0xFFD9E1E2)
+        val MiddleGrey = Color(0xFF768692)
+        val DarkGrey = Color(0xFF333F48)
     }
 
     object Icons {

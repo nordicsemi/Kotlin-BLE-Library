@@ -31,10 +31,10 @@
 
 package no.nordicsemi.kotlin.ble.android.sample.common
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -74,7 +74,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.launch
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
 import no.nordicsemi.kotlin.ble.android.sample.theme.Nordic
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
@@ -141,10 +140,11 @@ fun DeviceItem(
     ) {
         val state by peripheral.state.collectAsStateWithLifecycle()
         val animatedColor by animateColorAsState(
+            animationSpec = tween(durationMillis = 500),
             targetValue = when (state) {
-                is ConnectionState.Connected -> Nordic.Color.Blue
-                is ConnectionState.Connecting -> Nordic.Color.Sky
-                else -> MaterialTheme.colorScheme.surfaceVariant
+                is ConnectionState.Connected -> Nordic.Color.Lake
+                is ConnectionState.Connecting -> Nordic.Color.Blue
+                else -> Nordic.Color.MiddleGrey
             },
             label = "background color animation"
         )
@@ -173,7 +173,7 @@ fun DeviceItem(
                     Icon(
                         imageVector = Nordic.Icons.Bluetooth,
                         contentDescription = "Device Icon",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = Color.White,
                         modifier = Modifier
                             .size(32.dp)
                             .clip(CircleShape)
