@@ -53,11 +53,22 @@ abstract class RemoteService: PrimaryService<RemoteCharacteristic>, AnyRemoteSer
             field = newValue
             // Setting owner to null means, that the characteristic has been invalidated.
             if (newValue == null) {
-                characteristics.forEach {
-                    (it as? BaseRemoteCharacteristic)?.reset()
-                }
+                resetCharacteristics()
             }
         }
+}
+
+/**
+ * Resets the state of all characteristics of the service, including characteristics
+ * of included services.
+ */
+private fun AnyRemoteService.resetCharacteristics() {
+    characteristics.forEach {
+        (it as? BaseRemoteCharacteristic)?.reset()
+    }
+    includedServices.forEach {
+        it.resetCharacteristics()
+    }
 }
 
 /**
