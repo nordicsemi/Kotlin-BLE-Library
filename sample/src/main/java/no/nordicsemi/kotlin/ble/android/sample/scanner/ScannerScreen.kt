@@ -31,20 +31,12 @@
 
 package no.nordicsemi.kotlin.ble.android.sample.scanner
 
-import android.Manifest.permission.ACCESS_FINE_LOCATION
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -53,12 +45,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import no.nordicsemi.kotlin.ble.android.sample.view.AppBarActions
 import no.nordicsemi.kotlin.ble.android.sample.view.AppBarToggleButton
 import no.nordicsemi.kotlin.ble.android.sample.view.BluetoothStateWarning
-import no.nordicsemi.kotlin.ble.core.android.AndroidEnvironment
-import no.nordicsemi.kotlin.ble.environment.android.compose.LocalEnvironmentOwner
+import no.nordicsemi.kotlin.ble.android.sample.view.RequireScanPermissions
 
 @Composable
 fun ScannerScreen() {
-    val environment = LocalEnvironmentOwner.current
     val vm = hiltViewModel<ScannerViewModel>()
     val state by vm.state.collectAsStateWithLifecycle()
     val results by vm.peripherals.collectAsStateWithLifecycle()
@@ -72,49 +62,9 @@ fun ScannerScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        var permissions = arrayOf<String>()
-        if (environment.isLocationRequiredForScanning) {
-            // Location permission is required to scan for Bluetooth LE devices on Android 12 and below,
-            // or when 'neverForLocation' is set to 'false' in the manifest.
-            permissions += ACCESS_FINE_LOCATION
-        }
-        if (environment.requiresBluetoothRuntimePermissions) {
-             // Bluetooth permissions are required to scan for Bluetooth LE devices on Android 12 and above.
-             permissions += AndroidEnvironment.Permission.BLUETOOTH_SCAN
-             permissions += AndroidEnvironment.Permission.BLUETOOTH_CONNECT
-        }
-        var permissionGranted by remember {
-            val bluetoothPermissions =
-                environment.requiresBluetoothRuntimePermissions &&
-                environment.isBluetoothScanPermissionGranted &&
-                environment.isBluetoothConnectPermissionGranted
-            val locationPermission =
-                environment.isLocationRequiredForScanning &&
-                environment.isLocationPermissionGranted
-            mutableStateOf(bluetoothPermissions || locationPermission)
-        }
-        val launcher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestMultiplePermissions(),
-            onResult = {
-                // This may not work.
-                // permissionGranted = it.values.all { true }
-                // Use this instead:
-                val bluetoothPermissions =
-                    environment.requiresBluetoothRuntimePermissions &&
-                            environment.isBluetoothScanPermissionGranted &&
-                            environment.isBluetoothConnectPermissionGranted
-                val locationPermission =
-                    environment.isLocationRequiredForScanning &&
-                            environment.isLocationPermissionGranted
-                permissionGranted = bluetoothPermissions || locationPermission
-            }
-        )
-
         BluetoothStateWarning(state)
 
-        if (permissionGranted) {
-            // Both Bluetooth and Location permissions are granted.
-            // We can now start scanning.
+        RequireScanPermissions {
             AppBarActions {
                 AppBarToggleButton(
                     isActive = isScanning,
@@ -141,12 +91,6 @@ fun ScannerScreen() {
                 attributeValues = attributeValues,
                 onAttributeAction = vm::onAttributeAction,
             )
-        } else {
-            Button(
-                onClick = {  launcher.launch(permissions) }
-            ) {
-                Text("Grant required permissions")
-            }
         }
     }
 }
