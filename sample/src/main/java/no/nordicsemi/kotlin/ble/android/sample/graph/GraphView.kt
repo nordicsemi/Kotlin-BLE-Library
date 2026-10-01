@@ -133,6 +133,7 @@ private fun GraphCard(
             state = graphState,
             selected = selected,
             paused = !isScanning,
+            showFps = true,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(start = 8.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),

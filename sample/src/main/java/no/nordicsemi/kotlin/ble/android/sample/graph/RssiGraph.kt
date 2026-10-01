@@ -43,7 +43,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.StrokeCap
@@ -206,12 +208,14 @@ class RssiGraphState(
  * @property grid The color of the grid lines.
  * @property label The color of the axis labels.
  * @property inactive The color of devices not selected, when some devices are selected.
+ * @property labelBackground The background of labels drawn over the plot, like the FPS count.
  */
 @Immutable
 data class RssiGraphColors(
     val grid: Color,
     val label: Color,
     val inactive: Color,
+    val labelBackground: Color,
 )
 
 object RssiGraphDefaults {
@@ -228,7 +232,8 @@ object RssiGraphDefaults {
         grid: Color = MaterialTheme.colorScheme.outlineVariant,
         label: Color = MaterialTheme.colorScheme.onSurfaceVariant,
         inactive: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
-    ) = RssiGraphColors(grid, label, inactive)
+        labelBackground: Color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
+    ) = RssiGraphColors(grid, label, inactive, labelBackground)
 }
 
 /**
@@ -246,6 +251,8 @@ object RssiGraphDefaults {
  * @param rssiRange The minimum RSSI range shown. It is extended if values are outside it.
  * @param colors The colors.
  * @param labelStyle The style of the axis labels.
+ * @param showFps When `true`, the number of frames drawn per second is shown in the top-right
+ * corner. Useful for checking the performance with many devices.
  */
 @Composable
 fun RssiGraph(
@@ -256,6 +263,7 @@ fun RssiGraph(
     rssiRange: IntRange = -100..-30,
     colors: RssiGraphColors = RssiGraphDefaults.colors(),
     labelStyle: TextStyle = MaterialTheme.typography.labelSmall,
+    showFps: Boolean = false,
 ) {
     val textMeasurer = rememberTextMeasurer()
     val style = labelStyle.copy(color = colors.label)
@@ -264,19 +272,21 @@ fun RssiGraph(
     val labels = remember(textMeasurer, style) { HashMap<String, TextLayoutResult>() }
     fun label(text: String) = labels.getOrPut(text) { textMeasurer.measure(text, style) }
 
+    // Reused between frames to avoid allocations.
+    val buffers = remember { DrawBuffers() }
+
     // The time of the right edge of the graph, updated every frame.
     // It is read only in the draw phase, so moving the graph does not cause recomposition.
     var now by remember(state) { mutableLongStateOf(state.clock()) }
     LaunchedEffect(state, paused) {
+        // Don't count the time when paused.
+        buffers.fpsCounter.reset()
         if (!paused) {
             while (true) {
                 withFrameMillis { now = state.clock() }
             }
         }
     }
-
-    // Reused between frames to avoid allocations.
-    val buffers = remember { DrawBuffers() }
 
     Canvas(modifier = modifier) {
         val now = now
@@ -368,12 +378,55 @@ fun RssiGraph(
                 }
             }
         }
+
+        if (showFps) {
+            buffers.fpsCounter.onFrame(System.nanoTime())
+            val fps = label("${buffers.fpsCounter.fps} FPS")
+            val padding = 2.dp.toPx()
+            val topLeft = Offset(right - fps.size.width - labelPadding, plotTop + labelPadding)
+            drawRoundRect(
+                color = colors.labelBackground,
+                topLeft = topLeft - Offset(padding * 2, padding),
+                size = Size(fps.size.width + padding * 4, fps.size.height + padding * 2),
+                cornerRadius = CornerRadius(padding * 2),
+            )
+            drawText(fps, topLeft = topLeft)
+        }
     }
 }
 
 private class DrawBuffers {
+    val fpsCounter = FpsCounter()
     val linePaint = Paint().apply { strokeCap = StrokeCap.Butt }
     val dotPaint = Paint().apply { strokeCap = StrokeCap.Round }
     var lines = FloatArray(0)
     var dots = FloatArray(0)
+}
+
+/**
+ * Counts frames drawn per second, updated twice a second.
+ */
+private class FpsCounter {
+    private var frames = 0
+    private var start = 0L
+
+    /** The last calculated number of frames per second. */
+    var fps = 0
+        private set
+
+    fun onFrame(timeNanos: Long) {
+        if (start == 0L) start = timeNanos
+        frames++
+        val elapsed = timeNanos - start
+        if (elapsed >= 500_000_000L) {
+            fps = (frames * 1_000_000_000L / elapsed).toInt()
+            frames = 0
+            start = timeNanos
+        }
+    }
+
+    fun reset() {
+        frames = 0
+        start = 0L
+    }
 }
