@@ -144,8 +144,14 @@ class RssiGraphState(
     }
 
     private fun prune(s: Series, now: Long) {
-        // Keep one point to the left of the graph, so that the line enters it from the edge.
         val limit = now - timeWindow.inWholeMilliseconds - timeout.inWholeMilliseconds
+        // If the device stopped advertising, remove all points. The series is kept, so that
+        // the device keeps its color.
+        if (s.points.lastOrNull()?.let { it.time < limit } == true) {
+            s.points.clear()
+            return
+        }
+        // Keep one point to the left of the graph, so that the line enters it from the edge.
         while (s.points.size > 1 && s.points[1].time < limit) {
             s.points.removeFirst()
         }
@@ -188,12 +194,14 @@ class RssiGraphState(
         }
     }
 
-    /** Returns the RSSI range of all points, or `null` if there are none. */
-    internal fun rssiRange(): ClosedFloatingPointRange<Float>? = synchronized(lock) {
+    /** Returns the RSSI range of points visible at [now], or `null` if there are none. */
+    internal fun rssiRange(now: Long): ClosedFloatingPointRange<Float>? = synchronized(lock) {
+        val start = now - timeWindow.inWholeMilliseconds
         var lo = Float.POSITIVE_INFINITY
         var hi = Float.NEGATIVE_INFINITY
         series.values.forEach { s ->
             s.points.forEach {
+                if (it.time < start) return@forEach
                 lo = min(lo, it.rssi)
                 hi = max(hi, it.rssi)
             }
@@ -294,7 +302,7 @@ fun RssiGraph(
         val timeout = state.timeout.inWholeMilliseconds
 
         // Vertical range, rounded to 10 dB.
-        val data = state.rssiRange()
+        val data = state.rssiRange(now)
         val top = max(rssiRange.last.toFloat(), data?.let { ceil(it.endInclusive / 10f) * 10f } ?: Float.NEGATIVE_INFINITY)
         val bottom = min(rssiRange.first.toFloat(), data?.let { floor(it.start / 10f) * 10f } ?: Float.POSITIVE_INFINITY)
         val rssiStep = if (top - bottom > 80f) 20 else 10
