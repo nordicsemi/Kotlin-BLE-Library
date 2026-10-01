@@ -698,7 +698,6 @@ open class Peripheral(
      *
      * Call [executeReliableWrite] or [abortReliableWrite] to commit or cancel the transaction.
      *
-     * TODO Is the exception truly thrown?
      * If any of the write operations throws [ValueDoesNotMatchException], the whole transaction
      * will be aborted.
      *
@@ -707,6 +706,7 @@ open class Peripheral(
      * @see executeReliableWrite
      * @see abortReliableWrite
      */
+    // TODO IsValueDoesNotMatchException truly thrown?
     fun beginReliableWrite() {
         logger?.trace(Layer.GATT) { "Beginning reliable write" }
         try {
