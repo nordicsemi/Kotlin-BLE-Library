@@ -34,6 +34,7 @@ package no.nordicsemi.kotlin.ble.client.android
 import no.nordicsemi.kotlin.ble.client.ScanResult
 import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
+import kotlin.time.Instant
 
 open class ScanResult(
     override val peripheral: Peripheral,
@@ -43,7 +44,7 @@ open class ScanResult(
     override val txPowerLevel: Int?,
     override val primaryPhy: PrimaryPhy,
     override val secondaryPhy: Phy?,
-    override val timestamp: Long,
+    override val timestamp: Instant,
 ) : ScanResult<Peripheral, AdvertisingData> {
 
     override fun toString(): String = "ScanResult(" +

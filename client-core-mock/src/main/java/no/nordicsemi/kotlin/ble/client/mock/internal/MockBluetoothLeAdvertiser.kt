@@ -43,6 +43,7 @@ import no.nordicsemi.kotlin.ble.client.mock.Proximity
 import no.nordicsemi.kotlin.ble.core.Bluetooth5AdvertisingSetParameters
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
 import no.nordicsemi.kotlin.ble.core.Environment
+import kotlin.time.Clock
 
 class MockBluetoothLeAdvertiser<ID: Any>(
     private val scope: CoroutineScope,
@@ -106,7 +107,7 @@ class MockBluetoothLeAdvertiser<ID: Any>(
                                         txPowerLevel = txPowerLevel,
                                         primaryPhy = primaryPhy,
                                         secondaryPhy = secondaryPhy,
-                                        timestamp = System.currentTimeMillis() // TODO different time
+                                        timestamp = Clock.System.now()
                                     )
                                     _advertisingEvents.emit(scanResult)
                                 }

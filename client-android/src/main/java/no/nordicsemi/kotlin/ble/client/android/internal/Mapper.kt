@@ -52,6 +52,9 @@ import no.nordicsemi.kotlin.ble.core.PhyOption
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
 import no.nordicsemi.kotlin.ble.core.WriteType
 import java.util.UUID
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import android.bluetooth.le.ScanResult as NativeScanResult
 
@@ -121,7 +124,7 @@ internal fun NativeScanResult.toScanResult(peripheral: (device: BluetoothDevice,
                         null,
             primaryPhy = primaryPhy.toPrimaryPhy(),
             secondaryPhy = secondaryPhy.toPhy(),
-            timestamp = timestampNanos / 1_000_000
+            timestamp = timestampNanos.elapsedRealtimeNanosToInstant()
         )
     } else {
         ScanResult(
@@ -136,7 +139,7 @@ internal fun NativeScanResult.toScanResult(peripheral: (device: BluetoothDevice,
                     null,
             primaryPhy = PrimaryPhy.PHY_LE_1M,
             secondaryPhy = null, // Not used
-            timestamp = timestampNanos / 1_000_000
+            timestamp = timestampNanos.elapsedRealtimeNanosToInstant()
         )
     }
 }
@@ -151,8 +154,20 @@ internal fun ByteArray.toScanResult(rssi: Int, peripheral: (name: String?) -> Pe
         txPowerLevel = null, // Unknown
         primaryPhy = PrimaryPhy.PHY_LE_1M,
         secondaryPhy = null, // Not used
-        timestamp = SystemClock.elapsedRealtime()
+        timestamp = Clock.System.now()
     )
+}
+
+/**
+ * Converts the time since boot, as reported by [NativeScanResult.getTimestampNanos],
+ * to wall-clock time.
+ *
+ * The time since boot is not affected by changes of the system time, so the age of the scan
+ * result is calculated first and subtracted from the current time.
+ */
+private fun Long.elapsedRealtimeNanosToInstant(): Instant {
+    val age = (SystemClock.elapsedRealtimeNanos() - this).nanoseconds
+    return Clock.System.now() - age
 }
 
 private fun Int.toPrimaryPhy(): PrimaryPhy = when (this) {
