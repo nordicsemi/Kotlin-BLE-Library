@@ -33,4 +33,9 @@ package no.nordicsemi.kotlin.ble.client.android.exception
 
 import no.nordicsemi.kotlin.ble.core.exception.BluetoothException
 
+/**
+ * An exception thrown when bonding process failed.
+ *
+ * This may be caused by invalid PIN / passphrase, rejecting pairing or an internal error.
+ */
 class BondingFailedException: BluetoothException("Bonding failed")

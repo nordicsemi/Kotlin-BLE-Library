@@ -36,6 +36,11 @@ import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
 import kotlin.time.Instant
 
+/**
+ * Bluetooth LE scan result for Android.
+ *
+ * @see no.nordicsemi.kotlin.ble.client.ScanResult
+ */
 open class ScanResult(
     override val peripheral: Peripheral,
     override val isConnectable: Boolean?,

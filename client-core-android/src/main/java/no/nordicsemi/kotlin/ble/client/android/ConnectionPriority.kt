@@ -42,7 +42,9 @@ enum class ConnectionPriority {
      * Bluetooth SIG. This is the default value if no connection parameter update
      * is requested.
      *
-     * * Interval: 30 - 50 ms, latency: 0, supervision timeout: 5 sec (Android 8+) or 20 sec (before).
+     * * Interval: 30 - 50 ms,
+     * * Latency: 0,
+     * * Supervision timeout: 5 sec (Android 8+) or 20 sec (before).
      *
      * @see <a href="https://android.googlesource.com/platform/packages/modules/Bluetooth/+/673c5903c4a920510c371af26e5870857a584ead%5E!">commit 673c5903c4a920510c371af26e5870857a584ead</a>
      */
@@ -67,7 +69,9 @@ enum class ConnectionPriority {
     /**
      * Connection parameter update - Request low power, reduced data rate connection parameters.
      *
-     * * Interval: 100 - 125 ms, latency: 2, supervision timeout: 5 sec (Android 8+) or 20 sec (before).
+     * * Interval: 100 - 125 ms,
+     * * Latency: 2,
+     * * Supervision timeout: 5 sec (Android 8+) or 20 sec (before).
      *
      * @see <a href="https://android.googlesource.com/platform/packages/modules/Bluetooth/+/673c5903c4a920510c371af26e5870857a584ead%5E!">commit 673c5903c4a920510c371af26e5870857a584ead</a>
      */
@@ -79,7 +83,9 @@ enum class ConnectionPriority {
      * [BALANCED], so it is recommended that apps do not use this
      * unless it specifically fits their use case.
      *
-     * Interval: 30 ms, latency: 0, supervision timeout: 5 sec.
+     * * Interval: 30 ms,
+     * * Latency: 0,
+     * * Supervision timeout: 5 sec.
      */
     DIGITAL_CAR_KEY,
 }
