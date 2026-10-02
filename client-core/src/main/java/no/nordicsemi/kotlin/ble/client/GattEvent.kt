@@ -40,6 +40,9 @@ import no.nordicsemi.kotlin.ble.core.PhyOption
 
 /**
  * A base class for all GATT events.
+ *
+ * The events should only be used by central manager implementations, not exposed to the application.
+ * @hide
  */
 sealed class GattEvent {
 
@@ -56,6 +59,7 @@ sealed class GattEvent {
  * Event indicating that the connection state has changed.
  *
  * @param newState The new connection state.
+ * @hide
  */
 data class ConnectionStateChanged(val newState: ConnectionState) : GattEvent() {
 
@@ -68,6 +72,7 @@ data class ConnectionStateChanged(val newState: ConnectionState) : GattEvent() {
 
 /**
  * Event indicating that the service discovery has completed.
+ * @hide
  */
 sealed class ServiceDiscoveryCompleted : GattEvent()
 
@@ -75,6 +80,7 @@ sealed class ServiceDiscoveryCompleted : GattEvent()
  * Event indicating that the services have changed.
  *
  * @param services The list of discovered remote services.
+ * @hide
  */
 data class ServicesDiscovered(val services: List<RemoteService>) : ServiceDiscoveryCompleted()
 
@@ -82,11 +88,13 @@ data class ServicesDiscovered(val services: List<RemoteService>) : ServiceDiscov
  * Event indicating that the service discovery has failed.
  *
  * @param reason The reason of the failure.
+ * @hide
  */
 data class ServiceDiscoveryFailed(val reason: RemoteServices.Failed.Reason) : ServiceDiscoveryCompleted()
 
 /**
  * Event indicating that the services have changed.
+ * @hide
  */
 data object ServicesChanged : GattEvent()
 
@@ -99,6 +107,7 @@ data object ServicesChanged : GattEvent()
  * antenna, phone orientation, etc.
  *
  * @param rssi The RSSI value.
+ * @hide
  */
 data class RssiRead(val rssi: Int) : GattEvent()
 
@@ -115,6 +124,7 @@ data class RssiRead(val rssi: Int) : GattEvent()
  * Link Layer packet is called the LL MTU and is not available using Android API.
  *
  * @param mtu The new MTU.
+ * @hide
  */
 data class MtuChanged(val mtu: Int) : GattEvent()
 
@@ -128,6 +138,7 @@ data class MtuChanged(val mtu: Int) : GattEvent()
  * @param phy The new PHY.
  * @see Phy
  * @see PhyOption
+ * @hide
  */
 data class PhyChanged(val phy: PhyInUse) : GattEvent()
 
@@ -135,6 +146,7 @@ data class PhyChanged(val phy: PhyInUse) : GattEvent()
  * Event indicating that the connection parameters have changed.
  *
  * @param newParameters The new connection parameters.
+ * @hide
  */
 data class ConnectionParametersChanged(val newParameters: ConnectionParameters) : GattEvent()
 
@@ -145,10 +157,12 @@ data class ConnectionParametersChanged(val newParameters: ConnectionParameters) 
  * It ensures that either all prepared writes are committed or none of them.
  *
  * @param status The operation status.
+ * @hide
  */
 data class ReliableWriteCompleted(val status: OperationStatus) : GattEvent()
 
 /**
  * Event type used by implementations.
+ * @hide
  */
 open class ImplSpecificEvent : GattEvent()
