@@ -36,16 +36,24 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import no.nordicsemi.kotlin.ble.android.sample.NAV_ADVERTISER
+import no.nordicsemi.kotlin.ble.android.sample.NAV_GRAPH
 import no.nordicsemi.kotlin.ble.android.sample.NAV_SCANNER
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
+import no.nordicsemi.kotlin.ble.android.sample.theme.Nordic
 
 @Composable
 fun MenuScreen(
@@ -58,19 +66,42 @@ fun MenuScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Add buttons here
-        Button(
+        MenuItem(
+            title = NAV_ADVERTISER,
+            icon = Nordic.Icons.Advertising,
             onClick = { onMenuClicked(NAV_ADVERTISER) },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(text = "Advertiser")
-        }
-        Button(
+        )
+        MenuItem(
+            title = NAV_SCANNER,
+            icon = Nordic.Icons.BluetoothConnected,
             onClick = { onMenuClicked(NAV_SCANNER) },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(text = "Scanner")
-        }
+        )
+        MenuItem(
+            title = NAV_GRAPH,
+            icon = Nordic.Icons.Chart,
+            onClick = { onMenuClicked(NAV_GRAPH) },
+        )
+    }
+}
+
+@Composable
+private fun MenuItem(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(ButtonDefaults.IconSize),
+        )
+        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+        Text(text = title)
     }
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -29,12 +29,14 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package no.nordicsemi.kotlin.ble.android.sample.scanner
+package no.nordicsemi.kotlin.ble.android.sample.graph
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -48,12 +50,12 @@ import no.nordicsemi.kotlin.ble.android.sample.view.BluetoothStateWarning
 import no.nordicsemi.kotlin.ble.android.sample.view.RequireScanPermissions
 
 @Composable
-fun ScannerScreen() {
-    val vm = hiltViewModel<ScannerViewModel>()
+fun GraphScreen() {
+    val vm = hiltViewModel<GraphViewModel>()
     val state by vm.state.collectAsStateWithLifecycle()
-    val results by vm.peripherals.collectAsStateWithLifecycle()
     val isScanning by vm.isScanning.collectAsStateWithLifecycle()
-    val attributeValues by vm.attributeValues.collectAsStateWithLifecycle()
+    val devices by vm.devices.collectAsStateWithLifecycle()
+    val selected by vm.selected.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -66,6 +68,9 @@ fun ScannerScreen() {
 
         RequireScanPermissions {
             AppBarActions {
+                TextButton(onClick = vm::onClearRequested) {
+                    Text(text = "Clear")
+                }
                 AppBarToggleButton(
                     isActive = isScanning,
                     startLabel = "Scan",
@@ -79,19 +84,14 @@ fun ScannerScreen() {
                 )
             }
 
-            ScannerView(
-                results = results,
+            GraphView(
+                graphState = vm.graphState,
+                devices = devices,
+                selected = selected,
                 isScanning = isScanning,
-                onPeripheralClicked = vm::onPeripheralSelected,
-                onBondRequested = vm::onBondRequested,
-                onRemoveBondRequested = vm::onRemoveBondRequested,
-                onClearCacheRequested = vm::onClearCacheRequested,
-                onRssiRead = vm::onRssiRead,
-                onReadPhy = vm::onReadPhy,
-                attributeValues = attributeValues,
-                onAttributeAction = vm::onAttributeAction,
+                onDeviceClicked = vm::onDeviceClicked,
+                onClearSelectionRequested = vm::onClearSelectionRequested,
             )
         }
     }
 }
-
