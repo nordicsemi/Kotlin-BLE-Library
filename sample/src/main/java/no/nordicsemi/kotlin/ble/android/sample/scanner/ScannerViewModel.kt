@@ -221,6 +221,7 @@ class ScannerViewModel @Inject constructor(
                             // The observers will get canceled when the connection scope gets canceled,
                             // that is when the device is manually disconnected in case of auto connect,
                             // or disconnects for any reason when auto connect was false.
+                            observeMtu(peripheral, this)
                             observePhy(peripheral, this)
                             observeConnectionParameters(peripheral, this)
                             observeServices(peripheral, this)
@@ -388,6 +389,20 @@ class ScannerViewModel @Inject constructor(
         } catch (e: Exception) {
             Timber.e("Peripheral disconnected before initialization completed: ${e.message}")
         }
+    }
+
+    private fun observeMtu(peripheral: Peripheral, scope: CoroutineScope) {
+        peripheral.mtu
+            .onEach {
+                Timber.i("MTU changed to: $it")
+            }
+            .onEmpty {
+                Timber.w("MTU didn't change")
+            }
+            .onCompletion {
+                Timber.d("MTU collection completed")
+            }
+            .launchIn(scope)
     }
 
     private fun observePhy(peripheral: Peripheral, scope: CoroutineScope) {
