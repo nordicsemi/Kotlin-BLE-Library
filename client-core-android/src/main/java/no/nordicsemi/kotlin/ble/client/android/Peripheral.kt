@@ -506,9 +506,7 @@ open class Peripheral(
                             throw PeripheralNotConnectedException()
                         }
                     } catch (e: Exception) {
-                        logger?.error(Layer.PHY) {
-                            "Requesting PHY read failed: ${e.message}"
-                        }
+                        logger?.error(Layer.PHY) { "Requesting PHY read failed: ${e.message}" }
                         throw e
                     }
                 }
@@ -557,9 +555,7 @@ open class Peripheral(
                             throw PeripheralNotConnectedException()
                         }
                     } catch (e: Exception) {
-                        logger?.error(Layer.PHY) {
-                            "Requesting PHY change failed: ${e.message}"
-                        }
+                        logger?.error(Layer.PHY) { "Requesting PHY change failed: ${e.message}" }
                         throw e
                     }
                 }
@@ -647,9 +643,7 @@ open class Peripheral(
                                 throw PeripheralNotConnectedException()
                             }
                         } catch (e: Exception) {
-                            logger?.error(Layer.GATT) {
-                                "Requesting MTU failed: ${e.message}"
-                            }
+                            logger?.error(Layer.GATT) { "Requesting MTU failed: ${e.message}" }
                             throw e
                         }
                     }
@@ -696,9 +690,7 @@ open class Peripheral(
                                 throw PeripheralNotConnectedException()
                             }
                         } catch (e: Exception) {
-                            logger?.error(Layer.LINK) {
-                                "Requesting connection priority failed: ${e.message}"
-                            }
+                            logger?.error(Layer.LINK) { "Requesting connection priority failed: ${e.message}" }
                             throw e
                         }
                     }
@@ -772,9 +764,7 @@ open class Peripheral(
                                 throw PeripheralNotConnectedException()
                             }
                         } catch (e: Exception) {
-                            logger?.error(Layer.GATT) {
-                                "Executing reliable write failed: ${e.message}"
-                            }
+                            logger?.error(Layer.GATT) { "Executing reliable write failed: ${e.message}" }
                             throw e
                         }
                     }
@@ -823,9 +813,7 @@ open class Peripheral(
                                 throw PeripheralNotConnectedException()
                             }
                         } catch (e: Exception) {
-                            logger?.error(Layer.GATT) {
-                                "Aborting reliable write failed: ${e.message}"
-                            }
+                            logger?.error(Layer.GATT) { "Aborting reliable write failed: ${e.message}" }
                             throw e
                         }
                     }
@@ -882,9 +870,7 @@ open class Peripheral(
                     } catch (e: Exception) {
                         // Reflection exception has a cause, which is more important.
                         val reason = e.cause?.message ?: e.message
-                        logger?.error(Layer.GATT, e) {
-                            "Refreshing cache failed: $reason"
-                        }
+                        logger?.error(Layer.GATT, e) { "Refreshing cache failed: $reason" }
                         throw e
                     }
                 }
@@ -974,9 +960,7 @@ open class Peripheral(
                         } catch (e: Exception) {
                             // Reflection exception has a cause, which is more important.
                             val reason = e.cause?.message ?: e.message
-                            logger?.error(Layer.SMP, e) {
-                                "Failed to remove bond information: $reason"
-                            }
+                            logger?.error(Layer.SMP, e) { "Failed to remove bond information: $reason" }
                             throw e
                         }
                     }
