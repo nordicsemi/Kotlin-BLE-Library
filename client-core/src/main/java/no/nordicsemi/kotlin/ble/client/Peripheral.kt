@@ -466,6 +466,13 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
                     is ConnectionState.Disconnected ->
                         logger?.info(Layer.GAP) { "Disconnected from $this" }
                 }
+                // Before the state changes to Connected, let the implementation read the data
+                // that should be available when the state is reported. If the link was lost in
+                // the meantime, skip the state change; the disconnection event is already queued.
+                if (event.newState is ConnectionState.Connected && !prepareConnection()) {
+                    logger?.warn(Layer.GAP) { "Link lost while preparing the connection to $this" }
+                    return
+                }
                 _state.update { event.newState }
                 when (event.newState) {
                     is ConnectionState.Connected -> {
@@ -548,7 +555,20 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
     }
 
     /**
-     * This method is called when the peripheral is connected.
+     * This method is called when the link is established, but before the [state] changes to
+     * [ConnectionState.Connected].
+     *
+     * It may be used to read or negotiate data that should be ready when the state is reported.
+     * It is called for each connection, including automatic reconnections.
+     *
+     * @return `false` if the link was lost during preparation; `true` otherwise.
+     * @hide
+     */
+    protected open suspend fun prepareConnection(): Boolean = true
+
+    /**
+     * This method is called when the peripheral is connected, after the [state] has changed to
+     * [ConnectionState.Connected].
      * @hide
      */
     protected open suspend fun initiateConnection() {

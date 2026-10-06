@@ -325,7 +325,7 @@ class ScannerViewModel @Inject constructor(
         scope.launch {
             try {
                 Timber.i("Reading PHY...")
-                val phy = peripheral.readPhy()
+                val phy = peripheral.phy.value
                 Timber.i("PHY: $phy")
             } catch (e: Exception) {
                 Timber.e(e, "Reading PHY failed")
@@ -382,8 +382,7 @@ class ScannerViewModel @Inject constructor(
             Timber.i("RSSI: $rssi dBm")
 
             // Read PHY
-            val phyInUse = peripheral.readPhy()
-            Timber.i("PHY in use: $phyInUse")
+            Timber.i("PHY in use: ${peripheral.phy.value}")
 
             // Request connection priority
             val newConnectionParameters = peripheral.requestConnectionPriority(ConnectionPriority.HIGH)
