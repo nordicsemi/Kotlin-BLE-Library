@@ -474,19 +474,19 @@ private fun AttributeValueRows(
     showReceived: Boolean,
     showSent: Boolean,
 ) {
+    if (showSent) {
+        ValueRow(
+            icon = Icons.AutoMirrored.Filled.ArrowForward,
+            contentDescription = "Sent",
+            value = value?.sent,
+        )
+    }
     if (showReceived) {
         ValueRow(
             icon = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = "Received",
             value = value?.received,
             count = value?.notificationCount ?: 0,
-        )
-    }
-    if (showSent) {
-        ValueRow(
-            icon = Icons.AutoMirrored.Filled.ArrowForward,
-            contentDescription = "Sent",
-            value = value?.sent,
         )
     }
     value?.error?.let { error ->
