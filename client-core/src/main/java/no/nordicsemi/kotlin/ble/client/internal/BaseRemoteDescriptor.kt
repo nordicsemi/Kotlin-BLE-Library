@@ -157,7 +157,7 @@ abstract class BaseRemoteDescriptor(
                     }
                 }
                 .takeWhile { !it.isServiceInvalidatedEvent }
-                .filterIsInstance(DescriptorRead::class)
+                .filterIsInstance<DescriptorRead>()
                 .firstOrNull { it.matches() }
                 ?.let {
                     when (it.status) {
@@ -216,7 +216,7 @@ abstract class BaseRemoteDescriptor(
                     }
                 }
                 .takeWhile { !it.isServiceInvalidatedEvent }
-                .filterIsInstance(DescriptorWrite::class)
+                .filterIsInstance<DescriptorWrite>()
                 .firstOrNull { it.matches() }
                 ?.let {
                     check(it.status.isSuccess) {

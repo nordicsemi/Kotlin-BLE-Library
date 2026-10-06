@@ -786,7 +786,7 @@ class PeripheralSpec<ID: Any> private constructor(
          * Each connected client may invalidate services, but the change applies to all of them.
          */
         private val cacheMonitoring = events
-            .filterIsInstance(ServicesChanged::class)
+            .filterIsInstance<ServicesChanged>()
             .onEach { cachedServices = null }
             .launchIn(scope)
 

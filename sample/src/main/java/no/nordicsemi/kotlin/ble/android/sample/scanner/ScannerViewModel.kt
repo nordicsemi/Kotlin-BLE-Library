@@ -86,7 +86,6 @@ import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PhyInUse
 import no.nordicsemi.kotlin.ble.core.WriteType
 import timber.log.Timber
-import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -132,8 +131,12 @@ class ScannerViewModel @Inject constructor(
 
     /**
      * Subscriptions to notifications or indications started from the UI.
+     *
+     * Access only using [startSubscription], [stopSubscription] and [onSubscriptionCompleted],
+     * which synchronize on the map. `ConcurrentHashMap.computeIfAbsent` would be simpler,
+     * but it requires API 24.
      */
-    private val subscriptions = ConcurrentHashMap<RemoteCharacteristic, Job>()
+    private val subscriptions = mutableMapOf<RemoteCharacteristic, Job>()
 
     private var connectionScopeMap = mutableMapOf<Peripheral, CoroutineScope>()
 
@@ -232,7 +235,7 @@ class ScannerViewModel @Inject constructor(
                                 state.buttonLongPressed
                                     .onEach {
                                         Timber.w("LBS: Long button press detected, closing profile")
-                                        cancel()
+                                        this@installLbsProfile.cancel()
                                     }
                                     .launchIn(this)
 
@@ -512,8 +515,8 @@ class ScannerViewModel @Inject constructor(
     private fun toggleNotifications(characteristic: RemoteCharacteristic) {
         // If the notifications are enabled, or are being enabled, disable them.
         // Mind, that they could have been enabled elsewhere, e.g. by the LBS profile.
-        if (characteristic.isNotifying.value || subscriptions.containsKey(characteristic)) {
-            val job = subscriptions.remove(characteristic)
+        val job = stopSubscription(characteristic)
+        if (characteristic.isNotifying.value || job != null) {
             launchOperation(characteristic, "Disabling notifications on ${characteristic.uuid}") {
                 // Cancelling the subscription stops collecting values, but does not
                 // disable notifications on the peripheral. This has to be done manually.
@@ -527,7 +530,42 @@ class ScannerViewModel @Inject constructor(
         }
 
         // subscribe() enables notifications or indications when the Flow starts being collected.
-        subscriptions.computeIfAbsent(characteristic) { collectValues(it) }
+        startSubscription(characteristic)
+    }
+
+    /**
+     * Starts collecting values of the given characteristic, unless already collecting.
+     */
+    private fun startSubscription(characteristic: RemoteCharacteristic) {
+        synchronized(subscriptions) {
+            // The job is added while holding the lock, so it can't complete before it's added.
+            if (characteristic !in subscriptions) {
+                subscriptions[characteristic] = collectValues(characteristic)
+            }
+        }
+    }
+
+    /**
+     * Removes the subscription of the given characteristic.
+     *
+     * @return The job collecting the values, or `null` if there was none. It is not cancelled.
+     */
+    private fun stopSubscription(characteristic: RemoteCharacteristic): Job? =
+        synchronized(subscriptions) {
+            subscriptions.remove(characteristic)
+        }
+
+    /**
+     * Removes the subscription of the given characteristic, if it is still the given job.
+     *
+     * A newer subscription is not removed, if the user toggled notifications quickly.
+     */
+    private fun onSubscriptionCompleted(characteristic: RemoteCharacteristic, job: Job) {
+        synchronized(subscriptions) {
+            if (subscriptions[characteristic] === job) {
+                subscriptions.remove(characteristic)
+            }
+        }
     }
 
     /**
@@ -567,10 +605,10 @@ class ScannerViewModel @Inject constructor(
                     // If the notifications were enabled elsewhere, start collecting values.
                     // They are already enabled, so subscribe() won't write the CCCD again.
                     // Mind, that values received before the collection starts are missed.
-                    subscriptions.computeIfAbsent(characteristic) { collectValues(it) }
+                    startSubscription(characteristic)
                 } else {
                     // If the notifications were disabled elsewhere, stop collecting values.
-                    subscriptions.remove(characteristic)?.cancel()
+                    stopSubscription(characteristic)?.cancel()
                 }
             }
             .launchIn(scope)
@@ -593,26 +631,25 @@ class ScannerViewModel @Inject constructor(
                 }
             )
         }
-            .onEach { value ->
-                // This is called when a notification or indication is received.
-                Timber.i("Value of ${characteristic.uuid} changed: 0x${value.toHexString()}")
-                updateValue(characteristic) {
-                    copy(received = Timestamped(value), notificationCount = notificationCount + 1)
-                }
+        .onEach { value ->
+            // This is called when a notification or indication is received.
+            Timber.i("Value of ${characteristic.uuid} changed: 0x${value.toHexString()}")
+            updateValue(characteristic) {
+                copy(received = Timestamped(value), notificationCount = notificationCount + 1)
             }
-            .catch { e ->
-                // This is called when subscription fails.
-                Timber.e(e, "Subscription to ${characteristic.uuid} failed: ${e.message}")
-                updateValue(characteristic) { copy(error = Timestamped(e.describe())) }
-            }
-            .onCompletion {
-                // This is called when notifications were disabled, or when the characteristic
-                // becomes invalid, that is on disconnection or service change.
-                Timber.d("Stopped observing updates from ${characteristic.uuid}")
-                // Don't remove a newer subscription, if the user toggled quickly.
-                subscriptions.remove(characteristic, currentCoroutineContext().job)
-            }
-            .launchIn(scope)
+        }
+        .catch { e ->
+            // This is called when subscription fails.
+            Timber.e(e, "Subscription to ${characteristic.uuid} failed: ${e.message}")
+            updateValue(characteristic) { copy(error = Timestamped(e.describe())) }
+        }
+        .onCompletion {
+            // This is called when notifications were disabled, or when the characteristic
+            // becomes invalid, that is on disconnection or service change.
+            Timber.d("Stopped observing updates from ${characteristic.uuid}")
+            onSubscriptionCompleted(characteristic, currentCoroutineContext().job)
+        }
+        .launchIn(scope)
 
     /**
      * Records the value written to the Client Characteristic Configuration descriptor.

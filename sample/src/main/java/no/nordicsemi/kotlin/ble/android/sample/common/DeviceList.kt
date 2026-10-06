@@ -35,7 +35,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -83,7 +82,6 @@ import no.nordicsemi.kotlin.ble.client.android.preview.PreviewScanResult
 import no.nordicsemi.kotlin.ble.core.BondState
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DeviceList(
     results: List<ScanResult>,

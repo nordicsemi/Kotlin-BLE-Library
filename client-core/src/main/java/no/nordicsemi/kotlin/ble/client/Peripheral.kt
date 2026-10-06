@@ -335,7 +335,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
     ): ConnectionState = withTimeout(timeout) {
         impl.events
             .onSubscription { action() }
-            .filterIsInstance(ConnectionStateChanged::class)
+            .filterIsInstance<ConnectionStateChanged>()
             .map { it.newState }
             .first { condition(it) }
     }
