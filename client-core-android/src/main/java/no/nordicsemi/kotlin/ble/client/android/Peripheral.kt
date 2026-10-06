@@ -258,7 +258,13 @@ open class Peripheral(
 
     /** The current PHY as state flow. */
     private val _phy = MutableStateFlow<PhyInUse?>(null)
-    /** The current PHY in use for transmitting and receiving data. */
+    /**
+     * The current PHY in use for transmitting and receiving data.
+     *
+     * The value is `null` if the peripheral is not connected. After connecting the PHY is read
+     * (the initial PHY may be LE 1M or LE Coded), and then it is updated each time it changes,
+     * either by [setPreferredPhy] or by the remote device or the system.
+     */
     val phy = _phy.asStateFlow()
 
     /** Current MTU (Maximum Transmission Unit) value. */
@@ -485,7 +491,9 @@ open class Peripheral(
     }
 
     /**
-     * Read the current transmitter PHY and receiver PHY of the connection.
+     * Reads the current transmitter PHY and receiver PHY of the connection.
+     *
+     * The result is also reported to [phy] state flow.
      *
      * PHY LE 2M or PHY Coded is supported since Android 8.0 (API level 26) or later.
      *
