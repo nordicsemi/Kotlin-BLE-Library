@@ -260,7 +260,9 @@ open class Peripheral(
     val phy = _phy.asStateFlow()
 
     /** Current MTU (Maximum Transmission Unit) value. */
-    private var mtu: Int = ATT_MTU_DEFAULT
+    private var _mtu: Int = ATT_MTU_DEFAULT
+
+    override fun currentMtu(): Int = _mtu
 
     /**
      * A flag set during the automatic MTU request.
@@ -437,7 +439,7 @@ open class Peripheral(
 
     override suspend fun handle(event: GattEvent) = when (event) {
         is ReliableWriteCompleted -> impl.isReliableWriteEnabled = false
-        is MtuChanged -> mtu = event.mtu
+        is MtuChanged -> _mtu = event.mtu
         is PhyChanged -> _phy.update { event.phy }
         is ConnectionParametersChanged -> _connectionParameters.update { event.newParameters }
         is ConnectionStateChanged -> {
@@ -452,7 +454,7 @@ open class Peripheral(
 
     override fun handleDisconnection() {
         super.handleDisconnection()
-        mtu = ATT_MTU_DEFAULT
+        _mtu = ATT_MTU_DEFAULT
         _phy.update { null }
         _connectionParameters.update { null }
     }
@@ -571,6 +573,7 @@ open class Peripheral(
      * request it during connection.
      *
      * @throws PeripheralNotConnectedException If the device is not connected.
+     * @see mtu
      */
     override fun maximumWriteValueLength(type: WriteType): Int {
         check(isConnected) {
@@ -578,8 +581,8 @@ open class Peripheral(
         }
         return when (type) {
             WriteType.WITH_RESPONSE -> 512
-            WriteType.WITHOUT_RESPONSE -> min(mtu - 3, 512)
-            WriteType.SIGNED -> mtu - 15
+            WriteType.WITHOUT_RESPONSE -> min(_mtu - 3, 512)
+            WriteType.SIGNED -> _mtu - 15
         }
     }
 
@@ -614,11 +617,11 @@ open class Peripheral(
         // If automatic higher value length is requested, this method is called before
         // the state changes to Connected. This is to make the MTU ready when user gets receives
         // Connected state. Don't check for isConnected here.
-        check(mtu == ATT_MTU_DEFAULT) {
+        check(_mtu == ATT_MTU_DEFAULT) {
             logger?.warn(Layer.GATT) { "MTU has been already requested" }
             return
         }
-        mtu = withCallSite("requestHighestValueLength") {
+        _mtu = withCallSite("requestHighestValueLength") {
             OperationMutex.withLock {
                 impl.events
                     .onSubscription {

@@ -46,6 +46,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
@@ -53,6 +56,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.takeWhile
@@ -126,6 +130,51 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      */
     protected var _state: MutableStateFlow<ConnectionState> = MutableStateFlow(impl.initialState)
     val state = _state.asStateFlow()
+
+    /**
+     * The ATT MTU (Attribute Protocol Maximum Transfer Unit) negotiated for the connection.
+     *
+     * The value of this state is `null` if the peripheral is not connected. When the state changes
+     * to [ConnectionState.Connected] the flow emits 23 (default MTU) or the value of the negotiated
+     * MTU. ATT MTU can be negotiated once per connection.
+     *
+     * More information about MTU can be found [here](https://punchthrough.com/ble-att-mtu-throughput/).
+     *
+     * Use [maximumWriteValueLength] to calculate the maximum size of a single write. This method
+     * takes into account bytes used for the ATT header for given write type.
+     *
+     * ### MTU on iOS
+     *
+     * Due to API limitations, on iOS this may emit 515 even if the negotiated ATT MTU was
+     * larger.
+     *
+     * @see maximumWriteValueLength
+     */
+    val mtu: StateFlow<Int?> = state
+        .flatMapLatest { state ->
+            if (state.isConnected) {
+                impl.events
+                    .filterIsInstance<MtuChanged>()
+                    .map { it.mtu }
+                    .onStart { emit(currentMtu()) }
+            } else {
+                flowOf(null)
+            }
+        }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialValue = null)
+
+    /**
+     * Returns the current ATT MTU.
+     *
+     * This method is called when the peripheral is connected to feed [mtu] flow.
+     *
+     * The default implementation derives the MTU from [maximumWriteValueLength], which is how it is
+     * available when the system negotiates it. As the write length is capped at 512 bytes, the
+     * result is exact only below 515; for greater MTUs it is the lower bound.
+     * Platforms that know the exact value should override this method.
+     */
+    protected open fun currentMtu(): Int = maximumWriteValueLength(WriteType.WITHOUT_RESPONSE) + 3
 
     /**
      * Current list of GATT services.
