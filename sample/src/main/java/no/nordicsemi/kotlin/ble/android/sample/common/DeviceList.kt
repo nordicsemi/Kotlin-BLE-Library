@@ -90,7 +90,6 @@ fun DeviceList(
     onRemoveBondRequested: (Peripheral) -> Unit,
     onClearCacheRequested: (Peripheral) -> Unit,
     onReadRssi: (Peripheral) -> Unit,
-    onReadPhy: (Peripheral) -> Unit,
     attributeValues: Map<Any, AttributeValue>,
     onAttributeAction: (AttributeAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -114,7 +113,6 @@ fun DeviceList(
                 onRemoveBondRequested = { onRemoveBondRequested(result.peripheral) },
                 onClearCacheRequested = { onClearCacheRequested(result.peripheral) },
                 onReadRssi = { onReadRssi(result.peripheral) },
-                onReadPhy = { onReadPhy(result.peripheral) },
                 attributeValues = attributeValues,
                 onAttributeAction = onAttributeAction,
             )
@@ -131,7 +129,6 @@ fun DeviceItem(
     onRemoveBondRequested: () -> Unit,
     onClearCacheRequested: () -> Unit,
     onReadRssi: () -> Unit,
-    onReadPhy: () -> Unit,
     attributeValues: Map<Any, AttributeValue>,
     onAttributeAction: (AttributeAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -211,7 +208,6 @@ fun DeviceItem(
                             onRemoveBondRequested = onRemoveBondRequested,
                             onClearCacheRequested = onClearCacheRequested,
                             onReadRssi = onReadRssi,
-                            onReadPhy = onReadPhy,
                         )
                     }
                 }
@@ -303,7 +299,6 @@ fun GreetingPreview() {
             onRemoveBondRequested = {},
             onClearCacheRequested = {},
             onReadRssi = {},
-            onReadPhy = {},
             attributeValues = emptyMap(),
             onAttributeAction = {},
             contentPadding = PaddingValues(16.dp),

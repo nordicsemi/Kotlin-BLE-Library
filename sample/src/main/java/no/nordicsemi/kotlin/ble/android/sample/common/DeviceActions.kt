@@ -51,7 +51,6 @@ fun DeviceActions(
     onRemoveBondRequested: () -> Unit,
     onClearCacheRequested: () -> Unit,
     onReadRssi: () -> Unit,
-    onReadPhy: () -> Unit,
 ) {
     val environment = LocalEnvironmentOwner.current
     DropdownMenu(
@@ -94,13 +93,6 @@ fun DeviceActions(
                 onDismissRequest()
             },
         )
-        DropdownMenuItem(
-            text = { Text(text = "Read PHY") },
-            onClick = {
-                onReadPhy()
-                onDismissRequest()
-            },
-        )
     }
 }
 
@@ -116,7 +108,6 @@ private fun DeviceActionsPreview() {
             onRemoveBondRequested = {},
             onClearCacheRequested = {},
             onReadRssi = {},
-            onReadPhy = {},
         )
     }
 }
