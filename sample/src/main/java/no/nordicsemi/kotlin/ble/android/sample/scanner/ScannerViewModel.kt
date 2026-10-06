@@ -232,7 +232,7 @@ class ScannerViewModel @Inject constructor(
                                 state.buttonLongPressed
                                     .onEach {
                                         Timber.w("LBS: Long button press detected, closing profile")
-                                        cancel()
+                                        this@installLbsProfile.cancel()
                                     }
                                     .launchIn(this)
 
