@@ -504,7 +504,7 @@ open class Peripheral(
                     }
                 }
                 .takeWhile { !it.isDisconnectionEvent }
-                .filterIsInstance(PhyChanged::class)
+                .filterIsInstance<PhyChanged>()
                 // TODO add .timeout(...)?
                 .firstOrNull()?.phy
                 ?.also { logger?.info(Layer.PHY) { "PHY read: $it" } }
@@ -551,7 +551,7 @@ open class Peripheral(
                     }
                 }
                 .takeWhile { !it.isDisconnectionEvent }
-                .filterIsInstance(PhyChanged::class)
+                .filterIsInstance<PhyChanged>()
                 // TODO add .timeout(...)?
                 .firstOrNull()?.phy
                 ?.also { logger?.info(Layer.PHY) { "PHY changed to: $it" } }
@@ -638,7 +638,7 @@ open class Peripheral(
                         }
                     }
                     .takeWhile { !it.isDisconnectionEvent }
-                    .filterIsInstance(MtuChanged::class)
+                    .filterIsInstance<MtuChanged>()
                     // TODO add .timeout(...)?
                     .firstOrNull()?.mtu
                     ?.also { logger?.info(Layer.GATT) { "MTU set to $it" } }
@@ -681,7 +681,7 @@ open class Peripheral(
                         }
                     }
                     .takeWhile { !it.isDisconnectionEvent }
-                    .filterIsInstance(ConnectionParametersChanged::class)
+                    .filterIsInstance<ConnectionParametersChanged>()
                     // TODO add .timeout(...)?
                     .firstOrNull()?.newParameters
                     ?.also { logger?.info(Layer.LINK) { "Connection parameters updated: $it" } }

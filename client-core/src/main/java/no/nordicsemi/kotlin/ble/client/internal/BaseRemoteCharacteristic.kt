@@ -261,7 +261,7 @@ abstract class BaseRemoteCharacteristic(
                     }
                 }
                 .takeWhile { !it.isServiceInvalidatedEvent }
-                .filterIsInstance(CharacteristicRead::class)
+                .filterIsInstance<CharacteristicRead>()
                 .firstOrNull { it.matches() }
                 ?.let {
                     when (it.status) {
@@ -321,7 +321,7 @@ abstract class BaseRemoteCharacteristic(
                     }
                 }
                 .takeWhile { !it.isServiceInvalidatedEvent }
-                .filterIsInstance(CharacteristicWrite::class)
+                .filterIsInstance<CharacteristicWrite>()
                 .firstOrNull { it.matches() }
                 ?.let {
                     check(it.status == OperationStatus.Success) {
@@ -385,7 +385,7 @@ abstract class BaseRemoteCharacteristic(
                 }
             }
             .takeWhile { !it.isServiceInvalidatedEvent }
-            .filterIsInstance(CharacteristicChanged::class)
+            .filterIsInstance<CharacteristicChanged>()
             .filter { isDelivering.get() && it.matches() }
             .map { it.value }
     }
