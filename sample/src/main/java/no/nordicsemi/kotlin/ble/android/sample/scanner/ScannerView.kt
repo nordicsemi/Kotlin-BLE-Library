@@ -61,7 +61,6 @@ fun ScannerView(
     onRemoveBondRequested: (Peripheral) -> Unit,
     onClearCacheRequested: (Peripheral) -> Unit,
     onRssiRead: (Peripheral) -> Unit,
-    onReadPhy: (Peripheral) -> Unit,
     attributeValues: Map<Any, AttributeValue>,
     onAttributeAction: (AttributeAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -87,7 +86,6 @@ fun ScannerView(
         onRemoveBondRequested = onRemoveBondRequested,
         onClearCacheRequested = onClearCacheRequested,
         onReadRssi = onRssiRead,
-        onReadPhy = onReadPhy,
         attributeValues = attributeValues,
         onAttributeAction = onAttributeAction,
         contentPadding = PaddingValues(top = 8.dp, bottom = 56.dp),
@@ -149,7 +147,6 @@ private fun ScannerScreenPreview() {
             onRemoveBondRequested = {},
             onClearCacheRequested = {},
             onRssiRead = {},
-            onReadPhy = {},
             attributeValues = emptyMap(),
             onAttributeAction = {},
         )

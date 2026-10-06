@@ -321,18 +321,6 @@ class ScannerViewModel @Inject constructor(
         }
     }
 
-    fun onReadPhy(peripheral: Peripheral) {
-        scope.launch {
-            try {
-                Timber.i("Reading PHY...")
-                val phy = peripheral.readPhy()
-                Timber.i("PHY: $phy")
-            } catch (e: Exception) {
-                Timber.e(e, "Reading PHY failed")
-            }
-        }
-    }
-
     fun onAttributeAction(action: AttributeAction) {
         when (action) {
             is AttributeAction.Read -> read(action.characteristic)
@@ -382,8 +370,7 @@ class ScannerViewModel @Inject constructor(
             Timber.i("RSSI: $rssi dBm")
 
             // Read PHY
-            val phyInUse = peripheral.readPhy()
-            Timber.i("PHY in use: $phyInUse")
+            Timber.i("PHY in use: ${peripheral.phy.value}")
 
             // Request connection priority
             val newConnectionParameters = peripheral.requestConnectionPriority(ConnectionPriority.HIGH)

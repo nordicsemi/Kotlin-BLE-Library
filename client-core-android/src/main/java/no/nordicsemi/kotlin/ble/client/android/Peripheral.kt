@@ -38,13 +38,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.onSubscription
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.timeout
 import kotlinx.coroutines.flow.update
@@ -252,14 +254,25 @@ open class Peripheral(
     val type: PeripheralType = impl.type
 
     /** Connection parameters of the peripheral as state flow. */
-    private var _connectionParameters = MutableStateFlow<ConnectionParameters?>(null)
-    /** The current connection parameters as [StateFlow]. */
-    val connectionParameters = _connectionParameters.asStateFlow()
+    private val _connectionParameters = MutableStateFlow<ConnectionParameters?>(null)
+    /**
+     * The current connection parameters as [StateFlow].
+     *
+     * The value is `null` if the peripheral is not connected. When connected, it is
+     * [ConnectionParameters.Unknown] until the parameters change (Android 8+).
+     */
+    val connectionParameters: StateFlow<ConnectionParameters?> = _connectionParameters.whenConnected()
 
     /** The current PHY as state flow. */
     private val _phy = MutableStateFlow<PhyInUse?>(null)
-    /** The current PHY in use for transmitting and receiving data. */
-    val phy = _phy.asStateFlow()
+    /**
+     * The current PHY in use for transmitting and receiving data.
+     *
+     * The value is `null` if the peripheral is not connected. After connecting the PHY is read
+     * (the initial PHY may be LE 1M or LE Coded), and then it is updated each time it changes,
+     * either by [setPreferredPhy] or by the remote device or the system.
+     */
+    val phy: StateFlow<PhyInUse?> = _phy.whenConnected()
 
     /** Current MTU (Maximum Transmission Unit) value. */
     private var _mtu: Int = ATT_MTU_DEFAULT
@@ -267,13 +280,25 @@ open class Peripheral(
     override fun currentMtu(): Int = _mtu
 
     /**
-     * A flag set during the automatic MTU request.
+     * A flag set in [prepareConnection].
      *
      * This is to indicate, that the peripheral is already connected, but the [state]
      * doesn't yet reflect that.
-     * @see requestHighestValueLengthOnConnection
      */
-    private var initialMtuRequest = false
+    private var isPreparingConnection = false
+
+    /** Whether the highest MTU should be requested for each connection, including reconnections. */
+    private var automaticallyRequestHighestValueLength = false
+
+    /**
+     * Returns a flow that emits the value of this flow when the [state] is
+     * [ConnectionState.Connected], and `null` otherwise.
+     *
+     * Some values are set while the connection is being prepared, before the state changes.
+     */
+    private fun <T: Any> StateFlow<T?>.whenConnected(): StateFlow<T?> =
+        combine(state, this) { state, value -> value.takeIf { state.isConnected } }
+            .stateIn(scope, SharingStarted.Eagerly, initialValue = null)
 
     // Common implementation
 
@@ -297,6 +322,7 @@ open class Peripheral(
 
         // Start connection attempt, based on the connection options.
         logger?.trace(Layer.GAP) { "Connecting to $this using $options" }
+        automaticallyRequestHighestValueLength = options.automaticallyRequestHighestValueLength
         _state.update { ConnectionState.Connecting }
         when (options) {
             // In case of auto connect, the connection attempt does not time out.
@@ -316,12 +342,13 @@ open class Peripheral(
                     when (state) {
                         is ConnectionState.Connected -> {
                             logger?.info(Layer.GAP) { "Connected to $this" }
-                            // Request MTU before reporting connected state.
-                            if (options.automaticallyRequestHighestValueLength) {
-                                requestHighestValueLengthOnConnection()
+                            // Request MTU, read PHY, etc. before reporting connected state.
+                            if (!prepareConnection()) {
+                                logger?.warn(Layer.GAP) { "Connection attempt failed (reason: ${Reason.LinkLoss})" }
+                                _state.update { ConnectionState.Disconnected(Reason.LinkLoss) }
+                                throw ConnectionFailedException(Reason.LinkLoss)
                             }
                             _state.update { ConnectionState.Connected }
-                            _connectionParameters.update { ConnectionParameters.Unknown }
                             // Since we're connected, let's start collecting GATT events, including
                             // connection state changes. The device may disconnect and reconnect at
                             // any time. To stop collecting the events one needs to call disconnect().
@@ -383,12 +410,13 @@ open class Peripheral(
                     when (state) {
                         is ConnectionState.Connected -> {
                             logger?.info(Layer.GAP) { "Connected to $this" }
-                            // Request MTU before reporting connected state.
-                            if (options.automaticallyRequestHighestValueLength) {
-                                requestHighestValueLengthOnConnection()
+                            // Request MTU, read PHY, etc. before reporting connected state.
+                            if (!prepareConnection()) {
+                                logger?.warn(Layer.GAP) { "Connection attempt failed (reason: ${Reason.LinkLoss})" }
+                                _state.update { ConnectionState.Disconnected(Reason.LinkLoss) }
+                                throw ConnectionFailedException(Reason.LinkLoss)
                             }
                             _state.update { state }
-                            _connectionParameters.update { ConnectionParameters.Unknown }
                             // Since we're connected, let's start collecting GATT events.
                             // In case of a direct connection, a disconnection will cancel
                             // event collection and close the peripheral.
@@ -454,6 +482,19 @@ open class Peripheral(
         else -> super.handle(event)
     }
 
+    override suspend fun prepareConnection(): Boolean {
+        isPreparingConnection = true
+        try {
+            _connectionParameters.update { ConnectionParameters.Unknown }
+            if (automaticallyRequestHighestValueLength && !requestHighestValueLengthOnConnection()) {
+                return false
+            }
+            return readPhyOnConnection()
+        } finally {
+            isPreparingConnection = false
+        }
+    }
+
     override fun handleDisconnection() {
         super.handleDisconnection()
         _mtu = ATT_MTU_DEFAULT
@@ -467,25 +508,51 @@ open class Peripheral(
      *
      * This method ignores any exceptions thrown by [requestHighestValueLength], so that connection
      * could finish.
+     *
+     * @return `false` if the link was lost; `true` otherwise.
      */
-    private suspend fun requestHighestValueLengthOnConnection() {
-        try {
-            initialMtuRequest = true
-            requestHighestValueLength()
-        } catch (e: TimeoutCancellationException) {
-            // It was observed during testing, that after few reconnections the MTU request returns
-            // error 4 (invalid PDU?) and later no response at all.
-            // Not to block the connection a timeout is set that resumes connection.
-            logger?.warn(Layer.GATT) { "Initial MTU request timed out" }
-        } catch (e: Exception) {
-            // Ignore. The exception was already logged.
-        } finally {
-            initialMtuRequest = false
-        }
+    private suspend fun requestHighestValueLengthOnConnection(): Boolean = try {
+        requestHighestValueLength()
+        true
+    } catch (e: TimeoutCancellationException) {
+        // It was observed during testing, that after few reconnections the MTU request returns
+        // error 4 (invalid PDU?) and later no response at all.
+        // Not to block the connection a timeout is set that resumes connection.
+        logger?.warn(Layer.GATT) { "Initial MTU request timed out" }
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: PeripheralNotConnectedException) {
+        false
+    } catch (e: Exception) {
+        // Ignore. The exception was already logged.
+        true
     }
 
     /**
-     * Read the current transmitter PHY and receiver PHY of the connection.
+     * Reads the PHY before the [state] is set to [ConnectionState.Connected].
+     *
+     * The initial PHY may be LE 1M or LE Coded. Failures other than losing the link are ignored.
+     * In that case the PHY will be updated when it changes.
+     *
+     * @return `false` if the link was lost; `true` otherwise.
+     */
+    private suspend fun readPhyOnConnection(): Boolean = try {
+        readPhy()
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: PeripheralNotConnectedException) {
+        false
+    } catch (e: Exception) {
+        logger?.warn(Layer.PHY) { "Initial PHY read failed: ${e.message}" }
+        true
+    }
+
+    /**
+     * Reads the current transmitter PHY and receiver PHY of the connection.
+     *
+     * The result is also reported to [phy] state flow.
      *
      * PHY LE 2M or PHY Coded is supported since Android 8.0 (API level 26) or later.
      *
@@ -496,13 +563,13 @@ open class Peripheral(
      * @throws SecurityException If BLUETOOTH_CONNECT permission is denied.
      * @throws TimeoutCancellationException If the response has not been received within the specified timeout.
      */
-    suspend fun readPhy(timeout: Duration = 3.seconds): PhyInUse = withCallSite("readPhy") {
+    private suspend fun readPhy(timeout: Duration = 3.seconds): PhyInUse = withCallSite("readPhy") {
         OperationMutex.withLock {
             impl.events
                 .onSubscription {
                     logger?.trace(Layer.PHY) { "Reading PHY" }
                     try {
-                        if (!isConnected || !impl.readPhy()) {
+                        if ((!isPreparingConnection && !isConnected) || !impl.readPhy()) {
                             throw PeripheralNotConnectedException()
                         }
                     } catch (e: Exception) {
@@ -514,7 +581,12 @@ open class Peripheral(
                 .filterIsInstance<PhyChanged>()
                 .timeout(timeout)
                 .firstOrNull()?.phy
-                ?.also { logger?.info(Layer.PHY) { "PHY read: $it" } }
+                ?.also {
+                    // The event collector may be busy (preparing the connection), so update the
+                    // flow here, too.
+                    _phy.update { _ -> it }
+                    logger?.info(Layer.PHY) { "PHY read: $it" }
+                }
                 ?: throw PeripheralNotConnectedException()
         }
     }
@@ -639,7 +711,7 @@ open class Peripheral(
                     .onSubscription {
                         logger?.trace(Layer.GATT) { "Requesting MTU: $ATT_MTU_MAX" }
                         try {
-                            if ((!initialMtuRequest && !isConnected) || !impl.requestMtu(ATT_MTU_MAX)) {
+                            if ((!isPreparingConnection && !isConnected) || !impl.requestMtu(ATT_MTU_MAX)) {
                                 throw PeripheralNotConnectedException()
                             }
                         } catch (e: Exception) {
@@ -1017,6 +1089,6 @@ open class Peripheral(
             // This happens before the services are discovered,
             _services.value !is RemoteServices.Discovered &&
             // ...but after the app is notified about change to PHY LE 2M.
-            phy.value?.txPhy == Phy.PHY_LE_2M
+            _phy.value?.txPhy == Phy.PHY_LE_2M
         } ?: false
 }
