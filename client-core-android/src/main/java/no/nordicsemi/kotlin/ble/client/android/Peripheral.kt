@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.flow.timeout
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeout
 import no.nordicsemi.kotlin.ble.client.ConnectionParametersChanged
@@ -84,6 +85,7 @@ import org.jetbrains.annotations.Range
 import kotlin.math.min
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Android-specific implementation of a peripheral.
@@ -470,6 +472,11 @@ open class Peripheral(
         try {
             initialMtuRequest = true
             requestHighestValueLength()
+        } catch (e: TimeoutCancellationException) {
+            // It was observed during testing, that after few reconnections the MTU request returns
+            // error 4 (invalid PDU?) and later no response at all.
+            // Not to block the connection a timeout is set that resumes connection.
+            logger?.warn(Layer.GATT) { "Initial MTU request timed out" }
         } catch (e: Exception) {
             // Ignore. The exception was already logged.
         } finally {
@@ -482,12 +489,14 @@ open class Peripheral(
      *
      * PHY LE 2M or PHY Coded is supported since Android 8.0 (API level 26) or later.
      *
+     * @param timeout The timeout. Defaults to 3 seconds.
      * @return The PHY in use for transmitting and receiving data.
      * @throws PeripheralNotConnectedException If the device is not connected.
      * @throws OperationFailedException If PHY could not be read.
      * @throws SecurityException If BLUETOOTH_CONNECT permission is denied.
+     * @throws TimeoutCancellationException If the response has not been received within the specified timeout.
      */
-    suspend fun readPhy(): PhyInUse = withCallSite("readPhy") {
+    suspend fun readPhy(timeout: Duration = 3.seconds): PhyInUse = withCallSite("readPhy") {
         OperationMutex.withLock {
             impl.events
                 .onSubscription {
@@ -505,7 +514,7 @@ open class Peripheral(
                 }
                 .takeWhile { !it.isDisconnectionEvent }
                 .filterIsInstance<PhyChanged>()
-                // TODO add .timeout(...)?
+                .timeout(timeout)
                 .firstOrNull()?.phy
                 ?.also { logger?.info(Layer.PHY) { "PHY read: $it" } }
                 ?: throw PeripheralNotConnectedException()
@@ -525,15 +534,19 @@ open class Peripheral(
      * @param txPhy The preferred transmitter PHY.
      * @param rxPhy The preferred receiver PHY. By default, it is the same as [txPhy].
      * @param phyOptions The preferred coding to use when transmitting on the LE Coded PHY.
+     * @param timeout The timeout. Defaults to 3 seconds.
      * @return The PHYs in use after the change.
      * @throws PeripheralNotConnectedException If the device is not connected.
      * @throws OperationFailedException If PHY change could not be requested.
      * @throws SecurityException If BLUETOOTH_CONNECT permission is denied.
+     * @throws TimeoutCancellationException If the response has not been received within the
+     * specified timeout.
      */
     suspend fun setPreferredPhy(
         txPhy: Phy,
         rxPhy: Phy = txPhy,
         phyOptions: PhyOption = PhyOption.NO_PREFERRED,
+        timeout: Duration = 3.seconds,
     ): PhyInUse = withCallSite("setPreferredPhy") {
         OperationMutex.withLock {
             impl.events
@@ -552,7 +565,7 @@ open class Peripheral(
                 }
                 .takeWhile { !it.isDisconnectionEvent }
                 .filterIsInstance<PhyChanged>()
-                // TODO add .timeout(...)?
+                .timeout(timeout)
                 .firstOrNull()?.phy
                 ?.also { logger?.info(Layer.PHY) { "PHY changed to: $it" } }
                 ?: throw PeripheralNotConnectedException()
@@ -607,13 +620,16 @@ open class Peripheral(
      * connection to terminate. For such devices it is recommended not to request higher MTU
      * or never sending more than 20 bytes in a single write operation.
      *
+     * @param timeout The timeout. Defaults to 3 seconds.
      * @throws PeripheralNotConnectedException If the device is not connected.
      * @throws OperationFailedException If MTU could not be requested.
      * @throws SecurityException If BLUETOOTH_CONNECT permission is denied.
+     * @throws TimeoutCancellationException If the response has not been received within the
+     * specified timeout.
      * @see maximumWriteValueLength
      * @see CentralManager.ConnectionOptions.automaticallyRequestHighestValueLength
      */
-    suspend fun requestHighestValueLength() {
+    suspend fun requestHighestValueLength(timeout: Duration = 3.seconds) {
         // If automatic higher value length is requested, this method is called before
         // the state changes to Connected. This is to make the MTU ready when user gets receives
         // Connected state. Don't check for isConnected here.
@@ -639,7 +655,7 @@ open class Peripheral(
                     }
                     .takeWhile { !it.isDisconnectionEvent }
                     .filterIsInstance<MtuChanged>()
-                    // TODO add .timeout(...)?
+                    .timeout(timeout)
                     .firstOrNull()?.mtu
                     ?.also { logger?.info(Layer.GATT) { "MTU set to $it" } }
                     ?: throw PeripheralNotConnectedException()
@@ -658,12 +674,18 @@ open class Peripheral(
      * returned to the app, therefore the returned value will be [ConnectionParameters.Unknown].
      *
      * @param priority The new connection priority.
+     * @param timeout The timeout. Defaults to 3 seconds.
      * @return The new connection parameters.
      * @throws PeripheralNotConnectedException If the device is not connected.
      * @throws OperationFailedException If connection priority could not be requested.
      * @throws SecurityException If BLUETOOTH_CONNECT permission is denied.
+     * @throws TimeoutCancellationException If the response has not been received within the
+     * specified timeout.
      */
-    suspend fun requestConnectionPriority(priority: ConnectionPriority): ConnectionParameters =
+    suspend fun requestConnectionPriority(
+        priority: ConnectionPriority,
+        timeout: Duration = 3.seconds,
+    ): ConnectionParameters =
         withCallSite("requestConnectionPriority") {
             OperationMutex.withLock {
                 impl.events
@@ -682,7 +704,7 @@ open class Peripheral(
                     }
                     .takeWhile { !it.isDisconnectionEvent }
                     .filterIsInstance<ConnectionParametersChanged>()
-                    // TODO add .timeout(...)?
+                    .timeout(timeout)
                     .firstOrNull()?.newParameters
                     ?.also { logger?.info(Layer.LINK) { "Connection parameters updated: $it" } }
                     ?: throw PeripheralNotConnectedException()
