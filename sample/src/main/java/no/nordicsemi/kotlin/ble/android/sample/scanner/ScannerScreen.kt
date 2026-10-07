@@ -86,7 +86,8 @@ fun ScannerScreen() {
                 onBondRequested = vm::onBondRequested,
                 onRemoveBondRequested = vm::onRemoveBondRequested,
                 onClearCacheRequested = vm::onClearCacheRequested,
-                onRssiRead = vm::onRssiRead,
+                onRequestConnectionPriority = vm::onRequestConnectionPriority,
+                rssiMonitor = vm::rssiMonitor,
                 attributeValues = attributeValues,
                 onAttributeAction = vm::onAttributeAction,
             )

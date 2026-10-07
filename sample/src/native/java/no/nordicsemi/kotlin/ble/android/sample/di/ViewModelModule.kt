@@ -44,6 +44,7 @@ import no.nordicsemi.kotlin.ble.advertiser.android.BluetoothLeAdvertiser
 import no.nordicsemi.kotlin.ble.advertiser.android.native
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.native
+import no.nordicsemi.kotlin.ble.core.log.Layer
 import no.nordicsemi.kotlin.ble.environment.android.NativeAndroidEnvironment
 import no.nordicsemi.kotlin.log.Log
 import no.nordicsemi.kotlin.log.timber.Timber
@@ -75,7 +76,8 @@ object ViewModelModule {
     fun provideCentralManager(environment: NativeAndroidEnvironment, scope: CoroutineScope): CentralManager {
         return CentralManager.native(environment, scope)
             .apply {
-                logger = Log.Sink.Timber { _, _ -> true }
+                // Don't log RSSI events
+                logger = Log.Sink.Timber { layer, _ -> layer != Layer.LINK }
             }
     }
 }

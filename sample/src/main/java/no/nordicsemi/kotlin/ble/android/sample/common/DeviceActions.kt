@@ -31,15 +31,24 @@
 
 package no.nordicsemi.kotlin.ble.android.sample.common
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
+import no.nordicsemi.kotlin.ble.client.android.ConnectionPriority
 import no.nordicsemi.kotlin.ble.environment.android.compose.LocalEnvironmentOwner
 
 @Composable
@@ -50,13 +59,26 @@ fun DeviceActions(
     onBondRequested: () -> Unit,
     onRemoveBondRequested: () -> Unit,
     onClearCacheRequested: () -> Unit,
-    onReadRssi: () -> Unit,
+    onRequestConnectionPriority: (ConnectionPriority) -> Unit,
 ) {
     val environment = LocalEnvironmentOwner.current
+    // Whether the sub-menu with connection priorities is shown instead of the main menu.
+    // It's reset each time the menu is opened.
+    var showPriorities by remember(expanded) { mutableStateOf(false) }
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest
     ) {
+        if (showPriorities) {
+            ConnectionPriorityMenu(
+                onBack = { showPriorities = false },
+                onPrioritySelected = { priority ->
+                    onRequestConnectionPriority(priority)
+                    onDismissRequest()
+                },
+            )
+            return@DropdownMenu
+        }
         DropdownMenuItem(
             text = { Text(text = "Bond") },
             enabled = !isBonded,
@@ -87,11 +109,47 @@ fun DeviceActions(
         )
         HorizontalDivider()
         DropdownMenuItem(
-            text = { Text(text = "Read RSSI") },
-            onClick = {
-                onReadRssi()
-                onDismissRequest()
+            text = { Text(text = "Connection Parameters") },
+            trailingIcon = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Default.KeyboardArrowRight,
+                    contentDescription = null,
+                )
             },
+            onClick = { showPriorities = true },
+        )
+    }
+}
+
+@Composable
+private fun ConnectionPriorityMenu(
+    onBack: () -> Unit,
+    onPrioritySelected: (ConnectionPriority) -> Unit,
+) {
+    DropdownMenuItem(
+        text = {
+            Text(
+                text = "Connection Parameters",
+                style = MaterialTheme.typography.titleSmall,
+            )
+        },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.AutoMirrored.Default.KeyboardArrowLeft,
+                contentDescription = "Back",
+            )
+        },
+        onClick = onBack,
+    )
+    HorizontalDivider()
+    listOf(
+        ConnectionPriority.LOW_POWER to "Low Power",
+        ConnectionPriority.BALANCED to "Balanced",
+        ConnectionPriority.HIGH to "High",
+    ).forEach { (priority, label) ->
+        DropdownMenuItem(
+            text = { Text(text = label) },
+            onClick = { onPrioritySelected(priority) },
         )
     }
 }
@@ -107,7 +165,7 @@ private fun DeviceActionsPreview() {
             onBondRequested = {},
             onRemoveBondRequested = {},
             onClearCacheRequested = {},
-            onReadRssi = {},
+            onRequestConnectionPriority = {},
         )
     }
 }

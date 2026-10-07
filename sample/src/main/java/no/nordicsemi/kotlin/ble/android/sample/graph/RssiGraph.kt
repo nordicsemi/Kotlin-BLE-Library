@@ -257,6 +257,8 @@ object RssiGraphDefaults {
  * [RssiGraphColors.inactive] color, below the selected ones.
  * @param paused When `true`, the graph stops moving.
  * @param rssiRange The minimum RSSI range shown. It is extended if values are outside it.
+ * @param gridStep The distance between horizontal grid lines, in dB. By default, 10 dB, or 20 dB
+ * if the range is greater than 80 dB. Use a bigger value for a small graph.
  * @param colors The colors.
  * @param labelStyle The style of the axis labels.
  * @param showFps When `true`, the number of frames drawn per second is shown in the top-right
@@ -269,6 +271,7 @@ fun RssiGraph(
     selected: Set<Any> = emptySet(),
     paused: Boolean = false,
     rssiRange: IntRange = -100..-30,
+    gridStep: Int? = null,
     colors: RssiGraphColors = RssiGraphDefaults.colors(),
     labelStyle: TextStyle = MaterialTheme.typography.labelSmall,
     showFps: Boolean = false,
@@ -305,7 +308,7 @@ fun RssiGraph(
         val data = state.rssiRange(now)
         val top = max(rssiRange.last.toFloat(), data?.let { ceil(it.endInclusive / 10f) * 10f } ?: Float.NEGATIVE_INFINITY)
         val bottom = min(rssiRange.first.toFloat(), data?.let { floor(it.start / 10f) * 10f } ?: Float.POSITIVE_INFINITY)
-        val rssiStep = if (top - bottom > 80f) 20 else 10
+        val rssiStep = gridStep ?: if (top - bottom > 80f) 20 else 10
 
         // Plot area, leaving space for labels.
         val labelPadding = 4.dp.toPx()

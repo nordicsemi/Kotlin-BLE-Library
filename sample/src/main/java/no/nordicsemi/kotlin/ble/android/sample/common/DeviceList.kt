@@ -75,6 +75,7 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
 import no.nordicsemi.kotlin.ble.android.sample.theme.Nordic
+import no.nordicsemi.kotlin.ble.client.android.ConnectionPriority
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
 import no.nordicsemi.kotlin.ble.client.android.ScanResult
 import no.nordicsemi.kotlin.ble.client.android.preview.PreviewPeripheral
@@ -89,7 +90,8 @@ fun DeviceList(
     onBondRequested: (Peripheral) -> Unit,
     onRemoveBondRequested: (Peripheral) -> Unit,
     onClearCacheRequested: (Peripheral) -> Unit,
-    onReadRssi: (Peripheral) -> Unit,
+    onRequestConnectionPriority: (Peripheral, ConnectionPriority) -> Unit,
+    rssiMonitor: (Peripheral) -> RssiMonitor,
     attributeValues: Map<Any, AttributeValue>,
     onAttributeAction: (AttributeAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -112,7 +114,8 @@ fun DeviceList(
                 onBondRequested = { onBondRequested(result.peripheral) },
                 onRemoveBondRequested = { onRemoveBondRequested(result.peripheral) },
                 onClearCacheRequested = { onClearCacheRequested(result.peripheral) },
-                onReadRssi = { onReadRssi(result.peripheral) },
+                onRequestConnectionPriority = { priority -> onRequestConnectionPriority(result.peripheral, priority) },
+                rssiMonitor = rssiMonitor(result.peripheral),
                 attributeValues = attributeValues,
                 onAttributeAction = onAttributeAction,
             )
@@ -128,7 +131,8 @@ fun DeviceItem(
     onBondRequested: () -> Unit,
     onRemoveBondRequested: () -> Unit,
     onClearCacheRequested: () -> Unit,
-    onReadRssi: () -> Unit,
+    onRequestConnectionPriority: (ConnectionPriority) -> Unit,
+    rssiMonitor: RssiMonitor,
     attributeValues: Map<Any, AttributeValue>,
     onAttributeAction: (AttributeAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -207,7 +211,7 @@ fun DeviceItem(
                             onBondRequested = onBondRequested,
                             onRemoveBondRequested = onRemoveBondRequested,
                             onClearCacheRequested = onClearCacheRequested,
-                            onReadRssi = onReadRssi,
+                            onRequestConnectionPriority = onRequestConnectionPriority,
                         )
                     }
                 }
@@ -232,6 +236,11 @@ fun DeviceItem(
                 Column(
                     modifier = Modifier.padding(8.dp)
                 ) {
+                    ConnectionInfo(
+                        peripheral = peripheral,
+                        rssiMonitor = rssiMonitor,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
                     val services by peripheral.services().collectAsStateWithLifecycle()
                     DeviceServices(
                         services = services,
@@ -298,7 +307,11 @@ fun GreetingPreview() {
             onBondRequested = {},
             onRemoveBondRequested = {},
             onClearCacheRequested = {},
-            onReadRssi = {},
+            onRequestConnectionPriority = { _, _ -> },
+            rssiMonitor = {
+                RssiMonitor()
+                    .apply { add(-40) }
+            },
             attributeValues = emptyMap(),
             onAttributeAction = {},
             contentPadding = PaddingValues(16.dp),
