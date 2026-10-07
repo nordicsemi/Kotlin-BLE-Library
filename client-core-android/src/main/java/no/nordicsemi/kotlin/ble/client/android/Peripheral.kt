@@ -40,6 +40,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.filterIsInstance
@@ -580,6 +581,12 @@ open class Peripheral(
                 .takeWhile { !it.isDisconnectionEvent }
                 .filterIsInstance<PhyChanged>()
                 .timeout(timeout)
+                .catch { t ->
+                    if (t is TimeoutCancellationException) {
+                        logger?.warn(Layer.PHY) { "PHY read timed out" }
+                    }
+                    throw t
+                }
                 .firstOrNull()?.phy
                 ?.also {
                     // The event collector may be busy (preparing the connection), so update the
@@ -634,6 +641,12 @@ open class Peripheral(
                 .takeWhile { !it.isDisconnectionEvent }
                 .filterIsInstance<PhyChanged>()
                 .timeout(timeout)
+                .catch { t ->
+                    if (t is TimeoutCancellationException) {
+                        logger?.warn(Layer.PHY) { "PHY request timed out" }
+                    }
+                    throw t
+                }
                 .firstOrNull()?.phy
                 ?.also { logger?.info(Layer.PHY) { "PHY changed to: $it" } }
                 ?: throw PeripheralNotConnectedException()
@@ -722,6 +735,12 @@ open class Peripheral(
                     .takeWhile { !it.isDisconnectionEvent }
                     .filterIsInstance<MtuChanged>()
                     .timeout(timeout)
+                    .catch { t ->
+                        if (t is TimeoutCancellationException) {
+                            logger?.warn(Layer.PHY) { "MTU request timed out" }
+                        }
+                        throw t
+                    }
                     .firstOrNull()?.mtu
                     ?.also { logger?.info(Layer.GATT) { "MTU set to $it" } }
                     ?: throw PeripheralNotConnectedException()
@@ -769,6 +788,12 @@ open class Peripheral(
                     .takeWhile { !it.isDisconnectionEvent }
                     .filterIsInstance<ConnectionParametersChanged>()
                     .timeout(timeout)
+                    .catch { t ->
+                        if (t is TimeoutCancellationException) {
+                            logger?.warn(Layer.PHY) { "Connection parameters request timed out" }
+                        }
+                        throw t
+                    }
                     .firstOrNull()?.newParameters
                     ?.also { logger?.info(Layer.LINK) { "Connection parameters updated: $it" } }
                     ?: throw PeripheralNotConnectedException()
