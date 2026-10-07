@@ -253,12 +253,13 @@ private fun LegendItem(
 @Composable
 private fun GraphViewPreview() {
     AppTheme {
-        val graphState = RssiGraphState(clock = { 30_000L }).apply {
-            repeat(30) { i ->
-                add(key = "AA:BB:CC:DD:EE:01", rssi = -60 - (i % 7), time = i * 1_000L)
-                if (i !in 10..16) add(key = "AA:BB:CC:DD:EE:02", rssi = -80 + (i % 5), time = i * 1_000L)
+        val graphState = RssiGraphState(clock = { 30_000L })
+            .apply {
+                repeat(30) { i ->
+                    add(key = "AA:BB:CC:DD:EE:01", rssi = -60 - (i % 7), time = i * 1_000L)
+                    if (i !in 10..16) add(key = "AA:BB:CC:DD:EE:02", rssi = -80 + (i % 5), time = i * 1_000L)
+                }
             }
-        }
         GraphView(
             graphState = graphState,
             devices = listOf(

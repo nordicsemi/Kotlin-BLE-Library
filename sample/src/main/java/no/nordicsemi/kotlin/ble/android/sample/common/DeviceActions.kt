@@ -40,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
+import no.nordicsemi.kotlin.ble.client.android.ConnectionPriority
 import no.nordicsemi.kotlin.ble.environment.android.compose.LocalEnvironmentOwner
 
 @Composable
@@ -50,7 +51,7 @@ fun DeviceActions(
     onBondRequested: () -> Unit,
     onRemoveBondRequested: () -> Unit,
     onClearCacheRequested: () -> Unit,
-    onReadRssi: () -> Unit,
+    onRequestConnectionPriority: (ConnectionPriority) -> Unit,
 ) {
     val environment = LocalEnvironmentOwner.current
     DropdownMenu(
@@ -87,9 +88,9 @@ fun DeviceActions(
         )
         HorizontalDivider()
         DropdownMenuItem(
-            text = { Text(text = "Read RSSI") },
+            text = { Text(text = "Connection Parameters") },
             onClick = {
-                onReadRssi()
+                onRequestConnectionPriority(ConnectionPriority.BALANCED)
                 onDismissRequest()
             },
         )
@@ -107,7 +108,7 @@ private fun DeviceActionsPreview() {
             onBondRequested = {},
             onRemoveBondRequested = {},
             onClearCacheRequested = {},
-            onReadRssi = {},
+            onRequestConnectionPriority = {},
         )
     }
 }

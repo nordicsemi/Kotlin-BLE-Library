@@ -36,6 +36,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancel
@@ -46,12 +47,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
@@ -65,6 +68,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import no.nordicsemi.kotlin.ble.android.sample.common.AttributeAction
 import no.nordicsemi.kotlin.ble.android.sample.common.AttributeValue
+import no.nordicsemi.kotlin.ble.android.sample.common.RssiMonitor
 import no.nordicsemi.kotlin.ble.android.sample.common.Timestamped
 import no.nordicsemi.kotlin.ble.android.sample.scanner.profile.LedButtonProfile
 import no.nordicsemi.kotlin.ble.android.sample.scanner.profile.impl.LedButtonServiceImpl
@@ -87,6 +91,7 @@ import no.nordicsemi.kotlin.ble.core.PhyInUse
 import no.nordicsemi.kotlin.ble.core.WriteType
 import timber.log.Timber
 import javax.inject.Inject
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -139,6 +144,8 @@ class ScannerViewModel @Inject constructor(
     private val subscriptions = mutableMapOf<RemoteCharacteristic, Job>()
 
     private var connectionScopeMap = mutableMapOf<Peripheral, CoroutineScope>()
+
+    private val rssiMonitors = mutableMapOf<Peripheral, RssiMonitor>()
 
     private var scanningJob: Job? = null
 
@@ -227,6 +234,7 @@ class ScannerViewModel @Inject constructor(
                             observeMtu(peripheral, this)
                             observePhy(peripheral, this)
                             observeConnectionParameters(peripheral, this)
+                            pollRssi(peripheral, this)
                             observeServices(peripheral, this)
 
                             installLbsProfile(peripheral, required = false) { state ->
@@ -309,14 +317,17 @@ class ScannerViewModel @Inject constructor(
         }
     }
 
-    fun onRssiRead(peripheral: Peripheral) {
+    /** Returns the monitor with RSSI of the given peripheral. It is updated while connected. */
+    fun rssiMonitor(peripheral: Peripheral): RssiMonitor = synchronized(rssiMonitors) {
+        rssiMonitors.getOrPut(peripheral) { RssiMonitor() }
+    }
+
+    fun onRequestConnectionPriority(peripheral: Peripheral, priority: ConnectionPriority) {
         scope.launch {
             try {
-                Timber.i("Reading RSSI...")
-                val rssi = peripheral.readRssi()
-                Timber.i("RSSI: $rssi dBm")
+                peripheral.requestConnectionPriority(priority)
             } catch (e: Exception) {
-                Timber.e(e, "Reading RSSI failed")
+                Timber.e(e, "Requesting connection priority failed")
             }
         }
     }
@@ -365,10 +376,6 @@ class ScannerViewModel @Inject constructor(
             val length = peripheral.maximumWriteValueLength(writeType)
             Timber.i("Maximum write length for $writeType: $length bytes")
 
-            // Read RSSI
-            val rssi = peripheral.readRssi()
-            Timber.i("RSSI: $rssi dBm")
-
             // Read PHY
             Timber.i("PHY in use: ${peripheral.phy.value}")
 
@@ -379,6 +386,36 @@ class ScannerViewModel @Inject constructor(
         } catch (e: Exception) {
             Timber.e("Peripheral disconnected before initialization completed: ${e.message}")
         }
+    }
+
+    /**
+     * Reads RSSI every [interval] while the peripheral is connected.
+     *
+     * RSSI is not reported by the system, it has to be polled.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun pollRssi(peripheral: Peripheral, scope: CoroutineScope, interval: Duration = 2.seconds) {
+        val monitor = rssiMonitor(peripheral)
+        peripheral.state
+            .map { it.isConnected }
+            .distinctUntilChanged()
+            .mapLatest { isConnected ->
+                if (!isConnected) {
+                    monitor.clear()
+                    return@mapLatest
+                }
+                while (true) {
+                    try {
+                        monitor.add(peripheral.readRssi())
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Timber.w("Reading RSSI failed: ${e.message}")
+                    }
+                    delay(interval)
+                }
+            }
+            .launchIn(scope)
     }
 
     private fun observeMtu(peripheral: Peripheral, scope: CoroutineScope) {

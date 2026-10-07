@@ -45,7 +45,9 @@ import androidx.compose.ui.unit.dp
 import no.nordicsemi.kotlin.ble.android.sample.common.AttributeAction
 import no.nordicsemi.kotlin.ble.android.sample.common.AttributeValue
 import no.nordicsemi.kotlin.ble.android.sample.common.DeviceList
+import no.nordicsemi.kotlin.ble.android.sample.common.RssiMonitor
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
+import no.nordicsemi.kotlin.ble.client.android.ConnectionPriority
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
 import no.nordicsemi.kotlin.ble.client.android.ScanResult
 import no.nordicsemi.kotlin.ble.client.android.preview.PreviewPeripheral
@@ -60,7 +62,8 @@ fun ScannerView(
     onBondRequested: (Peripheral) -> Unit,
     onRemoveBondRequested: (Peripheral) -> Unit,
     onClearCacheRequested: (Peripheral) -> Unit,
-    onRssiRead: (Peripheral) -> Unit,
+    onRequestConnectionPriority: (Peripheral, ConnectionPriority) -> Unit,
+    rssiMonitor: (Peripheral) -> RssiMonitor,
     attributeValues: Map<Any, AttributeValue>,
     onAttributeAction: (AttributeAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -85,7 +88,8 @@ fun ScannerView(
         onBondRequested = onBondRequested,
         onRemoveBondRequested = onRemoveBondRequested,
         onClearCacheRequested = onClearCacheRequested,
-        onReadRssi = onRssiRead,
+        onRequestConnectionPriority = onRequestConnectionPriority,
+        rssiMonitor = rssiMonitor,
         attributeValues = attributeValues,
         onAttributeAction = onAttributeAction,
         contentPadding = PaddingValues(top = 8.dp, bottom = 56.dp),
@@ -146,7 +150,8 @@ private fun ScannerScreenPreview() {
             onBondRequested = {},
             onRemoveBondRequested = {},
             onClearCacheRequested = {},
-            onRssiRead = {},
+            onRequestConnectionPriority = { _, _ -> },
+            rssiMonitor = { RssiMonitor() },
             attributeValues = emptyMap(),
             onAttributeAction = {},
         )
