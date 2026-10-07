@@ -129,6 +129,15 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      * @hide
      */
     protected var _state: MutableStateFlow<ConnectionState> = MutableStateFlow(impl.initialState)
+        .also {
+            if (impl.initialState.isConnected) {
+                scope.launch {
+                    val _ = prepareConnection()
+                    startCollectingGattEvents()
+                    initiateConnection()
+                }
+            }
+        }
     val state = _state.asStateFlow()
 
     /**
