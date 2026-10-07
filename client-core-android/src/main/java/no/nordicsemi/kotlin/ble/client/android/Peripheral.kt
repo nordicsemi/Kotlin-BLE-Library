@@ -719,6 +719,7 @@ open class Peripheral(
      * @throws TimeoutCancellationException If the response has not been received within the
      * specified timeout.
      */
+    @IgnorableReturnValue
     suspend fun requestConnectionPriority(
         priority: ConnectionPriority,
         timeout: Duration = 3.seconds,
