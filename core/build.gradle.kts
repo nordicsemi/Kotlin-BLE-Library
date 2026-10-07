@@ -45,6 +45,8 @@ kotlin {
             kotlin.srcDir("src/main/java")
             dependencies {
                 api(libs.kotlinx.coroutines.core)
+                // Kept direct dependency to ensure version 25+ with KMP support.
+                api(libs.annotations)
                 api(nordic.id)
                 api(nordic.log)
             }
