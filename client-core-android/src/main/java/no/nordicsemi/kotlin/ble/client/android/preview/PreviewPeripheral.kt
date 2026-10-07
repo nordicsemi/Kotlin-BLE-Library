@@ -87,6 +87,8 @@ import no.nordicsemi.kotlin.ble.core.util.MergeResult
 import no.nordicsemi.kotlin.ble.core.util.mergeIndexed
 import no.nordicsemi.kotlin.log.Log
 import org.jetbrains.annotations.Range
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 
 /**
@@ -160,7 +162,29 @@ private class StubExecutor(
     }
 
     override suspend fun requestConnectionPriority(priority: ConnectionPriority): Boolean {
-        _events.emit(ConnectionParametersChanged(ConnectionParameters.Specified(15, 0, 0)))
+        val parameters = when (priority) {
+            ConnectionPriority.LOW_POWER -> ConnectionParameters.Specified(
+                connectionInterval = 125.milliseconds,
+                latency = 2,
+                supervisionTimeout = 5.seconds
+            )
+            ConnectionPriority.BALANCED -> ConnectionParameters.Specified(
+                connectionInterval = 45.milliseconds,
+                latency = 0,
+                supervisionTimeout = 5.seconds
+            )
+            ConnectionPriority.HIGH -> ConnectionParameters.Specified(
+                connectionInterval = 15.milliseconds,
+                latency = 0,
+                supervisionTimeout = 5.seconds
+            )
+            ConnectionPriority.DIGITAL_CAR_KEY -> ConnectionParameters.Specified(
+                connectionInterval = 30.milliseconds,
+                latency = 0,
+                supervisionTimeout = 5.seconds
+            )
+        }
+        _events.emit(ConnectionParametersChanged(parameters))
         return true
     }
 
@@ -457,6 +481,11 @@ open class PreviewPeripheral(
         hasBondInformation = hasBondInformation,
     )
 ) {
+    override suspend fun initiateConnection() {
+        super.initiateConnection()
+        requestConnectionPriority(ConnectionPriority.BALANCED)
+    }
+
     override fun toString(): String {
         return name ?: address
     }
