@@ -350,6 +350,28 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
     }
 
     /**
+     * Executes the given [block] when the peripheral is connected.
+     *
+     * This method ignores any exceptions thrown by [block], so that connection could finish.
+     *
+     * @return `false` if the link was lost; `true` otherwise.
+     */
+    protected suspend fun runCatchingOnConnection(block: suspend () -> Unit): Boolean = try {
+        block()
+        true
+    } catch (e: TimeoutCancellationException) {
+        // Ignore the timeout. Initial request may fail, but that should not stop connection.
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: PeripheralNotConnectedException) {
+        false
+    } catch (e: Exception) {
+        // Ignore. The exception was already logged.
+        true
+    }
+
+    /**
      * Starts collecting GATT events from the peripheral.
      *
      * The implementation may want to continue collecting events after the peripheral disconnects.
@@ -569,6 +591,9 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      *
      * It may be used to read or negotiate data that should be ready when the state is reported.
      * It is called for each connection, including automatic reconnections.
+     *
+     * Note, that event collection may not yet be started, so operations should not rely on
+     * the [handle] to work.
      *
      * @return `false` if the link was lost during preparation; `true` otherwise.
      * @hide

@@ -483,14 +483,18 @@ open class Peripheral(
         else -> super.handle(event)
     }
 
-    override suspend fun prepareConnection(): Boolean {
+    final override suspend fun prepareConnection(): Boolean {
         isPreparingConnection = true
         try {
+            // Initial connection parameters are not know.
+            // An event will be emitted when they change.
             _connectionParameters.update { ConnectionParameters.Unknown }
-            if (automaticallyRequestHighestValueLength && !requestHighestValueLengthOnConnection()) {
+            // Request MTU if set in ConnectionOptions.
+            if (automaticallyRequestHighestValueLength && !runCatchingOnConnection { requestHighestValueLength() }) {
                 return false
             }
-            return readPhyOnConnection()
+            // Read initial PHY to feed the `phy` flow.
+            return runCatchingOnConnection { _phy.update { readPhy() } }
         } finally {
             isPreparingConnection = false
         }
@@ -501,53 +505,6 @@ open class Peripheral(
         _mtu = ATT_MTU_DEFAULT
         _phy.update { null }
         _connectionParameters.update { null }
-    }
-
-    /**
-     * Requests the highest possible MTU ([517][ATT_MTU_MAX]) before the [state] is set to
-     * [ConnectionState.Connected].
-     *
-     * This method ignores any exceptions thrown by [requestHighestValueLength], so that connection
-     * could finish.
-     *
-     * @return `false` if the link was lost; `true` otherwise.
-     */
-    private suspend fun requestHighestValueLengthOnConnection(): Boolean = try {
-        requestHighestValueLength()
-        true
-    } catch (e: TimeoutCancellationException) {
-        // It was observed during testing, that after few reconnections the MTU request returns
-        // error 4 (invalid PDU?) and later no response at all.
-        // Not to block the connection a timeout is set that resumes connection.
-        logger?.warn(Layer.GATT) { "Initial MTU request timed out" }
-        true
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: PeripheralNotConnectedException) {
-        false
-    } catch (e: Exception) {
-        // Ignore. The exception was already logged.
-        true
-    }
-
-    /**
-     * Reads the PHY before the [state] is set to [ConnectionState.Connected].
-     *
-     * The initial PHY may be LE 1M or LE Coded. Failures other than losing the link are ignored.
-     * In that case the PHY will be updated when it changes.
-     *
-     * @return `false` if the link was lost; `true` otherwise.
-     */
-    private suspend fun readPhyOnConnection(): Boolean = try {
-        readPhy()
-        true
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: PeripheralNotConnectedException) {
-        false
-    } catch (e: Exception) {
-        logger?.warn(Layer.PHY) { "Initial PHY read failed: ${e.message}" }
-        true
     }
 
     /**
@@ -588,12 +545,7 @@ open class Peripheral(
                     throw t
                 }
                 .firstOrNull()?.phy
-                ?.also {
-                    // The event collector may be busy (preparing the connection), so update the
-                    // flow here, too.
-                    _phy.update { _ -> it }
-                    logger?.info(Layer.PHY) { "PHY read: $it" }
-                }
+                ?.also { logger?.info(Layer.PHY) { "PHY read: $it" } }
                 ?: throw PeripheralNotConnectedException()
         }
     }
