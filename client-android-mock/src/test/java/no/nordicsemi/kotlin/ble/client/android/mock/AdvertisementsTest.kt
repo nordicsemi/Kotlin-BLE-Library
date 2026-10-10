@@ -31,8 +31,13 @@
 
 package no.nordicsemi.kotlin.ble.client.android.mock
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
@@ -43,12 +48,15 @@ import no.nordicsemi.kotlin.ble.client.mock.Proximity
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.LegacyAdvertisingSetParameters
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 private const val ADDRESS = "CA:FE:00:00:00:01"
+private const val OTHER_ADDRESS = "CA:FE:00:00:00:02"
 private const val NAME = "Mock Device"
 
 /**
@@ -56,10 +64,9 @@ private const val NAME = "Mock Device"
  */
 class AdvertisementsTest {
 
-    @Test
-    fun `connect started after the device disappeared does not use stale advertisements`() = runTest {
-        val spec = PeripheralSpec.simulatePeripheral(
-            identifier = ADDRESS,
+    private fun connectableSpec(address: String, interval: Duration): PeripheralSpec<String> =
+        PeripheralSpec.simulatePeripheral(
+            identifier = address,
             // Android assumes PUBLIC address type for devices that weren't scanned.
             addressType = AddressType.PUBLIC,
         ) {
@@ -71,12 +78,16 @@ class AdvertisementsTest {
             advertising(
                 parameters = LegacyAdvertisingSetParameters(
                     connectable = true,
-                    interval = 1.seconds,
+                    interval = interval,
                 ),
             ) {
                 CompleteLocalName(NAME)
             }
         }
+
+    @Test
+    fun `connect started after the device disappeared does not use stale advertisements`() = runTest {
+        val spec = connectableSpec(ADDRESS, interval = 1.seconds)
         val manager = CentralManager.mock(scope = backgroundScope)
         manager.simulatePeripherals(listOf(spec))
 
@@ -92,5 +103,65 @@ class AdvertisementsTest {
             }
         }
         assertIs<ConnectionState.Disconnected>(peripheral.state.value)
+    }
+
+    @Test
+    fun `a blocked scan collector gets the oldest 64 queued results like the native scanner`() = runTest {
+        val manager = CentralManager.mock(scope = backgroundScope)
+
+        // The collector is stuck on its first result until the gate opens.
+        val gate = CompletableDeferred<Unit>()
+        val received = mutableListOf<String>()
+        backgroundScope.launch {
+            manager.scan().collect { result ->
+                gate.await()
+                received += result.peripheral.identifier
+            }
+        }
+        runCurrent()
+
+        // Meanwhile, 100 devices advertise once each, 100 ms apart.
+        val addresses = (0 until 100).map { "CA:FE:00:00:00:%02X".format(it) }
+        manager.simulatePeripherals(addresses.mapIndexed { index, address ->
+            PeripheralSpec.simulatePeripheral(address) {
+                advertising(
+                    parameters = LegacyAdvertisingSetParameters(
+                        connectable = false,
+                        interval = 1.seconds,
+                    ),
+                    delay = 100.milliseconds * index,
+                    maxAdvertisingEvents = 1,
+                ) {
+                    CompleteLocalName("Sensor")
+                }
+            }
+        })
+        advanceTimeBy(10.seconds)
+        gate.complete(Unit)
+        runCurrent()
+
+        // Like with the native scanner, the collector gets its first result and the 64 queued
+        // ones (the default buffer of channelFlow). Results arriving after that were lost.
+        assertEquals(addresses.take(1 + 64), received)
+    }
+
+    @Test
+    fun `a scan collector can connect while another device advertises`() = runTest {
+        val manager = CentralManager.mock(scope = backgroundScope)
+        manager.simulatePeripherals(listOf(
+            connectableSpec(ADDRESS, interval = 100.milliseconds),
+            connectableSpec(OTHER_ADDRESS, interval = 100.milliseconds),
+        ))
+
+        // Apps often connect from inside collect. The collector then stays busy until
+        // the device advertises again, so advertising must not wait for the collector.
+        withTimeout(10.seconds) {
+            manager.scan()
+                .filter { it.peripheral.identifier == ADDRESS }
+                .take(1)
+                .collect { manager.connect(it.peripheral) }
+        }
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        assertEquals(ConnectionState.Connected, peripheral.state.value)
     }
 }
