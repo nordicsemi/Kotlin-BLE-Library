@@ -885,13 +885,11 @@ private class WriteDialogState(
     var text by mutableStateOf(initialValue)
 
     /**
-     * The write types supported by the characteristic. Signed Write is rarely used,
-     * so it is not offered.
+     * The write types supported by the characteristic, out of the ones that can be selected,
+     * see [writeTypeOptions].
      */
-    val writeTypes: List<WriteType> = listOfNotNull(
-        WriteType.WITH_RESPONSE.takeIf { CharacteristicProperty.WRITE in characteristic.properties },
-        WriteType.WITHOUT_RESPONSE.takeIf { CharacteristicProperty.WRITE_WITHOUT_RESPONSE in characteristic.properties },
-    )
+    val writeTypes: List<WriteType> = writeTypeOptions
+        .filter { it.requiredProperty in characteristic.properties }
 
     /** The selected write type. */
     var writeType by mutableStateOf(
@@ -1002,35 +1000,37 @@ private fun WriteDialogContent(
                     }
                 }
             }
-            if (state.writeTypes.isNotEmpty()) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "Write type",
+                )
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "Write type",
-                    )
-                    SingleChoiceSegmentedButtonRow(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        state.writeTypes.forEachIndexed { index, type ->
-                            SegmentedButton(
-                                selected = type == state.writeType,
-                                onClick = { state.writeType = type },
-                                // There is nothing to choose from if only one is supported.
-                                enabled = state.writeTypes.size > 1,
-                                shape = SegmentedButtonDefaults.itemShape(
-                                    index = index,
-                                    count = state.writeTypes.size,
-                                ),
-                                label = { Text(type.label) },
-                            )
-                        }
+                    writeTypeOptions.forEachIndexed { index, type ->
+                        SegmentedButton(
+                            selected = type == state.writeType,
+                            onClick = { state.writeType = type },
+                            // The types not supported by the characteristic are disabled. There is
+                            // also nothing to choose from if only one is supported.
+                            enabled = type in state.writeTypes && state.writeTypes.size > 1,
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = writeTypeOptions.size,
+                            ),
+                            label = { Text(type.label) },
+                        )
                     }
                 }
             }
         }
     }
 }
+
+/** The write types that can be selected in the dialog. Signed Write is rarely used. */
+private val writeTypeOptions = listOf(WriteType.WITH_RESPONSE, WriteType.WITHOUT_RESPONSE)
 
 private val WriteType.label: String
     get() = when (this) {
