@@ -64,14 +64,16 @@ open class DescriptorDefinition(
  * @param enabled True if notifications/indications are enabled initially. Bonded devices may
  * store this information and restore it when reconnecting.
  * @param instanceId The instance ID of the descriptor.
+ * @param permissions The permissions of the descriptor.
  */
 class CCCD(
     var enabled: Boolean = false,
     instanceId: Int,
+    permissions: Set<Permission> = Permission.READ and Permission.WRITE,
 ): DescriptorDefinition(
     uuid = Descriptor.CLIENT_CHAR_CONF_UUID,
     instanceId = instanceId,
-    permissions = Permission.READ and Permission.WRITE
+    permissions = permissions,
 )
 
 /**

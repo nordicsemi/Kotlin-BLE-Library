@@ -129,43 +129,45 @@ abstract class BaseRemoteDescriptor(
             throw OperationFailedException(OperationStatus.ReadNotPermitted)
         }
 
-        OperationMutex.withLock {
-            events
-                .onSubscription {
-                    try {
-                        executeRead()
-                    } catch (e: CancellationException) {
-                        // We MUST rethrow CancellationException.
-                        throw e
-                    } catch (e: OperationFailedException) {
-                        // This is thrown when the write request failed before it was sent.
-                        throw e
-                    } catch (e: InvalidAttributeException) {
-                        // Thrown when the services have been invalidated.
-                        throw e
-                    } catch (e: SecurityException) {
-                        throw e
-                    } catch (e: BluetoothException) {
-                        throw e
-                    } catch (_: IllegalStateException) {
-                        // Thrown when mock implementation checks for connection parameters.
-                        // If that fails, the attribute was invalidated.
-                        throw InvalidAttributeException()
-                    } catch (e: Exception) {
-                        // This is any other exception, i.e. SecurityException, etc.
-                        throw BluetoothException(e)
+        owner.executor.repeatingAfterBonding {
+            OperationMutex.withLock {
+                events
+                    .onSubscription {
+                        try {
+                            executeRead()
+                        } catch (e: CancellationException) {
+                            // We MUST rethrow CancellationException.
+                            throw e
+                        } catch (e: OperationFailedException) {
+                            // This is thrown when the write request failed before it was sent.
+                            throw e
+                        } catch (e: InvalidAttributeException) {
+                            // Thrown when the services have been invalidated.
+                            throw e
+                        } catch (e: SecurityException) {
+                            throw e
+                        } catch (e: BluetoothException) {
+                            throw e
+                        } catch (_: IllegalStateException) {
+                            // Thrown when mock implementation checks for connection parameters.
+                            // If that fails, the attribute was invalidated.
+                            throw InvalidAttributeException()
+                        } catch (e: Exception) {
+                            // This is any other exception, i.e. SecurityException, etc.
+                            throw BluetoothException(e)
+                        }
                     }
-                }
-                .takeWhile { !it.isServiceInvalidatedEvent }
-                .filterIsInstance<DescriptorRead>()
-                .firstOrNull { it.matches() }
-                ?.let {
-                    when (it.status) {
-                        OperationStatus.Success -> it.value
-                        else -> throw OperationFailedException(it.status)
+                    .takeWhile { !it.isServiceInvalidatedEvent }
+                    .filterIsInstance<DescriptorRead>()
+                    .firstOrNull { it.matches() }
+                    ?.let {
+                        when (it.status) {
+                            OperationStatus.Success -> it.value
+                            else -> throw OperationFailedException(it.status)
+                        }
                     }
-                }
-                ?: throw InvalidAttributeException()
+                    ?: throw InvalidAttributeException()
+            }
         }
     }
 
@@ -185,45 +187,47 @@ abstract class BaseRemoteDescriptor(
             throw OperationFailedException(OperationStatus.WriteNotPermitted)
         }
 
-        OperationMutex.withLock {
-            events
-                .onSubscription {
-                    try {
-                        executeWrite(data)
-                    } catch (e: CancellationException) {
-                        // We MUST rethrow CancellationException.
-                        throw e
-                    } catch (e: ValueDoesNotMatchException) {
-                        // This exception is thrown when during Long Write or Reliable Write.
-                        throw e
-                    } catch (e: OperationFailedException) {
-                        // This is thrown when the write request failed before it was sent.
-                        throw e
-                    } catch (e: InvalidAttributeException) {
-                        // Thrown when the services have been invalidated.
-                        throw e
-                    } catch (e: SecurityException) {
-                        throw e
-                    } catch (e: BluetoothException) {
-                        throw e
-                    } catch (_: IllegalStateException) {
-                        // Thrown when mock implementation checks for connection parameters.
-                        // If that fails, the attribute was invalidated.
-                        throw InvalidAttributeException()
-                    } catch (e: Exception) {
-                        // This is any other exception, i.e. SecurityException, etc.
-                        throw BluetoothException(e)
+        owner.executor.repeatingAfterBonding {
+            OperationMutex.withLock {
+                events
+                    .onSubscription {
+                        try {
+                            executeWrite(data)
+                        } catch (e: CancellationException) {
+                            // We MUST rethrow CancellationException.
+                            throw e
+                        } catch (e: ValueDoesNotMatchException) {
+                            // This exception is thrown when during Long Write or Reliable Write.
+                            throw e
+                        } catch (e: OperationFailedException) {
+                            // This is thrown when the write request failed before it was sent.
+                            throw e
+                        } catch (e: InvalidAttributeException) {
+                            // Thrown when the services have been invalidated.
+                            throw e
+                        } catch (e: SecurityException) {
+                            throw e
+                        } catch (e: BluetoothException) {
+                            throw e
+                        } catch (_: IllegalStateException) {
+                            // Thrown when mock implementation checks for connection parameters.
+                            // If that fails, the attribute was invalidated.
+                            throw InvalidAttributeException()
+                        } catch (e: Exception) {
+                            // This is any other exception, i.e. SecurityException, etc.
+                            throw BluetoothException(e)
+                        }
                     }
-                }
-                .takeWhile { !it.isServiceInvalidatedEvent }
-                .filterIsInstance<DescriptorWrite>()
-                .firstOrNull { it.matches() }
-                ?.let {
-                    check(it.status.isSuccess) {
-                        throw OperationFailedException(it.status)
+                    .takeWhile { !it.isServiceInvalidatedEvent }
+                    .filterIsInstance<DescriptorWrite>()
+                    .firstOrNull { it.matches() }
+                    ?.let {
+                        check(it.status.isSuccess) {
+                            throw OperationFailedException(it.status)
+                        }
                     }
-                }
-                ?: throw InvalidAttributeException()
+                    ?: throw InvalidAttributeException()
+            }
         }
     }
 

@@ -45,6 +45,10 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.onSubscription
@@ -54,6 +58,7 @@ import kotlinx.coroutines.flow.timeout
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import no.nordicsemi.kotlin.ble.client.ConnectionParametersChanged
 import no.nordicsemi.kotlin.ble.client.ConnectionStateChanged
 import no.nordicsemi.kotlin.ble.client.GattEvent
@@ -92,6 +97,21 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
+
+/** The result of a request executed while the system could be bonding with the peripheral. */
+private sealed class Outcome<out T> {
+    class Completed<T>(val value: T) : Outcome<T>()
+    class Failed(val exception: OperationFailedException) : Outcome<Nothing>()
+    /** Bonding completed, but the request has not. */
+    data object Unanswered : Outcome<Nothing>()
+}
+
+/** How long to wait for the system to start bonding after a request failed because of the lack of it. */
+private val BONDING_START_TIMEOUT = 1.seconds
+
+/** Whether the status means that the link has to be authenticated, or encrypted, which needs a bond. */
+private fun OperationStatus.requiresBond() =
+    this == OperationStatus.InsufficientAuthentication || this == OperationStatus.InsufficientEncryption
 
 /**
  * Android-specific implementation of a peripheral.
@@ -145,6 +165,72 @@ open class Peripheral(
          * a failed [createBond].
          */
         val bondFailureReason: BondingFailedException.Reason?
+
+        /**
+         * Executes a GATT request, and repeats it once if the system did not, after bonding that
+         * was started because the link had to be authenticated or encrypted.
+         *
+         * Android 8+ holds the request, bonds and completes it. Older versions do not. On
+         * Android 6.0.1 (Samsung Galaxy Folder, confirmed with an HCI log) the request is silently
+         * dropped: the peripheral returns Insufficient Authentication, the phone bonds, and
+         * the app is never notified about the result, nor is the request sent again. Other
+         * devices were reported to return the error to the app. Both cases are handled here:
+         * the request is repeated once when bonding completes before the request did, or when
+         * the request failed with Insufficient Authentication or Insufficient Encryption and
+         * bonding succeeded.
+         *
+         * The request is not repeated if the phone was bonded before it, as the error is not caused
+         * by the lack of the bond. If bonding fails, the original error is thrown, or, when the
+         * system does not report the result of the request, it never completes.
+         *
+         * @hide
+         */
+        override suspend fun <T> repeatingAfterBonding(request: suspend () -> T): T {
+            if (environment.repeatsRequestsAfterBonding || bondState.value == BondState.BONDED) {
+                return request()
+            }
+
+            // Race the request with the bonding.
+            val outcome = coroutineScope {
+                val attempt = async {
+                    try {
+                        Outcome.Completed(request())
+                    } catch (e: OperationFailedException) {
+                        Outcome.Failed(e)
+                    }
+                }
+                val bonding = async { bondState.first { it == BondState.BONDED } }
+                select<Outcome<T>> {
+                    attempt.onAwait { it }
+                    bonding.onAwait { Outcome.Unanswered }
+                }.also {
+                    // Cancel the other one. When the request is cancelled, wait for it to release
+                    // the operation mutex.
+                    bonding.cancel()
+                    attempt.cancelAndJoin()
+                }
+            }
+            when (outcome) {
+                is Outcome.Completed -> return outcome.value
+                is Outcome.Failed -> {
+                    val e = outcome.exception
+                    if (!e.reason.requiresBond()) {
+                        throw e
+                    }
+                    // The bonding is started by the system as a result of the failure. Wait for it,
+                    // as the error may be delivered before the bond state changes.
+                    withTimeoutOrNull(BONDING_START_TIMEOUT) { bondState.first { it != BondState.NONE } }
+                        ?: throw e
+                    if (bondState.first { it != BondState.BONDING } != BondState.BONDED) {
+                        throw e
+                    }
+                    logger?.info(Layer.SMP) { "Bonded, repeating the request that failed with ${e.reason}" }
+                }
+                Outcome.Unanswered ->
+                    logger?.info(Layer.SMP) { "Bonded, repeating the request that was not answered" }
+            }
+            return request()
+        }
 
         /**
          * Requests the connection priority to be changed.

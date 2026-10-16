@@ -248,6 +248,19 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
         /** The initial services of the peripheral. */
         val initialServices: List<RemoteService>
 
+        /**
+         * Executes a GATT request, and repeats it if the system did not, after it failed because
+         * the link had to be authenticated or encrypted first.
+         *
+         * Some systems start bonding when a protected attribute is accessed, hold the request
+         * until the bonding finishes, and complete it. Others fail the request, and the client
+         * is expected to repeat it. By default, the request is executed once.
+         *
+         * @param request The request. It may be called twice.
+         * @hide
+         */
+        suspend fun <T> repeatingAfterBonding(request: suspend () -> T): T = request()
+
         /** A flow of GATT events from the peripheral. */
         val events: SharedFlow<GattEvent>
 

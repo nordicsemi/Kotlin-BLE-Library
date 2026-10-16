@@ -495,10 +495,15 @@ interface CharacteristicScope {
      * has `NOTIFY` or `INDICATE` property.
      *
      * @param enabled Whether notifications/indications are enabled initially.
+     * @param permissions The permissions of the descriptor. Use [Permission.WRITE_ENCRYPTED]
+     * to require bonding to enable notifications.
      */
     @Suppress("FunctionName")
     @IgnorableReturnValue
-    fun ClientCharacteristicConfigurationDescriptor(enabled: Boolean = false): Int
+    fun ClientCharacteristicConfigurationDescriptor(
+        enabled: Boolean = false,
+        permissions: Set<Permission> = Permission.READ and Permission.WRITE,
+    ): Int
 
     /**
      * Declares a Characteristic Extended Properties descriptor.

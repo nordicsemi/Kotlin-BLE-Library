@@ -227,6 +227,30 @@ class ServerScopeImplTest {
     }
 
     @Test
+    fun `CCCD is readable and writable by default`() {
+        val cccd = build {
+            Service(0x180F) {
+                Characteristic(0x2A19, CharacteristicProperty.NOTIFY)
+            }
+        }.single().characteristics.single().descriptors.single()
+        assertEquals(Permission.READ and Permission.WRITE, cccd.permissions)
+    }
+
+    @Test
+    fun `explicit CCCD can require encryption`() {
+        val cccd = build {
+            Service(0x180F) {
+                Characteristic(0x2A19, CharacteristicProperty.NOTIFY) {
+                    ClientCharacteristicConfigurationDescriptor(
+                        permissions = Permission.READ and Permission.WRITE_ENCRYPTED,
+                    )
+                }
+            }
+        }.single().characteristics.single().descriptors.single()
+        assertEquals(Permission.READ and Permission.WRITE_ENCRYPTED, cccd.permissions)
+    }
+
+    @Test
     fun `adding CCCD twice fails`() {
         assertFailsWith<IllegalArgumentException> {
             build {
