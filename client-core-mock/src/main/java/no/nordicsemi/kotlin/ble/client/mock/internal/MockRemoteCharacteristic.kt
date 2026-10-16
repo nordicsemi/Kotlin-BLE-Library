@@ -42,6 +42,7 @@ import no.nordicsemi.kotlin.ble.client.internal.CharacteristicRead
 import no.nordicsemi.kotlin.ble.client.internal.CharacteristicWrite
 import no.nordicsemi.kotlin.ble.client.internal.OperationEvent
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
+import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec.Authentication
 import no.nordicsemi.kotlin.ble.client.mock.PrepareWriteResponse
 import no.nordicsemi.kotlin.ble.client.mock.ReadResponse
 import no.nordicsemi.kotlin.ble.client.mock.WriteResponse
@@ -96,8 +97,12 @@ class MockRemoteCharacteristic(
         }
         val status = when {
             insecure -> null
-            authenticationRequired && peripheralSpec.requestAuthentication() -> null
-            authenticationRequired -> OperationStatus.InsufficientAuthentication
+            authenticationRequired -> when (peripheralSpec.requestAuthentication()) {
+                Authentication.Granted -> null
+                Authentication.Denied -> OperationStatus.InsufficientAuthentication
+                // The system started bonding and dropped the request. There is no response.
+                Authentication.Dropped -> return
+            }
             else -> OperationStatus.ReadNotPermitted
         }
         status?.let { status ->
@@ -185,8 +190,12 @@ class MockRemoteCharacteristic(
                 }
                 val status = when {
                     insecure -> null
-                    authenticationRequired && peripheralSpec.requestAuthentication() -> null
-                    authenticationRequired -> OperationStatus.InsufficientAuthentication
+                    authenticationRequired -> when (peripheralSpec.requestAuthentication()) {
+                        Authentication.Granted -> null
+                        Authentication.Denied -> OperationStatus.InsufficientAuthentication
+                        // The system started bonding and dropped the request. There is no response.
+                        Authentication.Dropped -> return
+                    }
                     else -> OperationStatus.WriteNotPermitted
                 }
                 status?.let { status ->

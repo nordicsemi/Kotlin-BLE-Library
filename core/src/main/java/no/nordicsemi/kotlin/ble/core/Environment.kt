@@ -48,6 +48,9 @@ package no.nordicsemi.kotlin.ble.core
  * Bluetooth LE advertising packet is connectable.
  * @property isSystem Whether the app is running in a privileged environment and has access to
  * restricted features.
+ * @property repeatsRequestsAfterBonding Whether the system repeats a request to a protected
+ * attribute after it bonded with the peripheral, instead of failing it with Insufficient
+ * Authentication (when `false`, the client is expected to repeat the request).
  */
 interface Environment {
     val deviceName: String
@@ -59,4 +62,6 @@ interface Environment {
     val allowsBondRemoval: Boolean
     val reportsConnectableFlag: Boolean
     val isSystem: Boolean
+    val repeatsRequestsAfterBonding: Boolean
+        get() = true
 }

@@ -57,6 +57,8 @@ import no.nordicsemi.kotlin.ble.client.mock.internal.MockRemoteCharacteristic
 import no.nordicsemi.kotlin.ble.client.mock.internal.MockRemoteDescriptor
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
 import no.nordicsemi.kotlin.ble.core.util.fromShortUuid
+import no.nordicsemi.kotlin.ble.environment.android.mock.LatestApi
+import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import kotlin.uuid.Uuid
 
 // Test support for the Gatt*Test classes. Everything here is prefixed with "Gatt" / "GATT_".
@@ -210,6 +212,7 @@ internal fun TestScope.gattFixture(
     maxAttMtu: Int = 23,
     bonded: Boolean = false,
     peripheralHasBond: Boolean = bonded,
+    environment: MockAndroidEnvironment = LatestApi(),
     services: MockServerScope.() -> Unit,
 ): GattFixture {
     val spec = PeripheralSpec.simulatePeripheral(
@@ -242,7 +245,7 @@ internal fun TestScope.gattFixture(
             )
         }
     }
-    val manager = CentralManager.mock(scope = backgroundScope)
+    val manager = CentralManager.mock(environment = environment, scope = backgroundScope)
         .apply { simulatePeripherals(listOf(spec)) }
     return GattFixture(spec, manager, handler)
 }
@@ -253,9 +256,10 @@ internal fun TestScope.gattSingleCharacteristic(
     maxAttMtu: Int = 23,
     bonded: Boolean = false,
     peripheralHasBond: Boolean = bonded,
+    environment: MockAndroidEnvironment = LatestApi(),
     properties: Set<no.nordicsemi.kotlin.ble.core.CharacteristicProperty>,
     permissions: Set<no.nordicsemi.kotlin.ble.core.Permission>,
-): GattFixture = gattFixture(handler, maxAttMtu, bonded, peripheralHasBond) {
+): GattFixture = gattFixture(handler, maxAttMtu, bonded, peripheralHasBond, environment) {
     Service(GATT_SERVICE_UUID) {
         Characteristic(GATT_CHAR_UUID, properties, permissions)
     }
