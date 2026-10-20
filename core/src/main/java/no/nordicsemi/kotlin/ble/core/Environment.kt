@@ -51,6 +51,10 @@ package no.nordicsemi.kotlin.ble.core
  * @property repeatsRequestsAfterBonding Whether the system repeats a request to a protected
  * attribute after it bonded with the peripheral, instead of failing it with Insufficient
  * Authentication (when `false`, the client is expected to repeat the request).
+ * @property rejectsAutoConnectToUnbondedPrivateAddress Whether the system reports an error when
+ * asked to connect in the background (auto connect) to a device that is not bonded and uses
+ * a Resolvable Private Address. When `false`, the request is accepted, but the connection
+ * is never established.
  */
 interface Environment {
     val deviceName: String
@@ -63,5 +67,5 @@ interface Environment {
     val reportsConnectableFlag: Boolean
     val isSystem: Boolean
     val repeatsRequestsAfterBonding: Boolean
-        get() = true
+    val rejectsAutoConnectToUnbondedPrivateAddress: Boolean
 }

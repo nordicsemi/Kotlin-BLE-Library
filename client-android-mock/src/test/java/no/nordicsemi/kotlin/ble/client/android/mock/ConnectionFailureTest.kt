@@ -59,6 +59,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import kotlin.test.assertNull
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
@@ -496,6 +497,23 @@ class ConnectionFailureTest {
 
         assertEquals(Reason.UnsupportedAddress, exception.reason)
         assertEquals(ConnectionState.Disconnected(Reason.UnsupportedAddress), peripheral.state.value)
+    }
+
+    @Test
+    fun `auto connect to a not bonded device with resolvable private address silently does not connect before Android 13`() = runTest {
+        val spec = spec(address = RPA_ADDRESS, addressType = AddressType.RANDOM_PRIVATE_RESOLVABLE)
+        val manager = newManager(spec, environment = MockAndroidEnvironment.Api31())
+        val peripheral = checkNotNull(manager.getPeripheralById(RPA_ADDRESS))
+        spec.simulateCaching()
+        val job = async { runCatching { manager.connect(peripheral, ConnectionOptions.AutoConnect()) } }
+
+        advanceTimeBy(1.minutes)
+        runCurrent()
+
+        // No error, the system just waits.
+        assertEquals(ConnectionState.Connecting, peripheral.state.value)
+        assertTrue(job.isActive)
+        job.cancel()
     }
 
     @Test
