@@ -137,6 +137,15 @@ interface AndroidEnvironment : Environment {
          */
         const val S = 31
         /**
+         * Android 13.
+         *
+         * New features:
+         * * Bluetooth is a Mainline module.
+         * * Auto connect to a device that is not bonded and uses a Resolvable Private Address
+         *   fails with an error. Before, the request was silently accepted, and never succeeded.
+         */
+        const val TIRAMISU = 33
+        /**
          * Android 15.
          *
          * New features:
@@ -206,6 +215,15 @@ interface AndroidEnvironment : Environment {
         // has to be repeated by the app. Android 8 repeats it after bonding. Android 7 is assumed
         // to behave like Android 6 (confirmed on Android 6.0.1 with an HCI snoop log).
         get() = androidSdkVersion >= SdkVersion.OREO
+
+    override val rejectsAutoConnectToUnbondedPrivateAddress: Boolean
+        // The Bluetooth stack of Android 12 and older logs "Unable to add RPA to background
+        // connection" and returns success, so the connection never happens, and the app is not
+        // notified. Android 13 returns an error (status 133 or 135). In AOSP the change was made by
+        // the commit 88e5c86895e8 "GATT: Add more logs in GATT to help with debugging" in
+        // system/stack/gatt/gatt_api.cc, GATT_Connect(). Confirmed on Android 6, 8, 9 and 12
+        // (silent) and Android 14 and 17 (error).
+        get() = androidSdkVersion >= SdkVersion.TIRAMISU
 
     override val reportsConnectableFlag: Boolean
         // isConnectable flag was added to ScanResult in Android 8 Oreo.

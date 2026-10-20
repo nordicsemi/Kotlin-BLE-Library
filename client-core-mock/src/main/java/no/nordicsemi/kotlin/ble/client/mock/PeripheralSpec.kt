@@ -1303,6 +1303,10 @@ class PeripheralSpec<ID: Any> private constructor(
             // Note 2: On iOS it is not possible to get a peripheral by Device Address at all.
             //         Devices must be scanned so that the Identifier is known.
             if (autoConnect && !isBonded && isKnown && addressType == AddressType.RANDOM_PRIVATE_RESOLVABLE) {
+                // Older systems accept the request, but never connect, and do not report anything.
+                if (!environment.rejectsAutoConnectToUnbondedPrivateAddress) {
+                    return
+                }
                 // Some Android devices return error 133, newer ones 135.
                 // This event is later translated to UnsupportedAddress.
                 clientEvents.emit(ConnectionStateChanged(ConnectionState.Disconnected(Reason.Unknown(135))))
