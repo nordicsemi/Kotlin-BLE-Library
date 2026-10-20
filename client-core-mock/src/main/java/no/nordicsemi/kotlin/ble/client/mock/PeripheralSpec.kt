@@ -922,13 +922,33 @@ class PeripheralSpec<ID: Any> private constructor(
      * If the phone is not bonded, bonding is started and the operation is held until it finishes.
      * The bonding level is not simulated: the link is authenticated if the bonding succeeds.
      *
-     * @return `true` if the phone is bonded, so the access to the attribute is granted.
+     * If the system does not repeat requests after bonding
+     * ([no.nordicsemi.kotlin.ble.core.Environment.repeatsRequestsAfterBonding]), bonding is started
+     * in the background, and the request is dropped without any response, like Android 6.0.1 does.
+     *
+     * @return The result of the authentication.
      */
-    internal suspend fun requestAuthentication(): Boolean {
+    internal suspend fun requestAuthentication(): Authentication {
         simulateBonding()
+        if (simulationEnvironment?.repeatsRequestsAfterBonding == false && !isBonded) {
+            return Authentication.Dropped
+        }
         val bonded = _bondState.first { it != BondState.BONDING } == BondState.BONDED
         // The peripheral does not have the key, so the link cannot be encrypted.
-        return bonded && _linkEncryption.value != LinkEncryption.KeyMissing
+        return when {
+            bonded && _linkEncryption.value != LinkEncryption.KeyMissing -> Authentication.Granted
+            else -> Authentication.Denied
+        }
+    }
+
+    /** The result of authenticating the link before accessing a protected attribute. */
+    internal enum class Authentication {
+        /** The link is authenticated, and the request can be handled. */
+        Granted,
+        /** The link could not be authenticated, the request fails with Insufficient Authentication. */
+        Denied,
+        /** The system started bonding and dropped the request; it will never be answered. */
+        Dropped,
     }
 
     /**

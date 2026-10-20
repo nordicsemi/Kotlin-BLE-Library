@@ -201,6 +201,12 @@ interface AndroidEnvironment : Environment {
         // onConnectionUpdated callback was added in Android 8 Oreo.
         get() = androidSdkVersion >= SdkVersion.OREO
 
+    override val repeatsRequestsAfterBonding: Boolean
+        // Android 6 returns Insufficient Authentication to the app, and starts bonding. The request
+        // has to be repeated by the app. Android 8 repeats it after bonding. Android 7 is assumed
+        // to behave like Android 6 (confirmed on Android 6.0.1 with an HCI snoop log).
+        get() = androidSdkVersion >= SdkVersion.OREO
+
     override val reportsConnectableFlag: Boolean
         // isConnectable flag was added to ScanResult in Android 8 Oreo.
         get() = androidSdkVersion >= SdkVersion.OREO
