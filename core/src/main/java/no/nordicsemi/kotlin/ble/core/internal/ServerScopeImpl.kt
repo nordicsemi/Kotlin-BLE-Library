@@ -209,7 +209,10 @@ private class CharacteristicScopeImpl(
         return descriptorHandle
     }
 
-    override fun ClientCharacteristicConfigurationDescriptor(enabled: Boolean): Int {
+    override fun ClientCharacteristicConfigurationDescriptor(
+        enabled: Boolean,
+        permissions: Set<Permission>,
+    ): Int {
         val descriptorHandle = handle.next()
 
         // There can be only one CCCD per characteristic.
@@ -219,7 +222,8 @@ private class CharacteristicScopeImpl(
         descriptors.add(
             CCCD(
                 enabled = enabled,
-                instanceId = descriptorHandle
+                instanceId = descriptorHandle,
+                permissions = permissions,
             )
         )
         return descriptorHandle
