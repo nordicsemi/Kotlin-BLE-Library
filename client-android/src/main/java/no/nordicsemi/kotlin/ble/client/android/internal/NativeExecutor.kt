@@ -169,8 +169,8 @@ internal class NativeExecutor(
         }
         logger?.d(Layer.GAP) { "device.connectGatt(autoConnect=$autoConnect)" }
         // Note: Instead of relying on BluetoothGattConnectionSettings.setAutomaticMtuEnabled
-        //       the MTU will be requested explicitly after connection. See client/Peripheral -> connect()
-        gatt = bluetoothDevice.connect(environment.applicationContext, autoConnect, false, opportunistic, gattCallback)
+        //       the MTU is requested explicitly after connection. See client/Peripheral -> connect().
+        gatt = bluetoothDevice.connect(environment.applicationContext, autoConnect, autoMtu, opportunistic, gattCallback)
     }
 
     override suspend fun discoverServices(uuids: List<Uuid>): Boolean {

@@ -42,7 +42,9 @@ package no.nordicsemi.kotlin.ble.core
  * @property isScanningOnLeCodedPhySupported Whether the device can scan for Bluetooth LE devices
  * advertising on LE Coded PHY as Primary PHY.
  * @property reportsConnectionParameters Whether the device reports connection parameters.
- * @property automaticallyRequestsMtu Whether the device automatically requests MTU upon connection.
+ * @property automaticallyRequestsMtu Whether the system requests the maximum MTU itself when
+ * the connection is established (e.g. iOS). If `true`, the library does not request the MTU before
+ * it reports the peripheral as connected.
  * @property allowsBondRemoval Whether the device provides API to remove bond information from local host.
  * @property reportsConnectableFlag Whether the device provides information whether a scanned
  * Bluetooth LE advertising packet is connectable.

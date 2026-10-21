@@ -417,8 +417,18 @@ open class Peripheral(
      */
     private var isPreparingConnection = false
 
-    /** Whether the highest MTU should be requested for each connection, including reconnections. */
+    /**
+     * Whether the library should request the highest MTU for each connection, including
+     * reconnections. It does not, if the system does it itself, see [systemRequestsMtu].
+     */
     private var automaticallyRequestHighestValueLength = false
+
+    /**
+     * Whether the system should request the highest MTU when the connection is established.
+     * It is passed to the executor, and set only if the environment supports it
+     * ([no.nordicsemi.kotlin.ble.core.Environment.automaticallyRequestsMtu]).
+     */
+    private var systemRequestsMtu = false
 
     /**
      * Returns a flow that emits the value of this flow when the [state] is
@@ -457,12 +467,15 @@ open class Peripheral(
             return
         }
 
-        // Start connection attempt, based on the connection options.
-        logger?.trace(Layer.GAP) { "Connecting to $this using $options" }
-        automaticallyRequestHighestValueLength = options.automaticallyRequestHighestValueLength
+        val environmentRequestsMtu = impl.environment.automaticallyRequestsMtu
+        automaticallyRequestHighestValueLength = options.automaticallyRequestHighestValueLength && !environmentRequestsMtu
+        systemRequestsMtu = options.automaticallyRequestHighestValueLength && environmentRequestsMtu
         isAutoReconnectBroken = false
         isConnectedDirectly = false
         isAutoConnectPending = false
+
+        // Start connection attempt, based on the connection options.
+        logger?.trace(Layer.GAP) { "Connecting to $this using $options" }
         _state.update { ConnectionState.Connecting }
         when (options) {
             // In case of auto connect, the connection attempt does not time out.
@@ -479,7 +492,7 @@ open class Peripheral(
                         action = {
                             impl.connect(
                                 autoConnect = true,
-                                autoMtu = options.automaticallyRequestHighestValueLength,
+                                autoMtu = systemRequestsMtu,
                                 opportunistic = options.opportunistic
                             )
                         },
@@ -549,7 +562,7 @@ open class Peripheral(
                             action = {
                                 impl.connect(
                                     autoConnect = false,
-                                    autoMtu = options.automaticallyRequestHighestValueLength,
+                                    autoMtu = systemRequestsMtu,
                                     opportunistic = options.opportunistic,
                                 )
                             },
@@ -642,7 +655,7 @@ open class Peripheral(
                 action = {
                     impl.connect(
                         autoConnect = false,
-                        autoMtu = options.automaticallyRequestHighestValueLength,
+                        autoMtu = systemRequestsMtu,
                         opportunistic = options.opportunistic,
                     )
                 },
@@ -683,7 +696,7 @@ open class Peripheral(
         isAutoConnectPending = true
         impl.connect(
             autoConnect = true,
-            autoMtu = automaticallyRequestHighestValueLength,
+            autoMtu = systemRequestsMtu,
             opportunistic = false,
         )
     }
