@@ -1330,14 +1330,18 @@ class PeripheralSpec<ID: Any> private constructor(
             // Note: The advertisements flow is not filtered by the PHYs supported by the phone,
             // so a device advertising on a PHY the phone can't receive must be skipped here,
             // just like the scanner does.
-            val advertisement = advertisements.first { scanResult ->
-                scanResult.peripheralSpec.identifier == identifier &&
-                        scanResult.isConnectable &&
-                        environment.canReceive(scanResult)
-            }
+            // With auto-connect the system keeps trying, until the request is accepted. A direct
+            // connection is tried once, and when the request is denied, it times out.
+            do {
+                val advertisement = advertisements.first { scanResult ->
+                    scanResult.peripheralSpec.identifier == identifier &&
+                            scanResult.isConnectable &&
+                            environment.canReceive(scanResult)
+                }
 
-            // Note: Ignoring "preferred PHY" set by user. Choosing the primary PHY of scanned packet.
-            connect(advertisement.primaryPhy, autoMtu)
+                // Note: Ignoring "preferred PHY" set by user. Choosing the primary PHY of scanned packet.
+                val accepted = connect(advertisement.primaryPhy, autoMtu)
+            } while (autoConnect && !accepted)
         }
 
         /** The job observing the connection state, started for auto-connect connections. */

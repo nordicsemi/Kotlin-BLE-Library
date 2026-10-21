@@ -118,6 +118,8 @@ open class MockExecutor(
         autoMtu: Boolean,
         opportunistic: Boolean,
     ) {
+        // On retry the previous GATT object may not be null and must be closed.
+        gatt?.close()
         gatt = peripheralSpec.connectGatt(
             environment = environment,
             autoConnect = autoConnect,

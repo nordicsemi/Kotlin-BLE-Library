@@ -33,6 +33,7 @@ package no.nordicsemi.kotlin.ble.client.android.mock
 
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -83,12 +84,17 @@ class ConnectionFailureTest {
         advertising: Boolean = true,
         connectableAdvertising: Boolean = true,
         eventHandler: PeripheralSpecEventHandler = object : PeripheralSpecEventHandler {},
+        isBonded: Boolean = false,
     ): PeripheralSpec<String> = PeripheralSpec.simulatePeripheral(
         identifier = address,
         addressType = addressType,
         proximity = proximity,
     ) {
-        connectable(name = "Device", eventHandler = eventHandler) {}
+        if (isBonded) {
+            connectable(name = "Device", isBonded = true, eventHandler = eventHandler, cachedServices = {})
+        } else {
+            connectable(name = "Device", eventHandler = eventHandler) {}
+        }
         if (advertising) {
             advertising(
                 parameters = LegacyAdvertisingSetParameters(
@@ -368,10 +374,11 @@ class ConnectionFailureTest {
     /** Counts the connection requests the peripheral gets. */
     private class ConnectionRequests : PeripheralSpecEventHandler {
         var count = 0
+        var result: ConnectionResult = ConnectionResult.Accept
 
         override fun onConnectionRequest(phy: PrimaryPhy): ConnectionResult {
             count++
-            return ConnectionResult.Accept
+            return result
         }
     }
 
@@ -514,6 +521,25 @@ class ConnectionFailureTest {
         assertEquals(ConnectionState.Connecting, peripheral.state.value)
         assertTrue(job.isActive)
         job.cancel()
+    }
+
+    @Test
+    fun `auto connect denied forever stops trying when the connection is cancelled`() = runTest {
+        val requests = ConnectionRequests().apply { result = ConnectionResult.Deny }
+        val manager = newManager(spec(eventHandler = requests))
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        val job = launch { manager.connect(peripheral, ConnectionOptions.AutoConnect()) }
+        advanceTimeBy(5.seconds)
+        runCurrent()
+        // The request is retried each time the peripheral advertises.
+        assertTrue(requests.count > 10, "Expected many attempts, but was ${requests.count}")
+
+        job.cancelAndJoin()
+        val attempts = requests.count
+        advanceTimeBy(5.seconds)
+        runCurrent()
+
+        assertEquals(attempts, requests.count)
     }
 
     @Test
