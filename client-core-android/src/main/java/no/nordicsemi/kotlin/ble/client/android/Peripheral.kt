@@ -112,6 +112,18 @@ private val BONDED_REQUEST_GRACE_PERIOD = 1.seconds
 /** How long to wait for the system to start bonding after a request failed because of the lack of it. */
 private val BONDING_START_TIMEOUT = 1.seconds
 
+/** How long a direct connection, made before auto connect of a device that is not bonded, is tried. */
+private val DIRECT_BEFORE_AUTO_CONNECT_TIMEOUT = 10.seconds
+
+/**
+ * Whether the state is a disconnection, caused by the system refusing to use auto connect
+ * for the address (status 133 or 135), see [CentralManager.ConnectionOptions.AutoConnect].
+ */
+private fun ConnectionState.isUnsupportedAddressError(): Boolean {
+    val reason = (this as? ConnectionState.Disconnected)?.reason
+    return reason is Reason.Unknown && (reason.status == 133 || reason.status == 135)
+}
+
 /** Whether the status means that the link has to be authenticated, or encrypted, which needs a bond. */
 private fun OperationStatus.requiresBond() =
     this == OperationStatus.InsufficientAuthentication || this == OperationStatus.InsufficientEncryption
@@ -449,13 +461,21 @@ open class Peripheral(
         logger?.trace(Layer.GAP) { "Connecting to $this using $options" }
         automaticallyRequestHighestValueLength = options.automaticallyRequestHighestValueLength
         isAutoReconnectBroken = false
+        isConnectedDirectly = false
+        isAutoConnectPending = false
         _state.update { ConnectionState.Connecting }
         when (options) {
             // In case of auto connect, the connection attempt does not time out.
             // Cancel the coroutine to abort.
             is CentralManager.ConnectionOptions.AutoConnect -> {
                 try {
-                    val state = await(
+                    // A device that is not bonded may use a Resolvable Private Address (RPA), which
+                    // cannot be used with AutoConnect: Android 13+ reports an error, and
+                    // older versions never connect. A direct connection works with RPA, so try it first.
+                    // If it fails, or the device is not around, use auto connect.
+                    val directState = if (hasBondInformation) null else connectDirectlyBeforeAutoConnect(options)
+                    isConnectedDirectly = directState != null
+                    val state = directState ?: await(
                         action = {
                             impl.connect(
                                 autoConnect = true,
@@ -492,7 +512,7 @@ open class Peripheral(
                             //
                             // See: https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Bluetooth/system/stack/gatt/gatt_api.cc;l=1450
                             val reason = state.reason!!
-                            if (reason is Reason.Unknown && (reason.status == 133 || reason.status == 135)) {
+                            if (state.isUnsupportedAddressError()) {
                                 logger?.warn(Layer.GAP) { "Connection attempt failed (reason: ${Reason.UnsupportedAddress})" }
                                 _state.update { ConnectionState.Disconnected(Reason.UnsupportedAddress) }
                                 throw ConnectionFailedException(Reason.UnsupportedAddress)
@@ -606,6 +626,68 @@ open class Peripheral(
         }
     }
 
+    /**
+     * Tries to connect directly, as the first step of [CentralManager.ConnectionOptions.AutoConnect]
+     * of a device that is not bonded.
+     *
+     * @return The connected state, the state with which the attempt was ended by the user,
+     * or `null` if the attempt failed or timed out and the peripheral should use auto connect.
+     */
+    private suspend fun connectDirectlyBeforeAutoConnect(
+        options: CentralManager.ConnectionOptions.AutoConnect
+    ): ConnectionState? {
+        logger?.trace(Layer.GAP) { "The peripheral is not bonded, connecting directly first" }
+        val state = try {
+            await(
+                action = {
+                    impl.connect(
+                        autoConnect = false,
+                        autoMtu = options.automaticallyRequestHighestValueLength,
+                        opportunistic = options.opportunistic,
+                    )
+                },
+                condition = { it.isConnected || it.isDisconnected },
+                timeout = DIRECT_BEFORE_AUTO_CONNECT_TIMEOUT,
+            )
+        } catch (e: TimeoutCancellationException) {
+            // The timeout of the direct attempt cancels only the awaiting block. A timeout
+            // of an outer withTimeout cancels this coroutine too.
+            if (!currentCoroutineContext().isActive) throw e
+            logger?.info(Layer.GAP) { "Direct connection timed out, using auto connect" }
+            return null
+        }
+        if (state is ConnectionState.Disconnected && !state.isUserInitiated) {
+            logger?.info(Layer.GAP) { "Direct connection failed (reason: ${state.reason}), using auto connect" }
+            return null
+        }
+        return state
+    }
+
+    /**
+     * Set when the connection was established with a direct attempt, made as the first step
+     * of auto connect, so the system will not reconnect by itself.
+     */
+    @Volatile
+    private var isConnectedDirectly = false
+
+    /** Set when auto connect was requested after the link of a direct connection was lost. */
+    @Volatile
+    private var isAutoConnectPending = false
+
+    override suspend fun waitForReconnection() {
+        if (!isConnectedDirectly) return
+        isConnectedDirectly = false
+        // The link was established directly, so the system does not reconnect. Use auto connect.
+        // If the device is bonded by now, or uses a public address, it works.
+        logger?.trace(Layer.GAP) { "The link of a direct connection was lost, using auto connect" }
+        isAutoConnectPending = true
+        impl.connect(
+            autoConnect = true,
+            autoMtu = automaticallyRequestHighestValueLength,
+            opportunistic = false,
+        )
+    }
+
     override suspend fun handle(event: GattEvent) = when (event) {
         is ReliableWriteCompleted -> impl.isReliableWriteEnabled = false
         is MtuChanged -> _mtu = event.mtu
@@ -614,7 +696,12 @@ open class Peripheral(
         is ConnectionStateChanged -> {
             if (event.isPhyRequestError) {
                 super.handle(ConnectionStateChanged(ConnectionState.Disconnected(reason = Reason.UnsupportedConfiguration)))
+            } else if (isAutoConnectPending && event.newState.isUnsupportedAddressError()) {
+                super.handle(ConnectionStateChanged(ConnectionState.Disconnected(reason = Reason.UnsupportedAddress)))
             } else {
+                if (event.newState.isConnected) {
+                    isAutoConnectPending = false
+                }
                 super.handle(event)
             }
         }
@@ -647,8 +734,12 @@ open class Peripheral(
     @Volatile
     private var isAutoReconnectBroken = false
 
-    override val isAutoReconnectExpected: Boolean
-        get() = !isAutoReconnectBroken
+    override fun isAutoReconnectExpected(state: ConnectionState.Disconnected): Boolean = when {
+        isAutoReconnectBroken -> false
+        // The system refused to use auto connect for the address (see connect()).
+        isAutoConnectPending && state.isUnsupportedAddressError() -> false
+        else -> true
+    }
 
     override fun handleDisconnection() {
         super.handleDisconnection()

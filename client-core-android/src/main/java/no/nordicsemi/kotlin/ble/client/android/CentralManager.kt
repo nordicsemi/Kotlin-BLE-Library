@@ -40,6 +40,7 @@ import no.nordicsemi.kotlin.ble.client.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.exception.ScanningFailedToStartException
 import no.nordicsemi.kotlin.ble.client.exception.ConnectionFailedException
 import no.nordicsemi.kotlin.ble.client.exception.ScanningException
+import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
 import no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException
 import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
@@ -175,6 +176,17 @@ interface CentralManager:
          * The option to passively scan and finalize the connection when the remote device is in
          * range and available. It does not allow to set a connection timeout and will not retry
          * on failure.
+         *
+         * A peripheral that is **not bonded** is first connected directly, for up to 10 seconds.
+         * Such a device may use a Resolvable Private Address (RPA), which the system cannot
+         * use with auto connect: Android 13+ returns an error
+         * ([UnsupportedAddress][ConnectionState.Disconnected.Reason.UnsupportedAddress]),
+         * and older versions accept the request, but never connect.
+         * If the direct connection fails, the peripheral uses auto connect.
+         * After the link of such a connection is lost, the peripheral uses auto connect as well,
+         * which fails for a device with an RPA that is still not bonded.
+         *
+         * A bonded peripheral uses auto connect only.
          *
          * In general, the first ever connection to a device should be direct and subsequent
          * connections to known devices should be invoked with this option.
