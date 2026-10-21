@@ -412,12 +412,12 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
                         // ...when the connection was terminated using disconnect() or canceled,
                         // or the closeWhenDisconnected flag was set (no automatic reconnection),
                         // or connection failed due to insufficient authentication (bond info removed from peer),
-                        // or the system is known not to reconnect (see isAutoReconnectExpected),
+                        // or the system is known not to reconnect (see isAutoReconnectExpected()),
                         // process the event and cancel the collector.
                         if (closeWhenDisconnected ||
                             event.newState.isUserInitiated ||
                             event.newState.reason is ConnectionState.Disconnected.Reason.InsufficientAuthentication ||
-                            !isAutoReconnectExpected) {
+                            !isAutoReconnectExpected(event.newState)) {
                             handle(event)
                             // Close the peripheral and stop collecting the events.
                             close()
@@ -426,6 +426,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
                             // Note: This changes state Connected -> Connecting, without going through
                             //       Disconnected state.
                             handle(ConnectionStateChanged(ConnectionState.Connecting))
+                            waitForReconnection()
                         }
                     }
                     // Handle other events.
@@ -453,10 +454,21 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      * When `false`, a lost link is reported as a disconnection, and the peripheral is closed,
      * even if the connection was started with auto connect. The implementation should return
      * `false` when it knows that the system will not reconnect.
+     *
+     * @param state The state the peripheral disconnected with.
      * @hide
      */
-    protected open val isAutoReconnectExpected: Boolean
-        get() = true
+    protected open fun isAutoReconnectExpected(state: ConnectionState.Disconnected): Boolean = true
+
+    /**
+     * Called when the link was lost, and the system is expected to reconnect automatically.
+     *
+     * The implementation may start waiting for the device, if the system does not do it itself.
+     * @hide
+     */
+    protected open suspend fun waitForReconnection() {
+        // Empty default implementation.
+    }
 
     /**
      * Cancels collection of GATT events and closes the connection.

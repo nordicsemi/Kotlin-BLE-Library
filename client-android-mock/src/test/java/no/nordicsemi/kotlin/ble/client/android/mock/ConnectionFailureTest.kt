@@ -33,6 +33,7 @@ package no.nordicsemi.kotlin.ble.client.android.mock
 
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -83,12 +84,17 @@ class ConnectionFailureTest {
         advertising: Boolean = true,
         connectableAdvertising: Boolean = true,
         eventHandler: PeripheralSpecEventHandler = object : PeripheralSpecEventHandler {},
+        isBonded: Boolean = false,
     ): PeripheralSpec<String> = PeripheralSpec.simulatePeripheral(
         identifier = address,
         addressType = addressType,
         proximity = proximity,
     ) {
-        connectable(name = "Device", eventHandler = eventHandler) {}
+        if (isBonded) {
+            connectable(name = "Device", isBonded = true, eventHandler = eventHandler, cachedServices = {})
+        } else {
+            connectable(name = "Device", eventHandler = eventHandler) {}
+        }
         if (advertising) {
             advertising(
                 parameters = LegacyAdvertisingSetParameters(
@@ -368,10 +374,11 @@ class ConnectionFailureTest {
     /** Counts the connection requests the peripheral gets. */
     private class ConnectionRequests : PeripheralSpecEventHandler {
         var count = 0
+        var result: ConnectionResult = ConnectionResult.Accept
 
         override fun onConnectionRequest(phy: PrimaryPhy): ConnectionResult {
             count++
-            return ConnectionResult.Accept
+            return result
         }
     }
 
@@ -483,14 +490,46 @@ class ConnectionFailureTest {
         assertNotNull(job.await().exceptionOrNull())
     }
 
-    @Test
-    fun `auto connect to a not bonded device with resolvable private address is not supported`() = runTest {
-        val spec = spec(address = RPA_ADDRESS, addressType = AddressType.RANDOM_PRIVATE_RESOLVABLE)
-        val manager = newManager(spec)
-        val peripheral = checkNotNull(manager.getPeripheralById(RPA_ADDRESS))
+    /** A device with a Resolvable Private Address, which is known (was scanned) and not bonded. */
+    private fun rpaSpec(
+        proximity: Proximity = Proximity.IMMEDIATE,
+        eventHandler: PeripheralSpecEventHandler = object : PeripheralSpecEventHandler {},
+    ) = spec(
+        address = RPA_ADDRESS,
+        addressType = AddressType.RANDOM_PRIVATE_RESOLVABLE,
+        proximity = proximity,
+        eventHandler = eventHandler,
+    ).also {
         // The device must be known (scanned) to have its address type recognized.
-        spec.simulateCaching()
+        it.simulateCaching()
+    }
 
+    @Test
+    fun `auto connect to a not bonded device with resolvable private address connects directly first`() = runTest {
+        val manager = newManager(rpaSpec())
+        val peripheral = checkNotNull(manager.getPeripheralById(RPA_ADDRESS))
+
+        manager.connect(peripheral, ConnectionOptions.AutoConnect())
+
+        assertEquals(ConnectionState.Connected, peripheral.state.value)
+    }
+
+    @Test
+    fun `auto connect to a not bonded device with resolvable private address connects directly first before Android 13`() = runTest {
+        val manager = newManager(rpaSpec(), environment = MockAndroidEnvironment.Api31())
+        val peripheral = checkNotNull(manager.getPeripheralById(RPA_ADDRESS))
+
+        manager.connect(peripheral, ConnectionOptions.AutoConnect())
+
+        assertEquals(ConnectionState.Connected, peripheral.state.value)
+    }
+
+    @Test
+    fun `auto connect to a not bonded device with resolvable private address out of range is not supported`() = runTest {
+        val manager = newManager(rpaSpec(proximity = Proximity.OUT_OF_RANGE))
+        val peripheral = checkNotNull(manager.getPeripheralById(RPA_ADDRESS))
+
+        // The direct connection times out, and then the system refuses to wait for the device.
         val exception = assertFailsWith<ConnectionFailedException> {
             manager.connect(peripheral, ConnectionOptions.AutoConnect())
         }
@@ -500,11 +539,9 @@ class ConnectionFailureTest {
     }
 
     @Test
-    fun `auto connect to a not bonded device with resolvable private address silently does not connect before Android 13`() = runTest {
-        val spec = spec(address = RPA_ADDRESS, addressType = AddressType.RANDOM_PRIVATE_RESOLVABLE)
-        val manager = newManager(spec, environment = MockAndroidEnvironment.Api31())
+    fun `auto connect to a not bonded device with resolvable private address out of range silently waits before Android 13`() = runTest {
+        val manager = newManager(rpaSpec(proximity = Proximity.OUT_OF_RANGE), environment = MockAndroidEnvironment.Api31())
         val peripheral = checkNotNull(manager.getPeripheralById(RPA_ADDRESS))
-        spec.simulateCaching()
         val job = async { runCatching { manager.connect(peripheral, ConnectionOptions.AutoConnect()) } }
 
         advanceTimeBy(1.minutes)
@@ -514,6 +551,89 @@ class ConnectionFailureTest {
         assertEquals(ConnectionState.Connecting, peripheral.state.value)
         assertTrue(job.isActive)
         job.cancel()
+    }
+
+    @Test
+    fun `auto connect to a not bonded device uses auto connect when the direct connection was denied`() = runTest {
+        val requests = ConnectionRequests().apply { result = ConnectionResult.Deny }
+        val manager = newManager(spec(eventHandler = requests))
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        val job = launch { manager.connect(peripheral, ConnectionOptions.AutoConnect()) }
+
+        // The direct connection times out, and the system keeps trying (auto connect).
+        advanceTimeBy(30.seconds)
+        runCurrent()
+        assertEquals(ConnectionState.Connecting, peripheral.state.value)
+
+        requests.result = ConnectionResult.Accept
+        advanceTimeBy(5.seconds)
+        runCurrent()
+
+        assertEquals(ConnectionState.Connected, peripheral.state.value)
+        job.join()
+    }
+
+    @Test
+    fun `auto connect denied forever stops trying when the connection is cancelled`() = runTest {
+        val requests = ConnectionRequests().apply { result = ConnectionResult.Deny }
+        // A bonded device, so there is no direct attempt before auto connect.
+        val manager = newManager(spec(eventHandler = requests, isBonded = true))
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        val job = launch { manager.connect(peripheral, ConnectionOptions.AutoConnect()) }
+        advanceTimeBy(5.seconds)
+        runCurrent()
+        // The request is retried each time the peripheral advertises.
+        assertTrue(requests.count > 10, "Expected many attempts, but was ${requests.count}")
+
+        job.cancelAndJoin()
+        val attempts = requests.count
+        advanceTimeBy(5.seconds)
+        runCurrent()
+
+        assertEquals(attempts, requests.count)
+    }
+
+    @Test
+    fun `not bonded device connected directly uses auto connect after the link is lost`() = runTest {
+        val spec = spec()
+        val manager = newManager(spec)
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        manager.connect(peripheral, ConnectionOptions.AutoConnect())
+
+        spec.simulateReset()
+        advanceTimeBy(10.seconds)
+        runCurrent()
+
+        // The direct connection is not reconnected by the system, so the peripheral waits for the device.
+        assertEquals(ConnectionState.Connected, peripheral.state.value)
+    }
+
+    @Test
+    fun `not bonded device with resolvable private address cannot be waited for after the link is lost`() = runTest {
+        val spec = rpaSpec()
+        val manager = newManager(spec)
+        val peripheral = checkNotNull(manager.getPeripheralById(RPA_ADDRESS))
+        manager.connect(peripheral, ConnectionOptions.AutoConnect())
+
+        spec.simulateReset()
+        advanceTimeBy(10.seconds)
+        runCurrent()
+
+        assertEquals(ConnectionState.Disconnected(Reason.UnsupportedAddress), peripheral.state.value)
+    }
+
+    @Test
+    fun `not bonded device with resolvable private address is silently waited for after the link is lost before Android 13`() = runTest {
+        val spec = rpaSpec()
+        val manager = newManager(spec, environment = MockAndroidEnvironment.Api31())
+        val peripheral = checkNotNull(manager.getPeripheralById(RPA_ADDRESS))
+        manager.connect(peripheral, ConnectionOptions.AutoConnect())
+
+        spec.simulateReset()
+        advanceTimeBy(1.minutes)
+        runCurrent()
+
+        assertEquals(ConnectionState.Connecting, peripheral.state.value)
     }
 
     @Test
