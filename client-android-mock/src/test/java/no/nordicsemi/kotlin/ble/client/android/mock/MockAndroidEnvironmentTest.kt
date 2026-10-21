@@ -34,6 +34,7 @@ package no.nordicsemi.kotlin.ble.client.android.mock
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 /**
  * Tests of the mock Android environments.
@@ -55,4 +56,13 @@ class MockAndroidEnvironmentTest {
         assertEquals(517, MockAndroidEnvironment.Api21().maxAttMtu)
         assertEquals(517, MockAndroidEnvironment.Api31().maxAttMtu)
     }
+
+    @Test
+    fun `android does not request the MTU automatically`() {
+        // Android 17 can, but the library requests the MTU itself, before it reports the connection.
+        assertFalse(MockAndroidEnvironment.Api31().automaticallyRequestsMtu)
+        assertFalse(MockAndroidEnvironment.Api36().automaticallyRequestsMtu)
+        assertFalse(MockAndroidEnvironment.Api37().automaticallyRequestsMtu)
+    }
 }
+

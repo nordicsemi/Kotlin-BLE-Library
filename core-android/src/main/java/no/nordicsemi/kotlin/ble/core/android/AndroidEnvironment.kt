@@ -230,8 +230,10 @@ interface AndroidEnvironment : Environment {
         get() = androidSdkVersion >= SdkVersion.OREO
 
     override val automaticallyRequestsMtu: Boolean
-        // New connectGatt API from Android 17 Cinnamon Bun allows to request MTU automatically.
-        get() = androidSdkVersion >= SdkVersion.CINNAMON_BUN
+        // The new connectGatt API from Android 17 Cinnamon Bun can request the MTU automatically,
+        // but the library does not use it. The MTU is requested explicitly, before the peripheral
+        // is reported as connected.
+        get() = false
 
     override val allowsBondRemoval: Boolean
         // From Android 17 Cinnamon Bun bond information can only be removed with BLUETOOTH_PRIVILEGED

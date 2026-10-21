@@ -31,10 +31,14 @@
 
 package no.nordicsemi.kotlin.ble.client.android.mock
 
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import no.nordicsemi.kotlin.ble.client.MtuChanged
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.CentralManager.ConnectionOptions
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
@@ -47,7 +51,6 @@ import no.nordicsemi.kotlin.ble.core.WriteType
 import no.nordicsemi.kotlin.ble.environment.android.mock.LatestApi
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import kotlin.test.Test
-import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -115,6 +118,21 @@ class ConnectionMtuTest {
         val peripheral = connect(spec(maxAttMtu = 247))
 
         assertEquals(247, peripheral.mtu.value)
+    }
+
+    @Test
+    fun `mtu is requested only once on Android 17`() = runTest {
+        val spec = spec(maxAttMtu = 247)
+        val changes = mutableListOf<Int>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            spec.events.filterIsInstance<MtuChanged>().collect { changes += it.mtu }
+        }
+
+        connect(spec, environment = MockAndroidEnvironment.Api37())
+        advanceTimeBy(1.seconds)
+        runCurrent()
+
+        assertEquals(listOf(247), changes)
     }
 
     @Test
