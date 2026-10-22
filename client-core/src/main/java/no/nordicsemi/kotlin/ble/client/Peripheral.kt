@@ -218,8 +218,11 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      * The list of service UUIDs requested for discovery.
      *
      * @see discoverServices
-     * TODO Should and when this list be cleared?
      */
+    // TODO Should and when this list be cleared?
+    // TODO An empty list means "all services", so [services] without UUIDs is lost when merged
+    //  with [services] with UUIDs: after a reconnection only the latter would be discovered
+    //  (on platforms with partial discovery). Keep a separate flag for "all".
     private var requestedServiceUuids: List<Uuid> = emptyList()
 
     /**
@@ -290,11 +293,18 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
          * Initiates GATT services discovery.
          *
          * The result should be reported by emitting [ServicesDiscovered] event to [events] flow.
+         *
          * @param uuids An optional list of service UUIDs to filter the results.
          * @return True if service discovery was requested successfully; false otherwise.
          * @throws SecurityException If BLUETOOTH_CONNECT permission is denied.
          * @throws OperationFailedException If the operation failed due to a platform error.
          */
+        // TODO Partial service discovery (iOS). The platform may discover only the requested
+        //  services, and the discovery may be requested multiple times, e.g. HR first and UART
+        //  later. The event should then tell which UUIDs it covers (`null` for all, as Android
+        //  does), so that [Peripheral] knows what was already requested and doesn't repeat it.
+        //  Alternatively, an environment flag could say that partial discovery is supported.
+        //  See also [services].
         suspend fun discoverServices(uuids: List<Uuid>): Boolean
 
         /**
@@ -620,6 +630,12 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
                     // These are thrown before the Flow is created.
                     logger?.warn(Layer.GATT) { "Enabling Service Changed indications failed" }
                 }
+                // TODO With partial service discovery (iOS) the services should be merged with
+                //  the ones already discovered, instead of replacing them. The merge probably
+                //  belongs to the executor, which knows the identity of native services (e.g. it
+                //  can keep the wrappers of CBService objects and emit the accumulated list), so
+                //  that the objects held by the app stay valid. The services can only be
+                //  matched by UUID here, which fails for services with the same UUID.
                 _services.update { RemoteServices.Discovered(services) }
             }
 
@@ -666,6 +682,9 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      *
      * This method does nothing if [servicesDiscovered] is `true`.
      */
+    // TODO With partial service discovery (iOS) it should also be called when [services] asks
+    //  for UUIDs that haven't been requested yet, even if [servicesDiscovered] is `true`.
+    //  On Android a single discovery returns all services, so nothing is requested twice.
     private fun discoverServices(uuids: List<Uuid>) {
         if (servicesDiscovered || serviceDiscoveryJob?.isActive == true) {
             return
@@ -772,6 +791,10 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
         requestedServiceUuids = (requestedServiceUuids + uuids).distinct()
 
         // First call to this method triggers service discovery.
+        // TODO With partial service discovery (iOS) a later call with other UUIDs should request
+        //  the discovery of UUIDs that haven't been covered yet. Currently, the services that
+        //  were not requested by the first call are never discovered, and the filtered flow
+        //  below reports an empty list (as if they were not found).
         if (isConnected && _services.value == RemoteServices.Unknown) {
             discoverServices(uuids)
         }
