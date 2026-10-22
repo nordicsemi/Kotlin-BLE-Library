@@ -54,6 +54,7 @@ import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PhyOption
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
 import no.nordicsemi.kotlin.ble.core.android.AndroidEnvironment
+import no.nordicsemi.kotlin.ble.core.mock.BondingFailure
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import org.jetbrains.annotations.Range
 import kotlin.time.Duration.Companion.seconds
@@ -94,11 +95,35 @@ open class MockExecutor(
     }
 
     private fun MockBondState.Reason.toBondStateReason(): BondState.Reason = when (this) {
-        MockBondState.Failure.REJECTED -> BondState.Reason.AuthenticationRejected
-        MockBondState.Failure.CANCELLED -> BondState.Reason.AuthenticationCanceled
-        MockBondState.Failure.AUTHENTICATION_FAILED -> BondState.Reason.AuthenticationFailed
-        MockBondState.Failure.TIMEOUT -> BondState.Reason.AuthenticationTimeout
+        is MockBondState.Reason.Failed -> failure.toBondStateReason()
         MockBondState.Reason.Removed -> BondState.Reason.Removed
+    }
+
+    /**
+     * Converts the failure to the reason reported by Android.
+     *
+     * Android versions report different reasons for the same event. The values below were
+     * observed on: Samsung A5 (Android 8), Pixel 5 (Android 14) and Pixel 7 (Android 16).
+     * Where the version was not tested, the reason of the closest tested version is used.
+     */
+    private fun BondingFailure.toBondStateReason(): BondState.Reason {
+        val sdk = environment.androidSdkVersion
+        // Pixel 5 reports all failures as Removed.
+        val isAndroid14 = sdk > AndroidEnvironment.SdkVersion.TIRAMISU &&
+                sdk < AndroidEnvironment.SdkVersion.BAKLAVA
+        val isAndroid16 = sdk >= AndroidEnvironment.SdkVersion.BAKLAVA
+        return when (this) {
+            BondingFailure.REJECTED ->
+                if (isAndroid14) BondState.Reason.Removed else BondState.Reason.AuthenticationRejected
+            // Cancelling the dialog is Removed on Android 8 and 14, and AuthenticationFailed on 16.
+            BondingFailure.CANCELLED ->
+                if (isAndroid16) BondState.Reason.AuthenticationFailed else BondState.Reason.Removed
+            BondingFailure.WRONG_PIN ->
+                if (isAndroid14) BondState.Reason.Removed else BondState.Reason.AuthenticationFailed
+            // Android 16 reports Removed when the pairing timed out.
+            BondingFailure.TIMED_OUT ->
+                if (isAndroid16) BondState.Reason.Removed else BondState.Reason.AuthenticationTimeout
+        }
     }
 
     override val encryptionState: StateFlow<EncryptionState> = peripheralSpec.encryptionState

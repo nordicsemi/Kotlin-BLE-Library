@@ -31,6 +31,7 @@
 
 package no.nordicsemi.kotlin.ble.client.mock
 
+import no.nordicsemi.kotlin.ble.core.mock.BondingFailure
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.client.mock.internal.MockRemoteCharacteristic
 import no.nordicsemi.kotlin.ble.client.mock.internal.MockRemoteDescriptor
@@ -82,9 +83,9 @@ sealed class BondResult {
     /**
      * The bonding failed, for example because the user cancelled it or entered a wrong PIN.
      *
-     * @param reason The reason of the failure, reported to the client.
+     * @param failure What went wrong. The environment decides how it is reported to the client.
      */
-    data class Reject(val reason: MockBondState.Failure = MockBondState.Failure.REJECTED) : BondResult()
+    data class Reject(val failure: BondingFailure = BondingFailure.REJECTED) : BondResult()
 }
 
 /**

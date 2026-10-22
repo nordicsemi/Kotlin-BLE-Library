@@ -31,6 +31,8 @@
 
 package no.nordicsemi.kotlin.ble.client.mock
 
+import no.nordicsemi.kotlin.ble.core.mock.BondingFailure
+
 /**
  * The state of the bond between the phone and a simulated peripheral, as seen by the phone.
  *
@@ -55,19 +57,10 @@ sealed class MockBondState {
     /** The reason why the peripheral is not bonded. */
     sealed interface Reason {
 
+        /** The bonding failed. */
+        data class Failed(val failure: BondingFailure) : Reason
+
         /** The bond was removed. It is only set when the phone removes the bond. */
         data object Removed : Reason
-    }
-
-    /** The reason why bonding failed. */
-    enum class Failure : Reason {
-        /** The peripheral rejected the pairing. This is the default reason of a failed bonding. */
-        REJECTED,
-        /** The user cancelled the pairing. */
-        CANCELLED,
-        /** The authentication failed, e.g. the PIN was wrong. */
-        AUTHENTICATION_FAILED,
-        /** The pairing timed out. */
-        TIMEOUT,
     }
 }

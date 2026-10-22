@@ -50,6 +50,7 @@ import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.LegacyAdvertisingSetParameters
+import no.nordicsemi.kotlin.ble.core.mock.BondingFailure
 import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import kotlin.test.Test
@@ -445,11 +446,14 @@ class ConnectionBondingTest {
         assertEquals(BondState.Bonded, peripheral.bondState.value)
     }
 
-    private suspend fun TestScope.failedBondingReason(result: BondResult): BondState.Reason? {
+    private suspend fun TestScope.failedBondingReason(
+        failure: BondingFailure,
+        environment: MockAndroidEnvironment = MockAndroidEnvironment.Api31(),
+    ): BondState.Reason? {
         val rejecting = object : PeripheralSpecEventHandler {
-            override fun onBondRequest() = result
+            override fun onBondRequest() = BondResult.Reject(failure)
         }
-        val manager = manager(spec(isBonded = false, eventHandler = rejecting))
+        val manager = manager(spec(isBonded = false, eventHandler = rejecting), environment = environment)
         val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
 
         return assertFailsWith<BondingFailedException> { peripheral.createBond() }.reason
@@ -459,32 +463,99 @@ class ConnectionBondingTest {
     fun `rejected bonding reports the peripheral rejecting it by default`() = runTest {
         assertEquals(
             BondState.Reason.AuthenticationRejected,
-            failedBondingReason(BondResult.Reject()),
+            failedBondingReason(BondingFailure.REJECTED),
         )
     }
 
     @Test
-    fun `bonding cancelled by the user reports the reason`() = runTest {
+    fun `bonding cancelled by the user is reported as removed on Android 8 and 14`() = runTest {
         assertEquals(
-            BondState.Reason.AuthenticationCanceled,
-            failedBondingReason(BondResult.Reject(MockBondState.Failure.CANCELLED)),
+            BondState.Reason.Removed,
+            failedBondingReason(BondingFailure.CANCELLED, MockAndroidEnvironment.Api26()),
+        )
+        assertEquals(
+            BondState.Reason.Removed,
+            failedBondingReason(BondingFailure.CANCELLED, MockAndroidEnvironment.SamsungA8()),
         )
     }
 
     @Test
-    fun `bonding with a wrong PIN reports the reason`() = runTest {
+    fun `bonding cancelled by the user is reported as authentication failure on Android 16`() = runTest {
         assertEquals(
             BondState.Reason.AuthenticationFailed,
-            failedBondingReason(BondResult.Reject(MockBondState.Failure.AUTHENTICATION_FAILED)),
+            failedBondingReason(BondingFailure.CANCELLED, MockAndroidEnvironment.Api36()),
         )
     }
 
     @Test
-    fun `bonding that timed out reports the reason`() = runTest {
+    fun `bonding with a wrong PIN is reported as authentication failure`() = runTest {
+        assertEquals(
+            BondState.Reason.AuthenticationFailed,
+            failedBondingReason(BondingFailure.WRONG_PIN),
+        )
+    }
+
+    @Test
+    fun `bonding with a wrong PIN is reported as removed on Android 14`() = runTest {
+        assertEquals(
+            BondState.Reason.Removed,
+            failedBondingReason(BondingFailure.WRONG_PIN, MockAndroidEnvironment.SamsungA8()),
+        )
+    }
+
+    @Test
+    fun `bonding rejected by the peripheral is reported as removed on Android 14`() = runTest {
+        assertEquals(
+            BondState.Reason.Removed,
+            failedBondingReason(BondingFailure.REJECTED, MockAndroidEnvironment.SamsungA8()),
+        )
+    }
+
+    @Test
+    fun `bonding that timed out is reported as timeout before Android 16`() = runTest {
         assertEquals(
             BondState.Reason.AuthenticationTimeout,
-            failedBondingReason(BondResult.Reject(MockBondState.Failure.TIMEOUT)),
+            failedBondingReason(BondingFailure.TIMED_OUT),
         )
+    }
+
+    @Test
+    fun `bonding that timed out is reported as removed on Android 16`() = runTest {
+        assertEquals(
+            BondState.Reason.Removed,
+            failedBondingReason(BondingFailure.TIMED_OUT, MockAndroidEnvironment.Api36()),
+        )
+    }
+
+    @Test
+    fun `link is terminated at once when bonding timed out on Android 16`() = runTest {
+        val handler = object : PeripheralSpecEventHandler {
+            override fun onBondRequest() = BondResult.Reject(BondingFailure.TIMED_OUT)
+        }
+        val manager = manager(spec(isBonded = false, eventHandler = handler), environment = MockAndroidEnvironment.Api36())
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        manager.connect(peripheral)
+
+        assertFailsWith<BondingFailedException> { peripheral.createBond() }
+        runCurrent()
+
+        assertIs<ConnectionState.Disconnected>(peripheral.state.value)
+    }
+
+    @Test
+    fun `link is not terminated after failed bonding on Android 8`() = runTest {
+        val handler = object : PeripheralSpecEventHandler {
+            override fun onBondRequest() = BondResult.Reject()
+        }
+        val manager = manager(spec(isBonded = false, eventHandler = handler), environment = MockAndroidEnvironment.Api26())
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        manager.connect(peripheral)
+
+        assertFailsWith<BondingFailedException> { peripheral.createBond() }
+        advanceTimeBy(60.seconds)
+        runCurrent()
+
+        assertEquals(ConnectionState.Connected, peripheral.state.value)
     }
 
     @Test
@@ -499,7 +570,7 @@ class ConnectionBondingTest {
 
     @Test
     fun `reason of a failed bonding is not kept after bonding succeeds`() = runTest {
-        var result: BondResult = BondResult.Reject(MockBondState.Failure.CANCELLED)
+        var result: BondResult = BondResult.Reject(BondingFailure.CANCELLED)
         val handler = object : PeripheralSpecEventHandler {
             override fun onBondRequest() = result
         }
@@ -712,16 +783,16 @@ class ConnectionBondingTest {
     }
 
     @Test
-    fun `bond state contains the reason when bonding was cancelled by the user`() = runTest {
+    fun `bond state contains the reason reported by the environment when bonding was cancelled by the user`() = runTest {
         val handler = object : PeripheralSpecEventHandler {
-            override fun onBondRequest() = BondResult.Reject(MockBondState.Failure.CANCELLED)
+            override fun onBondRequest() = BondResult.Reject(BondingFailure.CANCELLED)
         }
         val manager = manager(spec(isBonded = false, eventHandler = handler))
         val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
         manager.connect(peripheral)
         assertFailsWith<BondingFailedException> { peripheral.createBond() }
 
-        assertEquals(BondState.None(BondState.Reason.AuthenticationCanceled), peripheral.bondState.value)
+        assertEquals(BondState.None(BondState.Reason.Removed), peripheral.bondState.value)
     }
 
     @Test
