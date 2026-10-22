@@ -106,6 +106,7 @@ private fun Int.toDisconnectionReason(): ConnectionState.Disconnected.Reason = w
     0x93 /* = 147, GATT_CONNECTION_TIMEOUT, BluetoothGatt.GATT_CONNECTION_TIMEOUT, API 35+ */ -> ConnectionState.Disconnected.Reason.LinkLoss
     0x13 /* = 19, HCI_ERR_PEER_USER (GATT_CONN_TERMINATE_PEER_USER) */,
     0x15 /* = 21, HCI_ERR_REMOTE_POWER_OFF */ -> ConnectionState.Disconnected.Reason.TerminatePeerUser
+    0x3B /* = 59, HCI_ERR_UNACCEPT_CONN_INTERVAL */ -> ConnectionState.Disconnected.Reason.UnacceptableConnectionParameters
     0x16 /* = 22, HCI_ERR_CONN_CAUSE_LOCAL_HOST (GATT_CONN_TERMINATE_LOCAL_HOST) */ -> ConnectionState.Disconnected.Reason.TerminateLocalHost
  /* 0x101 = 257, BTA_GATT_CONN_NONE, BluetoothGatt.GATT_FAILURE -> Unknown */
     else -> ConnectionState.Disconnected.Reason.Unknown(this)
