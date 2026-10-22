@@ -35,6 +35,7 @@ package no.nordicsemi.kotlin.ble.client.android
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -57,6 +58,7 @@ import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.timeout
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import no.nordicsemi.kotlin.ble.client.ConnectionParametersChanged
@@ -463,7 +465,7 @@ open class Peripheral(
         val environmentRequestsMtu = impl.environment.automaticallyRequestsMtu
         automaticallyRequestHighestValueLength = options.automaticallyRequestHighestValueLength && !environmentRequestsMtu
         systemRequestsMtu = options.automaticallyRequestHighestValueLength && environmentRequestsMtu
-        isAutoReconnectBroken = false
+        isAutoConnectCancelled = false
         isConnectedDirectly = false
         isAutoConnectPending = false
 
@@ -732,16 +734,33 @@ open class Peripheral(
     }
 
     /**
-     * Set when bonding failed while the peripheral was connected.
+     * Set when the bond state changed to [BondState.None] while the peripheral was connected.
      *
-     * Android terminates the link then, and the pending auto connect does not work after that: the
-     * system does not reconnect, although the connection was requested with auto connect.
+     * Android terminates the link then (when the bond information is removed, or after a failed
+     * pairing), and the pending auto connect does not work after that: the system does not
+     * reconnect, although the connection was requested with auto connect. Also, after the bond
+     * information was removed, the peripheral may use a Resolvable Private Address, which cannot
+     * be used with auto connect any more.
      */
     @Volatile
-    private var isAutoReconnectBroken = false
+    private var isAutoConnectCancelled = false
+
+    init {
+        // The bond may be removed, or bonding may be initiated or cancelled by the peripheral
+        // or the system, so it is not enough to check the results of createBond() and removeBond().
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            impl.bondState.collect { bondState ->
+                // Android terminates the link when the bond information is removed, or shortly
+                // after a failed pairing. The auto connect request is cancelled with it.
+                if (bondState is BondState.None && (isConnected || isPreparingConnection)) {
+                    isAutoConnectCancelled = true
+                }
+            }
+        }
+    }
 
     override fun isAutoReconnectExpected(state: ConnectionState.Disconnected): Boolean = when {
-        isAutoReconnectBroken -> false
+        isAutoConnectCancelled -> false
         // The system refused to use auto connect for the address (see connect()).
         isAutoConnectPending && state.isUnsupportedAddressError() -> false
         else -> true
@@ -1214,18 +1233,10 @@ open class Peripheral(
                     // And process it.
                     .also {
                         when (it) {
-                            is BondState.Bonded -> {
-                                logger?.info(Layer.SMP) { "Bond created" }
-                                isAutoReconnectBroken = false
-                            }
+                            is BondState.Bonded -> logger?.info(Layer.SMP) { "Bond created" }
                             is BondState.None -> {
                                 val reason = it.reason
                                 logger?.warn(Layer.SMP) { "Bonding failed: $reason" }
-                                // Android terminates the link after a failed pairing, and it is not
-                                // reconnected, even if the connection was started with auto connect.
-                                if (isConnected) {
-                                    isAutoReconnectBroken = true
-                                }
                                 throw BondingFailedException(reason)
                             }
                             is BondState.Bonding -> { /* Not possible */ }
@@ -1256,6 +1267,13 @@ open class Peripheral(
                 impl.bondState
                     .onSubscription {
                         logger?.trace(Layer.SMP) { "Removing bond information" }
+                        // Android terminates the link when the bond information is removed. The flag
+                        // is set before the call, as the disconnection may be reported before
+                        // the bond state changes.
+                        val wasAutoConnectCancelled = isAutoConnectCancelled
+                        if (isConnected) {
+                            isAutoConnectCancelled = true
+                        }
                         try {
                             if (!impl.removeBond()) {
                                 // The device doesn't need to be connected for the bond
@@ -1267,6 +1285,7 @@ open class Peripheral(
                             // Reflection exception has a cause, which is more important.
                             val reason = e.cause?.message ?: e.message
                             logger?.error(Layer.SMP, e) { "Failed to remove bond information: $reason" }
+                            isAutoConnectCancelled = wasAutoConnectCancelled
                             throw e
                         }
                     }

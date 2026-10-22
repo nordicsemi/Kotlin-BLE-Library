@@ -538,6 +538,32 @@ class ConnectionBondingTest {
     }
 
     @Test
+    fun `auto connect peripheral is disconnected after bonding initiated by the peripheral failed`() = runTest {
+        // The bonding is not started by createBond(), but the link is terminated by the phone
+        // after the failure, and it is not reconnected.
+        val spec = spec(isBonded = false, eventHandler = rejectingHandler())
+        val manager = manager(spec)
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        manager.connect(peripheral, ConnectionOptions.AutoConnect())
+        val states = mutableListOf<ConnectionState>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            peripheral.state.toList(states)
+        }
+
+        spec.simulateBonding()
+        advanceTimeBy(10.seconds)
+        runCurrent()
+
+        assertEquals(
+            listOf(
+                ConnectionState.Connected,
+                ConnectionState.Disconnected(ConnectionState.Disconnected.Reason.TerminateLocalHost),
+            ),
+            states,
+        )
+    }
+
+    @Test
     fun `auto connect peripheral reconnects after the link is lost when bonding succeeded`() = runTest {
         val spec = spec(isBonded = false)
         val manager = manager(spec)
@@ -642,6 +668,29 @@ class ConnectionBondingTest {
         val state = assertIs<ConnectionState.Disconnected>(peripheral.state.value)
         assertEquals(ConnectionState.Disconnected.Reason.TerminateLocalHost, state.reason)
         assertEquals(listOf<DisconnectionReason>(DisconnectionReason.TerminatePeerUser), handler.connectionsLost)
+    }
+
+    @Test
+    fun `removing a bond does not reconnect a peripheral connected with auto connect`() = runTest {
+        val manager = manager(spec(isBonded = true))
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        manager.connect(peripheral, ConnectionOptions.AutoConnect())
+        val states = mutableListOf<ConnectionState>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            peripheral.state.toList(states)
+        }
+
+        peripheral.removeBond()
+        advanceTimeBy(5.seconds)
+        runCurrent()
+
+        assertEquals(
+            listOf(
+                ConnectionState.Connected,
+                ConnectionState.Disconnected(ConnectionState.Disconnected.Reason.TerminateLocalHost),
+            ),
+            states,
+        )
     }
 
     @Test
