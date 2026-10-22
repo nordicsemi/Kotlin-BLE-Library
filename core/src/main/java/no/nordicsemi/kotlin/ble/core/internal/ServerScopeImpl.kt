@@ -103,7 +103,7 @@ private open class ServiceScopeImpl(
             .apply(builder)
             .let { scope ->
                 // Add CCCD (Client Characteristic Configuration Descriptor) if NOTIFY or INDICATE is
-                // supported and it wasn't added by the user.
+                // supported, and it wasn't added by the user.
                 if ((CharacteristicProperty.NOTIFY in properties || CharacteristicProperty.INDICATE in properties) &&
                     scope.descriptors.none { it.uuid == Descriptor.CLIENT_CHAR_CONF_UUID }
                 ) {
