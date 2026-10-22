@@ -32,18 +32,19 @@
 package no.nordicsemi.kotlin.ble.client.android.mock.internal
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withTimeout
+import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.client.android.ConnectionPriority
 import no.nordicsemi.kotlin.ble.client.android.EncryptionState
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
-import no.nordicsemi.kotlin.ble.client.android.exception.BondingFailedException
-import no.nordicsemi.kotlin.ble.client.mock.BondResult
-import no.nordicsemi.kotlin.ble.client.mock.LinkEncryption
+import no.nordicsemi.kotlin.ble.client.mock.MockBondState
+import no.nordicsemi.kotlin.ble.client.mock.MockEncryptionState
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.internal.MockExecutor
 import no.nordicsemi.kotlin.ble.client.mock.internal.MockScanResult
@@ -76,28 +77,49 @@ open class MockExecutor(
 ): MockExecutor(peripheralSpec, name, environment, advertisements, scope), Peripheral.Executor {
     override val type: PeripheralType = peripheralSpec.type
 
-    override val bondState = peripheralSpec.bondState
+    // The bond state follows the spec right away (Unconfined), so that a change is visible as soon
+    // as it is made, like for the native executor.
+    override val bondState: StateFlow<BondState> = peripheralSpec.bondState
+        .map { it.toBondState() }
+        .stateIn(
+            scope = CoroutineScope(scope.coroutineContext + Dispatchers.Unconfined),
+            started = SharingStarted.Eagerly,
+            initialValue = peripheralSpec.bondState.value.toBondState(),
+        )
 
-    override val bondFailureReason: BondingFailedException.Reason?
-        get() = when (peripheralSpec.bondFailureReason) {
-            null -> null
-            BondResult.Reject.Reason.Rejected -> BondingFailedException.Reason.AuthenticationRejected
-            BondResult.Reject.Reason.Cancelled -> BondingFailedException.Reason.AuthenticationCanceled
-            BondResult.Reject.Reason.AuthenticationFailed -> BondingFailedException.Reason.AuthenticationFailed
-            BondResult.Reject.Reason.Timeout -> BondingFailedException.Reason.AuthenticationTimeout
-        }
+    private fun MockBondState.toBondState(): BondState = when (this) {
+        is MockBondState.None -> BondState.None(reason?.toBondStateReason())
+        MockBondState.Bonding -> BondState.Bonding
+        MockBondState.Bonded -> BondState.Bonded
+    }
 
-    override val encryptionState: StateFlow<EncryptionState> = peripheralSpec.linkEncryption
+    private fun MockBondState.Reason.toBondStateReason(): BondState.Reason = when (this) {
+        MockBondState.Failure.REJECTED -> BondState.Reason.AuthenticationRejected
+        MockBondState.Failure.CANCELLED -> BondState.Reason.AuthenticationCanceled
+        MockBondState.Failure.AUTHENTICATION_FAILED -> BondState.Reason.AuthenticationFailed
+        MockBondState.Failure.TIMEOUT -> BondState.Reason.AuthenticationTimeout
+        MockBondState.Reason.Removed -> BondState.Reason.Removed
+    }
+
+    override val encryptionState: StateFlow<EncryptionState> = peripheralSpec.encryptionState
         .map { it.toEncryptionState() }
-        .stateIn(scope, SharingStarted.Eagerly, peripheralSpec.linkEncryption.value.toEncryptionState())
+        .stateIn(scope, SharingStarted.Eagerly, peripheralSpec.encryptionState.value.toEncryptionState())
 
     /** The encryption state is reported by Android 16 and newer. */
-    private fun LinkEncryption.toEncryptionState(): EncryptionState = when {
-        environment.androidSdkVersion < AndroidEnvironment.SdkVersion.BAKLAVA -> EncryptionState.Unknown
-        this == LinkEncryption.NotConnected -> EncryptionState.Unknown
-        this == LinkEncryption.NotEncrypted -> EncryptionState.NotEncrypted
-        this == LinkEncryption.Encrypted -> EncryptionState.Encrypted(EncryptionState.Algorithm.AES, keySize = 16)
-        else -> EncryptionState.EncryptionFailed(EncryptionState.Reason.LeEncryptionFailure)
+    private fun MockEncryptionState?.toEncryptionState(): EncryptionState {
+        if (environment.androidSdkVersion < AndroidEnvironment.SdkVersion.BAKLAVA) {
+            return EncryptionState.Unknown
+        }
+        return when (this) {
+            // The peripheral is not connected.
+            null -> EncryptionState.Unknown
+            MockEncryptionState.Encrypted -> EncryptionState.Encrypted(EncryptionState.Algorithm.AES, keySize = 16)
+            is MockEncryptionState.NotEncrypted -> EncryptionState.NotEncrypted(reason?.toEncryptionReason())
+        }
+    }
+
+    private fun MockEncryptionState.Reason.toEncryptionReason(): EncryptionState.Reason = when (this) {
+        MockEncryptionState.Reason.KEY_MISSING -> EncryptionState.Reason.LeEncryptionFailure
     }
 
     // Implementation
@@ -120,7 +142,7 @@ open class MockExecutor(
     }
 
     override suspend fun createBond(): Boolean {
-        // The result is reported by the bond state. A rejected request ends with BondState.NONE.
+        // The result is reported by the bond state. A rejected request ends with BondState.None.
         peripheralSpec.simulateBonding()
         return true
     }

@@ -57,9 +57,9 @@ import no.nordicsemi.kotlin.ble.android.sample.graph.RssiGraph
 import no.nordicsemi.kotlin.ble.android.sample.graph.RssiGraphState
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
+import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.client.android.EncryptionState
 import no.nordicsemi.kotlin.ble.client.android.preview.PreviewPeripheral
-import no.nordicsemi.kotlin.ble.core.BondState
 import no.nordicsemi.kotlin.ble.core.ConnectionParameters
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.Phy
@@ -138,23 +138,24 @@ fun ConnectionInfo(
 }
 
 private fun BondState.format() = when (this) {
-    BondState.NONE -> "None"
-    BondState.BONDING -> "Bonding…"
-    BondState.BONDED -> "Bonded"
+    is BondState.None -> reason?.let { "None · ${it.format()}" } ?: "None"
+    BondState.Bonding -> "Bonding…"
+    BondState.Bonded -> "Bonded"
 }
+
+private fun BondState.Reason.format() = toString()
 
 private fun EncryptionState.format(): String? = when (this) {
     EncryptionState.Unknown -> null
-    EncryptionState.NotEncrypted -> "Not encrypted"
+    is EncryptionState.NotEncrypted -> reason?.let { "Not encrypted: ${it.format()}" } ?: "Not encrypted"
     is EncryptionState.Encrypted -> buildString {
         append(if (algorithm == EncryptionState.Algorithm.Unknown) "Encrypted" else algorithm.name)
         keySize?.let { append(" · ${it * 8} bit") }
     }
-    is EncryptionState.EncryptionFailed -> "Failed: ${reason.format()}"
 }
 
 private fun EncryptionState.Reason.format() = when (this) {
-    EncryptionState.Reason.Unknown -> "unknown"
+    is EncryptionState.Reason.Unknown -> "unknown reason ($code)"
     is EncryptionState.Reason.ControllerError -> "controller error 0x%02X".format(status)
     EncryptionState.Reason.LeEncryptionFailure -> "key missing"
     EncryptionState.Reason.LeIncomingPairing,

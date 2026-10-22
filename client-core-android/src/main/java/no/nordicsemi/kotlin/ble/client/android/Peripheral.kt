@@ -78,7 +78,6 @@ import no.nordicsemi.kotlin.ble.client.exception.ValueDoesNotMatchException
 import no.nordicsemi.kotlin.ble.client.internal.OperationMutex
 import no.nordicsemi.kotlin.ble.core.ATT_MTU_DEFAULT
 import no.nordicsemi.kotlin.ble.core.ATT_MTU_MAX
-import no.nordicsemi.kotlin.ble.core.BondState
 import no.nordicsemi.kotlin.ble.core.ConnectionParameters
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.ConnectionState.Disconnected.Reason
@@ -159,6 +158,9 @@ open class Peripheral(
         /**
          * Bonding state as a state flow.
          *
+         * When the bonding fails, or the bond is removed, the [BondState.None] state should
+         * contain the reason reported by the system.
+         *
          * @throws SecurityException If BLUETOOTH_CONNECT permission is denied.
          */
         val bondState: StateFlow<BondState>
@@ -171,15 +173,6 @@ open class Peripheral(
          * disconnects.
          */
         val encryptionState: StateFlow<EncryptionState>
-
-        /**
-         * The reason why the most recent bonding failed, or `null` if it did not, or the reason
-         * is not known.
-         *
-         * It must be set before [BondState.NONE] is emitted to [bondState] as the result of
-         * a failed [createBond].
-         */
-        val bondFailureReason: BondingFailedException.Reason?
 
         /**
          * Executes a GATT request, and repeats it once if the system did not, after bonding that
@@ -201,7 +194,7 @@ open class Peripheral(
          * @hide
          */
         override suspend fun <T> repeatingAfterBonding(request: suspend () -> T): T {
-            if (environment.repeatsRequestsAfterBonding || bondState.value == BondState.BONDED) {
+            if (environment.repeatsRequestsAfterBonding || bondState.value is BondState.Bonded) {
                 return request()
             }
 
@@ -214,7 +207,7 @@ open class Peripheral(
                         Outcome.Failed(e)
                     }
                 }
-                val bonding = async { bondState.first { it == BondState.BONDED } }
+                val bonding = async { bondState.first { it is BondState.Bonded } }
                 select<Outcome<T>?> {
                     attempt.onAwait { it }
                     bonding.onAwait { null }
@@ -242,8 +235,8 @@ open class Peripheral(
                     }
                     // The bonding is started by the system as a result of the failure. Wait for it,
                     // as the error may be delivered before the bond state changes.
-                    withTimeoutOrNull(BONDING_START_TIMEOUT) { bondState.first { it != BondState.NONE } } ?: throw e
-                    if (bondState.first { it != BondState.BONDING } != BondState.BONDED) {
+                    withTimeoutOrNull(BONDING_START_TIMEOUT) { bondState.first { it !is BondState.None } } ?: throw e
+                    if (bondState.first { it !is BondState.Bonding } !is BondState.Bonded) {
                         throw e
                     }
                     logger?.info(Layer.SMP) { "Bonded, repeating the request that failed with ${e.reason}" }
@@ -350,8 +343,8 @@ open class Peripheral(
          *
          * This method is guaranteed to be called only when the bond information does not exist.
          *
-         * The result should be reported by emitting state [BondState.BONDED] (in case of a success)
-         * or [BondState.NONE] (in case of a failure) to [bondState] flow.
+         * The result should be reported by emitting state [BondState.Bonded] (in case of a success)
+         * or [BondState.None] with the reason (in case of a failure) to [bondState] flow.
          *
          * @return True if bond was requested successfully; false otherwise.
          * @throws SecurityException If BLUETOOTH_CONNECT permission is denied.
@@ -366,7 +359,7 @@ open class Peripheral(
          *
          * This method is guaranteed to be called only when the bond information exists.
          *
-         * The result should be reported by emitting state [BondState.NONE] to [bondState] flow.
+         * The result should be reported by emitting state [BondState.None] to [bondState] flow.
          *
          * @return True if removing bond information has been initiated successfully; false otherwise.
          * @throws SecurityException If BLUETOOTH_CONNECT permission is denied.
@@ -1215,18 +1208,18 @@ open class Peripheral(
                         }
                     }
                     // Skip the initial state. It should transition to BONDING quickly.
-                    .dropWhile { it == BondState.NONE }
+                    .dropWhile { it is BondState.None }
                     // Now, await for the next state after BONDING.
-                    .first { it != BondState.BONDING }
+                    .first { it !is BondState.Bonding }
                     // And process it.
                     .also {
                         when (it) {
-                            BondState.BONDED -> {
+                            is BondState.Bonded -> {
                                 logger?.info(Layer.SMP) { "Bond created" }
                                 isAutoReconnectBroken = false
                             }
-                            BondState.NONE -> {
-                                val reason = impl.bondFailureReason ?: BondingFailedException.Reason.Unknown
+                            is BondState.None -> {
+                                val reason = it.reason
                                 logger?.warn(Layer.SMP) { "Bonding failed: $reason" }
                                 // Android terminates the link after a failed pairing, and it is not
                                 // reconnected, even if the connection was started with auto connect.
@@ -1235,7 +1228,7 @@ open class Peripheral(
                                 }
                                 throw BondingFailedException(reason)
                             }
-                            else -> { /* Not possible */ }
+                            is BondState.Bonding -> { /* Not possible */ }
                         }
                     }
             }
@@ -1277,7 +1270,7 @@ open class Peripheral(
                             throw e
                         }
                     }
-                    .first { it == BondState.NONE }
+                    .first { it is BondState.None }
                     .also { logger?.info(Layer.SMP) { "Bond information removed" } }
             }
         }
@@ -1286,9 +1279,11 @@ open class Peripheral(
     /**
      * Returns whether the system has bond information associated with this peripheral.
      *
-     * This means only that the phone stores a bond (keys) for the address of this peripheral.
-     * It does not mean that the peripheral is connected, or that the link is encrypted. Use
-     * [encryptionState] to check the latter.
+     * This is a statement about **this Android device** (the central): it stores a bond (keys)
+     * for the address of this peripheral. It does not say that the peripheral stores the
+     * bond information as well, as the peripheral may have lost it. It also does not mean that the
+     * peripheral is connected, or that the link is encrypted. Use [encryptionState] to check the
+     * latter.
      *
      * #### Security Note
      * Having a bond information does not guarantee that the connection to the device is secure.
@@ -1297,16 +1292,16 @@ open class Peripheral(
      * device could pretend to be another one, and simply use an unencrypted link.
      * Android should terminate the connection to a device for which it has a bond information
      * if encryption cannot be resumed, but some devices don't do that. Instead, the bond state
-     * is set to [BondState.BONDED] and the connection is kept open without any security.
+     * is set to [BondState.Bonded] and the connection is kept open without any security.
      */
     val hasBondInformation: Boolean
-        get() = bondState.value == BondState.BONDED
+        get() = bondState.value is BondState.Bonded
 
     /**
      * Returns the current bond state as [StateFlow].
      *
      * #### Security Note
-     * State [BondState.BONDED] does not guarantee that the connection to the device is secure.
+     * State [BondState.Bonded] does not guarantee that the connection to the device is secure.
      * Some Android devices allow connecting to bonded devices without restoring encryption,
      * or they remove the bond information when it fails.
      */
@@ -1321,8 +1316,8 @@ open class Peripheral(
      * connected, and on Android versions older than Android 16 (API 36), which do not report it.
      *
      * Android should encrypt the link with a bonded peripheral right after connecting. If it
-     * fails, e.g. because the peripheral lost the keys, the state is [EncryptionState.EncryptionFailed],
-     * and the connection should not be trusted.
+     * fails, e.g. because the peripheral lost the keys, the state is [EncryptionState.NotEncrypted]
+     * with the reason, and the connection should not be trusted.
      *
      * @see bondState
      */

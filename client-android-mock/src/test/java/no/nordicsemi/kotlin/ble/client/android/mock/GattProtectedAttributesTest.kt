@@ -40,13 +40,14 @@ import kotlinx.coroutines.withTimeout
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.client.mock.BondResult
 import no.nordicsemi.kotlin.ble.client.mock.ReadResponse
-import no.nordicsemi.kotlin.ble.core.BondState
+import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.Permission
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
@@ -108,7 +109,7 @@ class GattProtectedAttributesTest {
             fixture.characteristic().read()
 
             assertEquals(0, handler.bondRequests)
-            assertEquals(BondState.NONE, fixture.peripheral.bondState.value)
+            assertIs<BondState.None>(fixture.peripheral.bondState.value)
         }
     }
 
@@ -127,7 +128,7 @@ class GattProtectedAttributesTest {
 
             characteristic.write(byteArrayOf(0x01))
 
-            assertEquals(listOf(BondState.NONE, BondState.BONDING, BondState.BONDED), states)
+            assertEquals(listOf(BondState.None(), BondState.Bonding, BondState.Bonded), states)
         }
     }
 
@@ -146,7 +147,7 @@ class GattProtectedAttributesTest {
             val exception = assertFailsWith<OperationFailedException> { fixture.characteristic().read() }
 
             assertEquals(OperationStatus.InsufficientAuthentication, exception.reason)
-            assertEquals(BondState.NONE, fixture.peripheral.bondState.value)
+            assertIs<BondState.None>(fixture.peripheral.bondState.value)
             assertEquals(0, handler.bondRequests)
         }
     }
@@ -166,7 +167,7 @@ class GattProtectedAttributesTest {
             val value = fixture.descriptor().read()
 
             assertContentEquals(byteArrayOf(0x0A), value)
-            assertEquals(BondState.BONDED, fixture.peripheral.bondState.value)
+            assertEquals(BondState.Bonded, fixture.peripheral.bondState.value)
         }
     }
 
@@ -204,7 +205,7 @@ class GattProtectedAttributesTest {
             fixture.descriptor().write(byteArrayOf(0x01))
 
             assertEquals(1, handler.descriptorWrites.size)
-            assertEquals(BondState.BONDED, fixture.peripheral.bondState.value)
+            assertEquals(BondState.Bonded, fixture.peripheral.bondState.value)
         }
     }
 

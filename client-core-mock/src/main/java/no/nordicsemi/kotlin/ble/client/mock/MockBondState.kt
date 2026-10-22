@@ -29,27 +29,45 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 package no.nordicsemi.kotlin.ble.client.mock
 
 /**
- * The state of the encryption of the link between the phone and a simulated peripheral.
+ * The state of the bond between the phone and a simulated peripheral, as seen by the phone.
  *
- * @see PeripheralSpec.linkEncryption
+ * @see PeripheralSpec.bondState
  */
-enum class LinkEncryption {
-    /** The peripheral is not connected. */
-    NotConnected,
-
-    /** The peripheral is connected, but the link is not encrypted. */
-    NotEncrypted,
-
-    /** The link is encrypted. */
-    Encrypted,
+sealed class MockBondState {
 
     /**
-     * The phone has the bond information, but the peripheral does not (see
-     * [PeripheralSpec.peripheralHasBond]), so the link cannot be encrypted.
+     * The peripheral is not bonded, and the bonding process has not been initiated.
+     *
+     * @param reason Why the peripheral is not bonded: the reason the last bonding failed, or
+     * the bond was removed. `null` if there was no bonding yet.
      */
-    KeyMissing,
+    data class None(val reason: Reason? = null) : MockBondState()
+
+    /** The peripheral is not bonded yet, but the bonding process has been initiated. */
+    data object Bonding : MockBondState()
+
+    /** The peripheral is bonded. */
+    data object Bonded : MockBondState()
+
+    /** The reason why the peripheral is not bonded. */
+    sealed interface Reason {
+
+        /** The bond was removed. It is only set when the phone removes the bond. */
+        data object Removed : Reason
+    }
+
+    /** The reason why bonding failed. */
+    enum class Failure : Reason {
+        /** The peripheral rejected the pairing. This is the default reason of a failed bonding. */
+        REJECTED,
+        /** The user cancelled the pairing. */
+        CANCELLED,
+        /** The authentication failed, e.g. the PIN was wrong. */
+        AUTHENTICATION_FAILED,
+        /** The pairing timed out. */
+        TIMEOUT,
+    }
 }

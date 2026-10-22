@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -73,7 +74,6 @@ import no.nordicsemi.kotlin.ble.core.ATT_MTU_DEFAULT
 import no.nordicsemi.kotlin.ble.core.ATT_MTU_MAX
 import no.nordicsemi.kotlin.ble.core.AdvertisingSetParameters
 import no.nordicsemi.kotlin.ble.core.Bluetooth5AdvertisingSetParameters
-import no.nordicsemi.kotlin.ble.core.BondState
 import no.nordicsemi.kotlin.ble.core.Characteristic
 import no.nordicsemi.kotlin.ble.core.ConnectionParameters
 import no.nordicsemi.kotlin.ble.core.ConnectionState
@@ -305,7 +305,7 @@ class PeripheralSpec<ID: Any> private constructor(
     var isKnown: Boolean = isKnown
         private set
 
-    private val _bondState = MutableStateFlow(if (isBonded) BondState.BONDED else BondState.NONE)
+    private val _bondState = MutableStateFlow<MockBondState>(if (isBonded) MockBondState.Bonded else MockBondState.None())
 
     /**
      * The bond state of the peripheral, as seen by the phone.
@@ -316,46 +316,37 @@ class PeripheralSpec<ID: Any> private constructor(
      *
      * @see peripheralHasBond
      */
-    val bondState: StateFlow<BondState> = _bondState.asStateFlow()
+    val bondState: StateFlow<MockBondState> = _bondState.asStateFlow()
 
-    private val _linkEncryption = MutableStateFlow(LinkEncryption.NotConnected)
+    private val _encryptionState = MutableStateFlow<MockEncryptionState?>(null)
 
     /**
      * The encryption of the link with the phone.
      *
      * A bonded peripheral encrypts the link right after connecting, unless it does not have the
      * bond information ([peripheralHasBond]), which the phone has. Bonding encrypts the link.
+     *
+     * The value is `null` while the peripheral is not connected, as there is no link to encrypt.
      */
-    val linkEncryption: StateFlow<LinkEncryption> = _linkEncryption.asStateFlow()
+    val encryptionState: StateFlow<MockEncryptionState?> = _encryptionState.asStateFlow()
 
     /**
-     * Updates [linkEncryption] after the connection state or bond state changed.
+     * Updates [encryptionState] after the connection state or bond state changed.
      *
      * @param bonded Whether the phone is (being) bonded.
      */
-    private fun updateLinkEncryption(bonded: Boolean = isBonded) {
-        _linkEncryption.value = when {
-            !isConnected -> LinkEncryption.NotConnected
-            !bonded -> LinkEncryption.NotEncrypted
-            peripheralHasBond -> LinkEncryption.Encrypted
-            else -> LinkEncryption.KeyMissing
+    private fun updateEncryptionState(bonded: Boolean = isBonded) {
+        _encryptionState.value = when {
+            !isConnected -> null
+            !bonded -> MockEncryptionState.NotEncrypted()
+            peripheralHasBond -> MockEncryptionState.Encrypted
+            else -> MockEncryptionState.NotEncrypted(MockEncryptionState.Reason.KEY_MISSING)
         }
     }
 
-    @Volatile
-    private var _bondFailureReason: BondResult.Reject.Reason? = null
-
-    /**
-     * The reason why the most recent bonding failed, or `null` if it did not.
-     *
-     * It is set before [bondState] changes to [BondState.NONE].
-     */
-    val bondFailureReason: BondResult.Reject.Reason?
-        get() = _bondFailureReason
-
     /** Whether the phone has the bond information of the peripheral. */
     val isBonded: Boolean
-        get() = _bondState.value == BondState.BONDED
+        get() = _bondState.value is MockBondState.Bonded
 
     /**
      * Whether the peripheral has the bond information of the phone.
@@ -397,11 +388,11 @@ class PeripheralSpec<ID: Any> private constructor(
                 mtu = null
                 llMtu = null
                 connectionParameters = null
-                updateLinkEncryption()
+                updateEncryptionState()
             } else if (mtu == null) {
                 // If first connection, set default parameters.
                 setDefaultConnectionState(PhyInUse.PHY_LE_1M)
-                updateLinkEncryption()
+                updateEncryptionState()
             }
         }
 
@@ -429,7 +420,7 @@ class PeripheralSpec<ID: Any> private constructor(
         // connection the peripheral is initially connected with is set here.
         if (activePhy != null) {
             setDefaultConnectionState(activePhy)
-            updateLinkEncryption()
+            updateEncryptionState()
         }
     }
 
@@ -864,8 +855,9 @@ class PeripheralSpec<ID: Any> private constructor(
     /**
      * Simulates bonding of the phone and the peripheral.
      *
-     * The bond state changes to [BondState.BONDING] and then, depending on the response of
-     * [PeripheralSpecEventHandler.onBondRequest], to [BondState.BONDED] or back to [BondState.NONE].
+     * The bond state changes to [MockBondState.Bonding] and then, depending on the response of
+     * [PeripheralSpecEventHandler.onBondRequest], to [MockBondState.Bonded] or back to
+     * [MockBondState.None] with the reason.
      * The peripheral rejects bonding if it still has the bond information ([peripheralHasBond])
      * and the phone does not, or if it is not connectable.
      *
@@ -875,11 +867,10 @@ class PeripheralSpec<ID: Any> private constructor(
      * Does nothing if the peripheral is already bonded, or the bonding is in progress.
      */
     fun simulateBonding() {
-        if (!_bondState.compareAndSet(BondState.NONE, BondState.BONDING)) {
+        if (_bondState.getAndUpdate { if (it is MockBondState.None) MockBondState.Bonding else it } !is MockBondState.None) {
             return
         }
-        _bondFailureReason = null
-        // The result is reported later, so that the clients can observe the BONDING state.
+        // The result is reported later, so that the clients can observe the Bonding state.
         launchShared {
             val result = try {
                 when {
@@ -894,14 +885,11 @@ class PeripheralSpec<ID: Any> private constructor(
                 BondResult.Accept -> {
                     peripheralHasBond = true
                     // The link is encrypted, and then the bond is created.
-                    updateLinkEncryption(bonded = true)
-                    _bondState.value = BondState.BONDED
+                    updateEncryptionState(bonded = true)
+                    _bondState.value = MockBondState.Bonded
                 }
                 is BondResult.Reject -> {
-                    // The reason is set before the state, so that it is available when the
-                    // clients are notified.
-                    _bondFailureReason = result.reason
-                    _bondState.value = BondState.NONE
+                    _bondState.value = MockBondState.None(result.reason)
                     // Android terminates the link after a failed pairing.
                     if (isConnected) {
                         val epoch = connectionEpoch
@@ -933,10 +921,10 @@ class PeripheralSpec<ID: Any> private constructor(
         if (simulationEnvironment?.repeatsRequestsAfterBonding == false && !isBonded) {
             return Authentication.Dropped
         }
-        val bonded = _bondState.first { it != BondState.BONDING } == BondState.BONDED
+        val bonded = _bondState.first { it !is MockBondState.Bonding } is MockBondState.Bonded
         // The peripheral does not have the key, so the link cannot be encrypted.
         return when {
-            bonded && _linkEncryption.value != LinkEncryption.KeyMissing -> Authentication.Granted
+            bonded && _encryptionState.value != MockEncryptionState.NotEncrypted(MockEncryptionState.Reason.KEY_MISSING) -> Authentication.Granted
             else -> Authentication.Denied
         }
     }
@@ -952,7 +940,7 @@ class PeripheralSpec<ID: Any> private constructor(
     }
 
     /**
-     * Simulates the phone removing the bond information of the peripheral.
+     * Simulates the central removing the bond information associated with the peripheral.
      *
      * The peripheral keeps its bond information ([peripheralHasBond]). The connection is terminated
      * by the phone.
@@ -960,14 +948,14 @@ class PeripheralSpec<ID: Any> private constructor(
      * @see simulatePeripheralBondLoss
      */
     fun simulateBondRemoval() {
-        _bondState.value = BondState.NONE
+        _bondState.value = MockBondState.None(MockBondState.Reason.Removed)
         terminateConnectionByPhone()
     }
 
     /**
      * Simulates the peripheral forgetting the bond information, for example after a factory reset.
      *
-     * The phone keeps its bond information ([isBonded]).
+     * The central keeps its bond information ([isBonded]).
      *
      * @see simulateBondRemoval
      */
@@ -1102,7 +1090,7 @@ class PeripheralSpec<ID: Any> private constructor(
             this.identifier = newIdentifier
             this.addressType = addressType
             this.isKnown = false
-            _bondState.value = BondState.NONE
+            _bondState.value = MockBondState.None()
         }
         // TODO what with cached connections in central managers? PeripheralSpec instance is the same.
     }

@@ -58,12 +58,11 @@ import no.nordicsemi.kotlin.ble.client.RssiRead
 import no.nordicsemi.kotlin.ble.client.ServicesChanged
 import no.nordicsemi.kotlin.ble.client.ServicesDiscovered
 import no.nordicsemi.kotlin.ble.client.android.ConnectionPriority
+import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.client.android.EncryptionState
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
-import no.nordicsemi.kotlin.ble.client.android.exception.BondingFailedException
 import no.nordicsemi.kotlin.ble.client.exception.InvalidAttributeException
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
-import no.nordicsemi.kotlin.ble.core.BondState
 import no.nordicsemi.kotlin.ble.core.Characteristic
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.ConnectionParameters
@@ -124,12 +123,10 @@ private class StubExecutor(
     private val _events = MutableSharedFlow<GattEvent>(extraBufferCapacity = 64)
     override val events: SharedFlow<GattEvent> = _events.asSharedFlow()
 
-    private val _bondState = MutableStateFlow(if (hasBondInformation) BondState.BONDED else BondState.NONE)
+    private val _bondState = MutableStateFlow<BondState>(if (hasBondInformation) BondState.Bonded else BondState.None())
     override val bondState: StateFlow<BondState> = _bondState.asStateFlow()
 
     override val encryptionState: StateFlow<EncryptionState> = MutableStateFlow(EncryptionState.Unknown)
-
-    override val bondFailureReason: BondingFailedException.Reason? = null
 
     override val isClosed: Boolean
         get() = false
@@ -152,12 +149,12 @@ private class StubExecutor(
     }
 
     override suspend fun createBond(): Boolean {
-        _bondState.emit(BondState.BONDED)
+        _bondState.emit(BondState.Bonded)
         return true
     }
 
     override suspend fun removeBond(): Boolean {
-        _bondState.emit(BondState.NONE)
+        _bondState.emit(BondState.None(BondState.Reason.Removed))
         _events.emit(ConnectionStateChanged(ConnectionState.Disconnected(Reason.TerminateLocalHost)))
         return true
     }
