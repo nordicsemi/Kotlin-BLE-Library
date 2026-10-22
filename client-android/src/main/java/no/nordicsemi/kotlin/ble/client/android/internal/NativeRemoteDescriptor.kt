@@ -57,7 +57,11 @@ internal class NativeRemoteDescriptor(
     events: SharedFlow<GattEvent>,
 ): BaseRemoteDescriptor(parent, events) {
     override val uuid: Uuid = descriptor.uuid.toKotlinUuid
-    override val instanceId: Int = descriptor.instanceId
+    // BluetoothGattDescriptor does not expose instance ID.
+    // Instead, let's just use the index of the descriptor in the list of descriptors.
+    // Note, that we can't use 'parent.descriptors.indexOf(descriptor)' here,
+    // as at the time of creation of the descriptor it is not yet added to parent's list.
+    override val instanceId: Int = descriptor.characteristic.descriptors.indexOf(descriptor)
 
     override suspend fun FlowCollector<GattEvent>.executeRead() {
        owner?.logger?.log(Layer.GATT, Log.Level.DEBUG, owner?.identifier.toString(), null) {
@@ -119,13 +123,3 @@ internal class NativeRemoteDescriptor(
 
     override fun OperationEvent.matches(): Boolean = subject == descriptor
 }
-
-private val BluetoothGattDescriptor.instanceId: Int
-    @SuppressLint("PrivateApi")
-    get() = try {
-        val method = BluetoothGattDescriptor::class.java.getDeclaredMethod("getInstanceId")
-        method.invoke(this) as Int
-    } catch (_: Exception) {
-        // Handle the exception or return a default value
-        -1 // Assuming -1 is an invalid instance ID and used as an error code
-    }
