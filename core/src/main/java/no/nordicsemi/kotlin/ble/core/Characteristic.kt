@@ -93,7 +93,11 @@ interface Characteristic<D: Descriptor> {
     val uuid: Uuid
 
     /**
-     * Instance id of a characteristic.
+     * An opaque value that distinguishes characteristics with the same [uuid] in the same service.
+     *
+     * It is not unique across the peripheral and it is not an ATT handle. Its value differs
+     * between platforms, Android versions and the mock, so do not persist it or compare it
+     * across connections. Identify a characteristic by its service and its own [uuid] and `instanceId`.
      */
     val instanceId: Int
 
