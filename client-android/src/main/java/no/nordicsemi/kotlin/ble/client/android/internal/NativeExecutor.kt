@@ -119,6 +119,9 @@ internal class NativeExecutor(
      * This method is called when the bond state of the device changes.
      */
     internal fun onBondStateChanged(state: BondState) {
+        if (state is BondState.None) {
+            gattCallback.onBondLost()
+        }
         _bondState.value = state
     }
 
