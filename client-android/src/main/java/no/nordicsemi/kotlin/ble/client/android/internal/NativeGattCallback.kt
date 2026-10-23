@@ -110,12 +110,13 @@ internal class NativeGattCallback(
         val betterStatus = when {
             disconnectReason != null -> status
             newState != BluetoothGatt.STATE_DISCONNECTED -> status
+            // The phone terminates the link after the bond was lost (e.g. the pairing was cancelled),
+            // but the status doesn't say that: Pixel 7 with Android 17 reports 147 (connection
+            // timeout), and Pixel 4 with Android 12 reports 0 (success).
+            isBondLostWhileConnected && (status == BluetoothGatt.GATT_SUCCESS || status == 0x93 /* GATT_CONNECTION_TIMEOUT */) -> 0x16 /* GATT_CONN_TERMINATE_LOCAL_HOST */
             // Pixel 4 with Android 12 does return status 0 when link to a device is lost.
             // Newer versions (Pixel 7 with Android 16) report status 8 (timeout) in the same case.
             status == BluetoothGatt.GATT_SUCCESS -> 0x08 /* GATT_CONN_TIMEOUT */
-            // Pixel 7 with Android 17 reports status 147 when bonding failed,
-            // despite it being the user who requested disconnection.
-            status == 0x93 /* GATT_CONNECTION_TIMEOUT */ && isBondLostWhileConnected -> 0x16 /* GATT_CONN_TERMINATE_LOCAL_HOST */
             else -> status
         }
 
