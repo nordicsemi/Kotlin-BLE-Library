@@ -33,7 +33,6 @@ package no.nordicsemi.kotlin.ble.core.mock
 
 import no.nordicsemi.kotlin.ble.core.Environment
 import org.jetbrains.annotations.Range
-import kotlin.time.Duration
 
 /**
  * A mock environment that can be used to test the behavior of the Central Manager.
@@ -51,12 +50,4 @@ interface MockEnvironment : Environment {
     val maxLlMtu: @Range(from = 27, to = 251) Int
     val isLe2MPhySupported: Boolean
     val isLeCodedPhySupported: Boolean
-
-    /**
-     * Returns how long after a failed bonding the system terminates the link.
-     *
-     * @param failure The reason of the failure.
-     * @return The delay, or `null` if the system does not terminate the link.
-     */
-    fun disconnectionDelayAfterFailedBonding(failure: BondingFailure): Duration?
 }

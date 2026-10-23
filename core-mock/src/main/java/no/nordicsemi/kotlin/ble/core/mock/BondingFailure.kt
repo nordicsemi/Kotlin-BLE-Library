@@ -34,8 +34,11 @@ package no.nordicsemi.kotlin.ble.core.mock
 /**
  * The reason why bonding of a simulated peripheral failed.
  *
- * It describes what happened, not how the system reports it. The mock environment decides what
- * the app is told (e.g. the reason of the failure), and what happens to the link afterwards.
+ * The client is told the matching reason, and the phone terminates the link a few seconds later.
+ * A peripheral that terminates the link itself after a failed bonding can be simulated by calling
+ * `PeripheralSpec.simulateDisconnection()`.
+ *
+ * [CANCELLED] and [WRONG_PIN] only make sense for pairing that requires user interaction.
  */
 enum class BondingFailure {
     /** The peripheral refused to pair, e.g. it does not support bonding. This is the default. */

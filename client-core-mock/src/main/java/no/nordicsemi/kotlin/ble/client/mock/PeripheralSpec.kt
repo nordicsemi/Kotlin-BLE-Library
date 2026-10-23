@@ -611,14 +611,12 @@ class PeripheralSpec<ID: Any> private constructor(
         private const val LL_UPDATE_INSTANT_EVENTS = 6
 
         /**
-         * The time after which the phone terminates the link when pairing failed, used when the
-         * peripheral is not simulated in an environment. Otherwise, the environment decides, see
-         * [MockEnvironment.disconnectionDelayAfterFailedBonding].
+         * The time after which the phone terminates the link when pairing failed.
          *
-         * Observed in the HCI log of Android phones (Android 6, 16): the HCI Disconnect command
-         * is sent exactly 3 seconds after the SMP Pairing Failed.
+         * Observed in the HCI log of Android phones: the HCI Disconnect command is sent
+         * 3 seconds after the SMP Pairing Failed.
          */
-        private val DEFAULT_FAILED_PAIRING_DISCONNECTION_DELAY = 3.seconds
+        private val FAILED_PAIRING_DISCONNECTION_DELAY = 3.seconds
 
         /**
          * Simulates a peripheral with given ID and proximity.
@@ -892,16 +890,10 @@ class PeripheralSpec<ID: Any> private constructor(
                 }
                 is BondResult.Reject -> {
                     _bondState.value = MockBondState.None(MockBondState.Reason.Failed(result.failure))
-                    // The system may terminate the link after a failed pairing.
-                    val environment = simulationEnvironment
-                    val terminationDelay = if (environment != null) {
-                        environment.disconnectionDelayAfterFailedBonding(result.failure)
-                    } else {
-                        DEFAULT_FAILED_PAIRING_DISCONNECTION_DELAY
-                    }
-                    if (isConnected && terminationDelay != null) {
+                    // The phone terminates the link after a failed pairing.
+                    if (isConnected) {
                         val epoch = connectionEpoch
-                        delay(terminationDelay)
+                        delay(FAILED_PAIRING_DISCONNECTION_DELAY)
                         // The connection could have ended or been established again in the meantime.
                         if (epoch == connectionEpoch) {
                             terminateConnectionByPhone()

@@ -45,11 +45,8 @@ import no.nordicsemi.kotlin.ble.core.TxPowerLevel
 import no.nordicsemi.kotlin.ble.core.android.AdvertisingDataDefinition
 import no.nordicsemi.kotlin.ble.core.android.AndroidEnvironment
 import no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException
-import no.nordicsemi.kotlin.ble.core.mock.BondingFailure
 import no.nordicsemi.kotlin.ble.core.mock.MockEnvironment
 import org.jetbrains.annotations.Range
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * A type alias for the lastest Android API.
@@ -164,17 +161,6 @@ sealed class MockAndroidEnvironment(
         set(value) { field = field || value && requiresBluetoothRuntimePermissions }
 
     override val isScanningOnLeCodedPhySupported: Boolean = isLeCodedPhySupported && isScanningOnLeCodedPhySupported
-
-    override fun disconnectionDelayAfterFailedBonding(failure: BondingFailure): Duration? = when {
-        // Samsung A5 with Android 8 keeps the link after a failed pairing.
-        androidSdkVersion == AndroidEnvironment.SdkVersion.OREO -> null
-        // Pixel 7 with Android 17 terminates the link at once when the pairing timed out
-        // (assumed for Android 16).
-        failure == BondingFailure.TIMED_OUT && androidSdkVersion >= AndroidEnvironment.SdkVersion.BAKLAVA -> Duration.ZERO
-        // Pixel 7 (Android 17), Pixel 5 (Android 14) and Folder (Android 6) terminate the link
-        // about 3 seconds after the pairing failed.
-        else -> 3.seconds
-    }
 
     override val maxAttMtu: @Range(from = 23, to = 517) Int = when (androidSdkVersion) {
         in AndroidEnvironment.SdkVersion.JELLY_BEAN_MR2..AndroidEnvironment.SdkVersion.KITKAT -> ATT_MTU_DEFAULT
