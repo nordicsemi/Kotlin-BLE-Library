@@ -78,7 +78,13 @@ sealed class BondState {
          * @param code The code reported by the system.
          */
         data class Unknown(val code: Int) : Reason()
-        /** The authentication failed, e.g. the PIN or passkey was wrong. */
+        /**
+         * The authentication failed, e.g. the PIN or passkey was wrong.
+         *
+         * This is also reported when the system says that the bond was [Removed] while the bonding
+         * was in progress. Many phones do so when the pairing is cancelled by the user, refused
+         * by the peripheral or timed out.
+         */
         data object AuthenticationFailed : Reason()
         /** The peripheral rejected the pairing. */
         data object AuthenticationRejected : Reason()
@@ -94,7 +100,7 @@ sealed class BondState {
         data object RepeatedAttempts : Reason()
         /** The peripheral cancelled the pairing. */
         data object RemoteAuthenticationCanceled : Reason()
-        /** The bond information was removed from Android side. */
+        /** The bond information was removed from Android side, after the peripheral had been bonded. */
         data object Removed : Reason()
     }
 }

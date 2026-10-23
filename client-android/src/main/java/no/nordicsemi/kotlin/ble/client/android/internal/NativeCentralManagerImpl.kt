@@ -117,10 +117,20 @@ internal class NativeCentralManagerImpl(
             val unbondReasonCode = intent
                 .takeIf { it.hasExtra(EXTRA_UNBOND_REASON) }
                 ?.getIntExtra(EXTRA_UNBOND_REASON, UNBOND_REASON_UNKNOWN)
-            val bondState = intent
+            val systemBondState = intent
                 .getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.BOND_NONE)
                 .toBondState(unbondReasonCode?.toBondStateReason())
-            logger?.info(Layer.SMP) { "Bond state of $device changed: $previousBondState -> $bondState" }
+            // Many phones report a failed bonding (cancelled by the user, refused by the peripheral,
+            // wrong PIN or timeout) as Removed, although no bond existed. Report such failures
+            // with a reason that makes sense. The reason reported by the system is logged.
+            val bondState = if (
+                previousBondState == BondState.Bonding &&
+                systemBondState == BondState.None(BondState.Reason.Removed)
+            ) BondState.None(BondState.Reason.AuthenticationFailed) else systemBondState
+            logger?.info(Layer.SMP) {
+                "Bond state of $device changed: $previousBondState -> $systemBondState" +
+                        if (bondState != systemBondState) ", reported as $bondState" else ""
+            }
             _bondState.tryEmit(BondEvent(device.address, bondState))
         }
     }
