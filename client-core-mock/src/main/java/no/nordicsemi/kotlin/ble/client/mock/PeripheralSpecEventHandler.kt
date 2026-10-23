@@ -239,12 +239,12 @@ interface PeripheralSpecEventHandler {
     /**
      * Called when a client requests bonding with the mock peripheral.
      *
-     * By default, the request is accepted, and the peripheral becomes bonded.
+     * By default, the request is rejected, as if the peripheral did not support bonding.
      *
-     * @return The result of the bonding request, by default [BondResult.Accept].
+     * @return The result of the bonding request, by default [BondResult.Reject].
      */
     fun onBondRequest(): BondResult {
-        return BondResult.Accept
+        return BondResult.Reject(BondingFailure.REJECTED)
     }
 
     /**

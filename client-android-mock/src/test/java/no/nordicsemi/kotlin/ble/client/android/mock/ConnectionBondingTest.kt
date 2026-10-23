@@ -75,13 +75,18 @@ private const val RPA_ADDRESS = "4A:11:22:33:44:55"
  */
 class ConnectionBondingTest {
 
+    /** The peripheral accepts bonding, which is not the default. */
+    private fun acceptingHandler() = object : PeripheralSpecEventHandler {
+        override fun onBondRequest() = BondResult.Accept
+    }
+
     /** A peripheral that was connected before, and so is known by the phone, and may be bonded. */
     private fun spec(
         address: String = ADDRESS,
         addressType: AddressType = AddressType.PUBLIC,
         isBonded: Boolean,
         peripheralHasBond: Boolean = isBonded,
-        eventHandler: PeripheralSpecEventHandler = object : PeripheralSpecEventHandler {},
+        eventHandler: PeripheralSpecEventHandler = acceptingHandler(),
     ): PeripheralSpec<String> = PeripheralSpec.simulatePeripheral(
         identifier = address,
         addressType = addressType,
