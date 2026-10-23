@@ -761,6 +761,10 @@ open class Peripheral(
 
     override fun isAutoReconnectExpected(state: ConnectionState.Disconnected): Boolean = when {
         isAutoConnectCancelled -> false
+        // The link was lost while bonding. That means the bonding failed (the bond state will
+        // change to None, possibly after the disconnection is reported). The system would not
+        // reconnect anyway, and an attempt to do so would start the pairing again.
+        impl.bondState.value is BondState.Bonding -> false
         // The system refused to use auto connect for the address (see connect()).
         isAutoConnectPending && state.isUnsupportedAddressError() -> false
         else -> true
