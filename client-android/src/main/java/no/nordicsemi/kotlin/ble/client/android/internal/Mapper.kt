@@ -39,13 +39,13 @@ import android.bluetooth.le.ScanSettings
 import android.os.Build
 import android.os.SystemClock
 import androidx.annotation.RequiresApi
+import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.client.android.AdvertisingData
 import no.nordicsemi.kotlin.ble.client.android.ConnectionPriority
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
 import no.nordicsemi.kotlin.ble.client.android.ScanMode
 import no.nordicsemi.kotlin.ble.client.android.ScanResult
 import no.nordicsemi.kotlin.ble.client.android.exception.ScanningFailedToStartException
-import no.nordicsemi.kotlin.ble.core.BondState
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.PeripheralType
@@ -60,10 +60,32 @@ import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import android.bluetooth.le.ScanResult as NativeScanResult
 
-internal fun Int.toBondState(): BondState = when (this) {
-    BluetoothDevice.BOND_BONDED -> BondState.BONDED
-    BluetoothDevice.BOND_BONDING -> BondState.BONDING
-    else -> BondState.NONE
+/**
+ * Converts the native bond state.
+ *
+ * @param reason The reason why bond information was removed, if known.
+ */
+internal fun Int.toBondState(reason: BondState.Reason? = null): BondState = when (this) {
+    BluetoothDevice.BOND_BONDED -> BondState.Bonded
+    BluetoothDevice.BOND_BONDING -> BondState.Bonding
+    else -> BondState.None(reason)
+}
+
+/**
+ * Converts the unbond reason, which is not a part of the public API, but is delivered with
+ * the bond state broadcast. The values are defined in `BluetoothDevice.UNBOND_REASON_*`.
+ */
+internal fun Int.toBondStateReason(): BondState.Reason = when (this) {
+    1 -> BondState.Reason.AuthenticationFailed
+    2 -> BondState.Reason.AuthenticationRejected
+    3 -> BondState.Reason.AuthenticationCanceled
+    4 -> BondState.Reason.RemoteDeviceDown
+    5 -> BondState.Reason.DiscoveryInProgress
+    6 -> BondState.Reason.AuthenticationTimeout
+    7 -> BondState.Reason.RepeatedAttempts
+    8 -> BondState.Reason.RemoteAuthenticationCanceled
+    9 -> BondState.Reason.Removed
+    else -> BondState.Reason.Unknown(this)
 }
 
 internal fun Int.toConnectionState(status: Int, reason: ConnectionState.Disconnected.Reason?): ConnectionState = when (this) {
@@ -84,6 +106,7 @@ private fun Int.toDisconnectionReason(): ConnectionState.Disconnected.Reason = w
     0x93 /* = 147, GATT_CONNECTION_TIMEOUT, BluetoothGatt.GATT_CONNECTION_TIMEOUT, API 35+ */ -> ConnectionState.Disconnected.Reason.LinkLoss
     0x13 /* = 19, HCI_ERR_PEER_USER (GATT_CONN_TERMINATE_PEER_USER) */,
     0x15 /* = 21, HCI_ERR_REMOTE_POWER_OFF */ -> ConnectionState.Disconnected.Reason.TerminatePeerUser
+    0x3B /* = 59, HCI_ERR_UNACCEPT_CONN_INTERVAL */ -> ConnectionState.Disconnected.Reason.UnacceptableConnectionParameters
     0x16 /* = 22, HCI_ERR_CONN_CAUSE_LOCAL_HOST (GATT_CONN_TERMINATE_LOCAL_HOST) */ -> ConnectionState.Disconnected.Reason.TerminateLocalHost
  /* 0x101 = 257, BTA_GATT_CONN_NONE, BluetoothGatt.GATT_FAILURE -> Unknown */
     else -> ConnectionState.Disconnected.Reason.Unknown(this)

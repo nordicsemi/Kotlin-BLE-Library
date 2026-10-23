@@ -39,7 +39,7 @@ import no.nordicsemi.kotlin.ble.client.exception.InvalidAttributeException
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.client.mock.BondResult
 import no.nordicsemi.kotlin.ble.client.mock.ReadResponse
-import no.nordicsemi.kotlin.ble.core.BondState
+import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.Permission
@@ -47,6 +47,7 @@ import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
@@ -77,7 +78,7 @@ class GattProtectedAttributesOldAndroidTest {
             val result = fixture.characteristic().read()
 
             assertContentEquals(byteArrayOf(0x01), result)
-            assertEquals(BondState.BONDED, fixture.peripheral.bondState.value)
+            assertEquals(BondState.Bonded, fixture.peripheral.bondState.value)
             // The first attempt failed in the system, it never reached the peripheral.
             assertEquals(1, handler.reads.size)
             assertEquals(1, handler.bondRequests)
@@ -98,7 +99,7 @@ class GattProtectedAttributesOldAndroidTest {
             fixture.characteristic().write(byteArrayOf(0x01))
 
             assertEquals(1, handler.writeRequests.size)
-            assertEquals(BondState.BONDED, fixture.peripheral.bondState.value)
+            assertEquals(BondState.Bonded, fixture.peripheral.bondState.value)
         }
     }
 
@@ -117,7 +118,7 @@ class GattProtectedAttributesOldAndroidTest {
             val value = fixture.descriptor().read()
 
             assertContentEquals(byteArrayOf(0x0A), value)
-            assertEquals(BondState.BONDED, fixture.peripheral.bondState.value)
+            assertEquals(BondState.Bonded, fixture.peripheral.bondState.value)
         }
     }
 
@@ -138,7 +139,7 @@ class GattProtectedAttributesOldAndroidTest {
             characteristic.setNotifying(true)
 
             assertTrue(characteristic.isNotifying.first { it })
-            assertEquals(BondState.BONDED, fixture.peripheral.bondState.value)
+            assertEquals(BondState.Bonded, fixture.peripheral.bondState.value)
         }
     }
 
@@ -156,7 +157,7 @@ class GattProtectedAttributesOldAndroidTest {
 
             assertFailsWith<InvalidAttributeException> { fixture.characteristic().read() }
 
-            assertEquals(BondState.NONE, fixture.peripheral.bondState.value)
+            assertIs<BondState.None>(fixture.peripheral.bondState.value)
             assertTrue(handler.reads.isEmpty())
         }
     }
@@ -187,7 +188,7 @@ class GattProtectedAttributesOldAndroidTest {
 
             assertContentEquals(byteArrayOf(0x01), value)
             assertEquals(2, attempts)
-            assertEquals(BondState.BONDED, fixture.peripheral.bondState.value)
+            assertEquals(BondState.Bonded, fixture.peripheral.bondState.value)
         }
     }
 
@@ -212,7 +213,7 @@ class GattProtectedAttributesOldAndroidTest {
             val value = fixture.characteristic().read()
 
             assertContentEquals(byteArrayOf(0x01), value)
-            assertEquals(BondState.BONDED, fixture.peripheral.bondState.value)
+            assertEquals(BondState.Bonded, fixture.peripheral.bondState.value)
             assertEquals(1, handler.reads.size)
         }
     }
@@ -293,7 +294,7 @@ class GattProtectedAttributesOldAndroidTest {
 
             fixture.characteristic().read()
 
-            assertEquals(BondState.BONDED, fixture.peripheral.bondState.value)
+            assertEquals(BondState.Bonded, fixture.peripheral.bondState.value)
             assertEquals(1, handler.reads.size)
         }
     }

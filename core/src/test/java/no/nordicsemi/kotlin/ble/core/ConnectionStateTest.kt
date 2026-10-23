@@ -50,6 +50,7 @@ class ConnectionStateTest {
     fun `link loss and errors are not user initiated`() {
         assertFalse(Disconnected(Reason.LinkLoss).isUserInitiated)
         assertFalse(Disconnected(Reason.TerminatePeerUser).isUserInitiated)
+        assertFalse(Disconnected(Reason.UnacceptableConnectionParameters).isUserInitiated)
         assertFalse(Disconnected(Reason.InsufficientAuthentication).isUserInitiated)
         assertFalse(Disconnected(Reason.UnsupportedAddress).isUserInitiated)
         assertFalse(Disconnected(Reason.UnsupportedConfiguration).isUserInitiated)

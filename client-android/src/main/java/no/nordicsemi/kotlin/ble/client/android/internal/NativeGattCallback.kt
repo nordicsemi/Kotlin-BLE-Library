@@ -82,6 +82,18 @@ internal class NativeGattCallback(
      */
     var disconnectReason: ConnectionState.Disconnected.Reason? = null
 
+    /** Whether the link is up, as reported by the last connection state change. */
+    private var isConnected: Boolean = false
+
+    /**
+     * A flag set when the bond information was removed, or bonding failed, while the link was up.
+     *
+     * Android terminates the link then, but Android 17 reports it with status 147
+     * (`GATT_CONNECTION_TIMEOUT`), which would be mapped to link loss, although the link was
+     * terminated by the phone (confirmed with an HCI snoop log on Pixel 7).
+     */
+    private var isBondLostWhileConnected: Boolean = false
+
     /**
      * A flag set when the service discovery was complete.
      *
@@ -94,15 +106,29 @@ internal class NativeGattCallback(
 
     override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
         logger?.debug(Layer.GAP) { "onConnectionStateChange(newState=$newState, status=$status)" }
+
+        val betterStatus = when {
+            disconnectReason != null -> status
+            newState != BluetoothGatt.STATE_DISCONNECTED -> status
+            // The phone terminates the link after the bond was lost (e.g. the pairing was cancelled),
+            // but the status doesn't say that: Pixel 7 with Android 17 reports 147 (connection
+            // timeout), and Pixel 4 with Android 12 reports 0 (success).
+            isBondLostWhileConnected && (status == BluetoothGatt.GATT_SUCCESS || status == 0x93 /* GATT_CONNECTION_TIMEOUT */) -> 0x16 /* GATT_CONN_TERMINATE_LOCAL_HOST */
+            // Pixel 4 with Android 12 does return status 0 when link to a device is lost.
+            // Newer versions (Pixel 7 with Android 16) report status 8 (timeout) in the same case.
+            status == BluetoothGatt.GATT_SUCCESS -> 0x08 /* GATT_CONN_TIMEOUT */
+            else -> status
+        }
+
+        isConnected = newState == BluetoothGatt.STATE_CONNECTED
         isServiceDiscoveryComplete = false
-        // Pixel 4 with Android 12 does return status 0 when link is lost to a device.
-        // Newer versions (Pixel 7 with Android 16) report status 8 (timeout) in the same case.
-        val betterStatus = if (
-                newState == BluetoothGatt.STATE_DISCONNECTED &&
-                status == BluetoothGatt.GATT_SUCCESS &&
-                disconnectReason == null
-            ) 0x08 /* GATT_CONN_TIMEOUT */ else status
+        isBondLostWhileConnected = false
         _events.tryEmit(ConnectionStateChanged(newState.toConnectionState(betterStatus, disconnectReason)))
+    }
+
+    /** Called when the bond state changed to None. */
+    fun onBondLost() {
+        isBondLostWhileConnected = isConnected
     }
 
     override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {

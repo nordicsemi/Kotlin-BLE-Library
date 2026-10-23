@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -29,16 +29,38 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package no.nordicsemi.kotlin.ble.core
+package no.nordicsemi.kotlin.ble.client.mock
+
+import no.nordicsemi.kotlin.ble.core.mock.BondingFailure
 
 /**
- * Defines available bonding states.
+ * The state of the bond between the phone and a simulated peripheral, as seen by the phone.
+ *
+ * @see PeripheralSpec.bondState
  */
-enum class BondState {
-    /** Device is not bonded and bonding process has not been initiated. */
-    NONE,
-    /** Device is not bonded, but bonding process has been initiated. */
-    BONDING,
-    /** Device is bonded. */
-    BONDED
+sealed class MockBondState {
+
+    /**
+     * The peripheral is not bonded, and the bonding process has not been initiated.
+     *
+     * @param reason Why the peripheral is not bonded: the reason the last bonding failed, or
+     * the bond was removed. `null` if there was no bonding yet.
+     */
+    data class None(val reason: Reason? = null) : MockBondState()
+
+    /** The peripheral is not bonded yet, but the bonding process has been initiated. */
+    data object Bonding : MockBondState()
+
+    /** The peripheral is bonded. */
+    data object Bonded : MockBondState()
+
+    /** The reason why the peripheral is not bonded. */
+    sealed interface Reason {
+
+        /** The bonding failed. */
+        data class Failed(val failure: BondingFailure) : Reason
+
+        /** The bond was removed. It is only set when the phone removes the bond. */
+        data object Removed : Reason
+    }
 }

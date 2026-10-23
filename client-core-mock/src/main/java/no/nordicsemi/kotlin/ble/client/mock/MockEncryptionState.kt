@@ -29,27 +29,34 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 package no.nordicsemi.kotlin.ble.client.mock
 
 /**
  * The state of the encryption of the link between the phone and a simulated peripheral.
  *
- * @see PeripheralSpec.linkEncryption
+ * It exists only while the peripheral is connected, see [PeripheralSpec.encryptionState].
  */
-enum class LinkEncryption {
-    /** The peripheral is not connected. */
-    NotConnected,
-
-    /** The peripheral is connected, but the link is not encrypted. */
-    NotEncrypted,
-
-    /** The link is encrypted. */
-    Encrypted,
+sealed class MockEncryptionState {
 
     /**
-     * The phone has the bond information, but the peripheral does not (see
-     * [PeripheralSpec.peripheralHasBond]), so the link cannot be encrypted.
+     * The link is not encrypted.
+     *
+     * @param reason Why the link is not encrypted, or `null` if it is simply not encrypted.
      */
-    KeyMissing,
+    data class NotEncrypted(val reason: Reason? = null) : MockEncryptionState()
+
+    /** The link is encrypted. */
+    data object Encrypted : MockEncryptionState()
+
+    /** The reason why the link is not encrypted. */
+    enum class Reason {
+        /**
+         * The phone has the bond information, but the peripheral does not (see
+         * [PeripheralSpec.peripheralHasBond]), so the link could not be encrypted.
+         *
+         * Note: Android 16 and newer disconnects the link in such case, and keeps the bond
+         * information. The mock does not disconnect.
+         */
+        KEY_MISSING,
+    }
 }

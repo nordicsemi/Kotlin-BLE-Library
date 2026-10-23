@@ -36,9 +36,10 @@ package no.nordicsemi.kotlin.ble.client.android
  * The state of the encryption of the link with a peripheral.
  *
  * Having the bond information ([Peripheral.hasBondInformation]) does not mean that the link is
- * encrypted. A bonded peripheral should encrypt the link right after connecting, but it may fail to
- * do so, for example when the peripheral lost the keys. Use this state to check that the connection
- * is secure.
+ * encrypted: the bond information is stored by this Android device, whether the peripheral is
+ * connected or not. A bonded peripheral should encrypt the link right after connecting, but it may
+ * fail to do so, for example when the peripheral lost the keys. Use this state to check that the
+ * connection is secure.
  *
  * The state is reported from Android 16 (API 36). Earlier versions do not tell whether the link
  * is encrypted, and the state is [Unknown]. Note, that old Android versions did not require
@@ -57,8 +58,15 @@ sealed class EncryptionState {
      */
     data object Unknown : EncryptionState()
 
-    /** The link is not encrypted. */
-    data object NotEncrypted : EncryptionState()
+    /**
+     * The link is not encrypted.
+     *
+     * @param reason Why the link is not encrypted, e.g. the controller failed to encrypt it, or
+     * the peripheral does not have the key. `null` if it is not known, or the link is simply
+     * not encrypted. The reason is kept until the encryption state changes, or the peripheral
+     * disconnects.
+     */
+    data class NotEncrypted(val reason: Reason? = null) : EncryptionState()
 
     /**
      * The link is encrypted.
@@ -71,16 +79,6 @@ sealed class EncryptionState {
         val keySize: Int? = null,
     ) : EncryptionState()
 
-    /**
-     * Encrypting the link failed, or the peripheral does not have the key required to
-     * encrypt it.
-     *
-     * The state is kept until the encryption state changes, or the peripheral disconnects.
-     *
-     * @param reason The reason of the failure.
-     */
-    data class EncryptionFailed(val reason: Reason) : EncryptionState()
-
     /** The encryption algorithm. */
     enum class Algorithm {
         /** The E0 stream cipher, used by Bluetooth BR/EDR. */
@@ -91,10 +89,14 @@ sealed class EncryptionState {
         Unknown,
     }
 
-    /** The reason of an encryption failure. */
+    /** The reason why the link is not encrypted. */
     sealed class Reason {
-        /** The reason is not known. */
-        data object Unknown : Reason()
+        /**
+         * The system reported a reason that is not known to the library.
+         *
+         * @param code The code reported by the system.
+         */
+        data class Unknown(val code: Int) : Reason()
 
         /**
          * The controller failed to encrypt the link.

@@ -101,6 +101,11 @@ sealed class ConnectionState {
             /** The remote device initiated graceful disconnection. */
             data object TerminatePeerUser: Reason()
             /**
+             * The remote device terminated the connection because it did not accept the
+             * connection parameters (HCI error 0x3B, Unacceptable Connection Parameters).
+             */
+            data object UnacceptableConnectionParameters: Reason()
+            /**
              * Insufficient authentication.
              *
              * This error is returned when the Android device tries to enable security on a

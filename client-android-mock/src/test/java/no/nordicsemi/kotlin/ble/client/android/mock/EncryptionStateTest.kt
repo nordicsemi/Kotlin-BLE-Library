@@ -41,14 +41,16 @@ import kotlinx.coroutines.withTimeout
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.EncryptionState
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
-import no.nordicsemi.kotlin.ble.client.mock.LinkEncryption
-import no.nordicsemi.kotlin.ble.core.BondState
+import no.nordicsemi.kotlin.ble.client.mock.MockBondState
+import no.nordicsemi.kotlin.ble.client.mock.MockEncryptionState
+import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.Permission
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertFailsWith
 import kotlin.time.Duration.Companion.seconds
 
@@ -91,7 +93,7 @@ class EncryptionStateTest {
         fixture.connect()
         runCurrent()
 
-        assertEquals(EncryptionState.NotEncrypted, fixture.peripheral.encryptionState.value)
+        assertEquals(EncryptionState.NotEncrypted(), fixture.peripheral.encryptionState.value)
     }
 
     @Test
@@ -122,17 +124,17 @@ class EncryptionStateTest {
             val fixture = fixture()
             fixture.connect()
             // The peripheral reports the encryption first, and then the bond, like Android does.
-            val encryptionWhenBonded = mutableListOf<LinkEncryption>()
+            val encryptionWhenBonded = mutableListOf<MockEncryptionState?>()
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
                 fixture.spec.bondState.collect {
-                    if (it == BondState.BONDED) encryptionWhenBonded += fixture.spec.linkEncryption.value
+                    if (it is MockBondState.Bonded) encryptionWhenBonded += fixture.spec.encryptionState.value
                 }
             }
 
             fixture.characteristic().read()
             runCurrent()
 
-            assertEquals(listOf(LinkEncryption.Encrypted), encryptionWhenBonded)
+            assertEquals(listOf<MockEncryptionState?>(MockEncryptionState.Encrypted), encryptionWhenBonded)
             assertEquals(ENCRYPTED, fixture.peripheral.encryptionState.value)
         }
     }
@@ -145,10 +147,10 @@ class EncryptionStateTest {
         fixture.connect()
         runCurrent()
 
-        val failed: EncryptionState = EncryptionState.EncryptionFailed(EncryptionState.Reason.LeEncryptionFailure)
+        val failed: EncryptionState = EncryptionState.NotEncrypted(EncryptionState.Reason.LeEncryptionFailure)
         assertEquals(failed, fixture.peripheral.encryptionState.value)
         // The bond information is kept by the phone.
-        assertEquals(BondState.BONDED, fixture.peripheral.bondState.value)
+        assertEquals(BondState.Bonded, fixture.peripheral.bondState.value)
     }
 
     @Test
@@ -186,7 +188,7 @@ class EncryptionStateTest {
         runCurrent()
 
         assertEquals(EncryptionState.Unknown, fixture.peripheral.encryptionState.value)
-        assertEquals(BondState.NONE, fixture.peripheral.bondState.value)
+        assertIs<BondState.None>(fixture.peripheral.bondState.value)
     }
 
     @Test

@@ -44,11 +44,13 @@ import no.nordicsemi.kotlin.ble.client.android.exception.BondingFailedException
 import no.nordicsemi.kotlin.ble.client.mock.AddressType
 import no.nordicsemi.kotlin.ble.client.mock.BondResult
 import no.nordicsemi.kotlin.ble.client.mock.DisconnectionReason
+import no.nordicsemi.kotlin.ble.client.mock.MockBondState
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
-import no.nordicsemi.kotlin.ble.core.BondState
+import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.LegacyAdvertisingSetParameters
+import no.nordicsemi.kotlin.ble.core.mock.BondingFailure
 import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import kotlin.test.Test
@@ -73,13 +75,18 @@ private const val RPA_ADDRESS = "4A:11:22:33:44:55"
  */
 class ConnectionBondingTest {
 
+    /** The peripheral accepts bonding, which is not the default. */
+    private fun acceptingHandler() = object : PeripheralSpecEventHandler {
+        override fun onBondRequest() = BondResult.Accept
+    }
+
     /** A peripheral that was connected before, and so is known by the phone, and may be bonded. */
     private fun spec(
         address: String = ADDRESS,
         addressType: AddressType = AddressType.PUBLIC,
         isBonded: Boolean,
         peripheralHasBond: Boolean = isBonded,
-        eventHandler: PeripheralSpecEventHandler = object : PeripheralSpecEventHandler {},
+        eventHandler: PeripheralSpecEventHandler = acceptingHandler(),
     ): PeripheralSpec<String> = PeripheralSpec.simulatePeripheral(
         identifier = address,
         addressType = addressType,
@@ -110,7 +117,7 @@ class ConnectionBondingTest {
         val manager = manager(spec(isBonded = true))
         val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
 
-        assertEquals(BondState.BONDED, peripheral.bondState.value)
+        assertEquals(BondState.Bonded, peripheral.bondState.value)
         assertTrue(peripheral.hasBondInformation)
     }
 
@@ -119,7 +126,7 @@ class ConnectionBondingTest {
         val manager = manager(spec(isBonded = false))
         val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
 
-        assertEquals(BondState.NONE, peripheral.bondState.value)
+        assertIs<BondState.None>(peripheral.bondState.value)
         assertFalse(peripheral.hasBondInformation)
     }
 
@@ -131,7 +138,7 @@ class ConnectionBondingTest {
 
         peripheral.disconnect()
 
-        assertEquals(BondState.BONDED, peripheral.bondState.value)
+        assertEquals(BondState.Bonded, peripheral.bondState.value)
     }
 
     @Test
@@ -208,7 +215,7 @@ class ConnectionBondingTest {
 
         peripheral.createBond()
 
-        assertEquals(BondState.BONDED, peripheral.bondState.value)
+        assertEquals(BondState.Bonded, peripheral.bondState.value)
         assertTrue(peripheral.hasBondInformation)
     }
 
@@ -231,7 +238,7 @@ class ConnectionBondingTest {
 
         peripheral.createBond()
 
-        assertEquals(BondState.BONDED, peripheral.bondState.value)
+        assertEquals(BondState.Bonded, peripheral.bondState.value)
     }
 
     @Test
@@ -241,7 +248,7 @@ class ConnectionBondingTest {
 
         peripheral.removeBond()
 
-        assertEquals(BondState.NONE, peripheral.bondState.value)
+        assertIs<BondState.None>(peripheral.bondState.value)
         assertTrue(manager.getBondedPeripherals().isEmpty())
     }
 
@@ -264,7 +271,7 @@ class ConnectionBondingTest {
 
         peripheral.removeBond()
 
-        assertEquals(BondState.NONE, peripheral.bondState.value)
+        assertIs<BondState.None>(peripheral.bondState.value)
     }
 
     @Test
@@ -273,7 +280,7 @@ class ConnectionBondingTest {
         val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
 
         assertFailsWith<SecurityException> { peripheral.removeBond() }
-        assertEquals(BondState.BONDED, peripheral.bondState.value)
+        assertEquals(BondState.Bonded, peripheral.bondState.value)
     }
 
     @Test
@@ -284,7 +291,7 @@ class ConnectionBondingTest {
 
         peripheral.removeBond()
 
-        assertEquals(BondState.NONE, peripheral.bondState.value)
+        assertIs<BondState.None>(peripheral.bondState.value)
     }
 
     @Test
@@ -298,7 +305,7 @@ class ConnectionBondingTest {
 
         assertFailsWith<BondingFailedException> { peripheral.createBond() }
 
-        assertEquals(BondState.NONE, peripheral.bondState.value)
+        assertIs<BondState.None>(peripheral.bondState.value)
         assertTrue(manager.getBondedPeripherals().isEmpty())
     }
 
@@ -329,7 +336,7 @@ class ConnectionBondingTest {
 
         peripheral.createBond()
 
-        assertEquals(listOf(BondState.NONE, BondState.BONDING, BondState.BONDED), states)
+        assertEquals(listOf(BondState.None(), BondState.Bonding, BondState.Bonded), states)
     }
 
     @Test
@@ -388,7 +395,7 @@ class ConnectionBondingTest {
 
         assertFailsWith<BondingFailedException> { peripheral.createBond() }
 
-        assertEquals(BondState.NONE, peripheral.bondState.value)
+        assertIs<BondState.None>(peripheral.bondState.value)
         assertEquals(0, requests)
     }
 
@@ -402,7 +409,7 @@ class ConnectionBondingTest {
 
         peripheral.createBond()
 
-        assertEquals(BondState.BONDED, peripheral.bondState.value)
+        assertEquals(BondState.Bonded, peripheral.bondState.value)
     }
 
     @Test
@@ -414,7 +421,7 @@ class ConnectionBondingTest {
         spec.simulatePeripheralBondLoss()
 
         assertFalse(spec.peripheralHasBond)
-        assertEquals(BondState.BONDED, peripheral.bondState.value)
+        assertEquals(BondState.Bonded, peripheral.bondState.value)
     }
 
     @Test
@@ -427,7 +434,7 @@ class ConnectionBondingTest {
         spec.simulateBondRemoval()
         runCurrent()
 
-        assertEquals(BondState.NONE, peripheral.bondState.value)
+        assertIs<BondState.None>(peripheral.bondState.value)
         assertIs<ConnectionState.Disconnected>(peripheral.state.value)
         assertTrue(spec.peripheralHasBond)
     }
@@ -441,14 +448,17 @@ class ConnectionBondingTest {
         spec.simulateBonding()
         runCurrent()
 
-        assertEquals(BondState.BONDED, peripheral.bondState.value)
+        assertEquals(BondState.Bonded, peripheral.bondState.value)
     }
 
-    private suspend fun TestScope.failedBondingReason(result: BondResult): BondingFailedException.Reason {
+    private suspend fun TestScope.failedBondingReason(
+        failure: BondingFailure,
+        environment: MockAndroidEnvironment = MockAndroidEnvironment.Api31(),
+    ): BondState.Reason? {
         val rejecting = object : PeripheralSpecEventHandler {
-            override fun onBondRequest() = result
+            override fun onBondRequest() = BondResult.Reject(failure)
         }
-        val manager = manager(spec(isBonded = false, eventHandler = rejecting))
+        val manager = manager(spec(isBonded = false, eventHandler = rejecting), environment = environment)
         val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
 
         return assertFailsWith<BondingFailedException> { peripheral.createBond() }.reason
@@ -457,33 +467,60 @@ class ConnectionBondingTest {
     @Test
     fun `rejected bonding reports the peripheral rejecting it by default`() = runTest {
         assertEquals(
-            BondingFailedException.Reason.AuthenticationRejected,
-            failedBondingReason(BondResult.Reject()),
+            BondState.Reason.AuthenticationRejected,
+            failedBondingReason(BondingFailure.REJECTED),
         )
     }
 
     @Test
     fun `bonding cancelled by the user reports the reason`() = runTest {
         assertEquals(
-            BondingFailedException.Reason.AuthenticationCanceled,
-            failedBondingReason(BondResult.Reject(BondResult.Reject.Reason.Cancelled)),
+            BondState.Reason.AuthenticationCanceled,
+            failedBondingReason(BondingFailure.CANCELLED),
         )
     }
 
     @Test
     fun `bonding with a wrong PIN reports the reason`() = runTest {
         assertEquals(
-            BondingFailedException.Reason.AuthenticationFailed,
-            failedBondingReason(BondResult.Reject(BondResult.Reject.Reason.AuthenticationFailed)),
+            BondState.Reason.AuthenticationFailed,
+            failedBondingReason(BondingFailure.WRONG_PIN),
+        )
+    }
+
+    @Test
+    fun `bonding that failed authentication is reported like a wrong PIN`() = runTest {
+        assertEquals(
+            failedBondingReason(BondingFailure.WRONG_PIN),
+            failedBondingReason(BondingFailure.AUTH_FAILED),
+        )
+        assertEquals(
+            BondState.Reason.AuthenticationFailed,
+            failedBondingReason(BondingFailure.AUTH_FAILED),
         )
     }
 
     @Test
     fun `bonding that timed out reports the reason`() = runTest {
         assertEquals(
-            BondingFailedException.Reason.AuthenticationTimeout,
-            failedBondingReason(BondResult.Reject(BondResult.Reject.Reason.Timeout)),
+            BondState.Reason.AuthenticationTimeout,
+            failedBondingReason(BondingFailure.TIMED_OUT),
         )
+    }
+
+    @Test
+    fun `failed bonding reports the same reason in every environment`() = runTest {
+        listOf(
+            MockAndroidEnvironment.Api23(),
+            MockAndroidEnvironment.Api26(),
+            MockAndroidEnvironment.SamsungA8(),
+            MockAndroidEnvironment.Api36(),
+        ).forEach { environment ->
+            assertEquals(
+                BondState.Reason.AuthenticationCanceled,
+                failedBondingReason(BondingFailure.CANCELLED, environment),
+            )
+        }
     }
 
     @Test
@@ -493,12 +530,12 @@ class ConnectionBondingTest {
 
         val exception = assertFailsWith<BondingFailedException> { peripheral.createBond() }
 
-        assertEquals(BondingFailedException.Reason.AuthenticationRejected, exception.reason)
+        assertEquals(BondState.Reason.AuthenticationRejected, exception.reason)
     }
 
     @Test
     fun `reason of a failed bonding is not kept after bonding succeeds`() = runTest {
-        var result: BondResult = BondResult.Reject(BondResult.Reject.Reason.Cancelled)
+        var result: BondResult = BondResult.Reject(BondingFailure.CANCELLED)
         val handler = object : PeripheralSpecEventHandler {
             override fun onBondRequest() = result
         }
@@ -510,8 +547,8 @@ class ConnectionBondingTest {
         result = BondResult.Accept
         peripheral.createBond()
 
-        assertEquals(BondState.BONDED, peripheral.bondState.value)
-        assertEquals(null, spec.bondFailureReason)
+        assertEquals(BondState.Bonded, peripheral.bondState.value)
+        assertEquals(MockBondState.Bonded, spec.bondState.value)
     }
 
     private fun rejectingHandler() = object : PeripheralSpecEventHandler {
@@ -534,6 +571,32 @@ class ConnectionBondingTest {
 
         val state = assertIs<ConnectionState.Disconnected>(peripheral.state.value)
         assertEquals(ConnectionState.Disconnected.Reason.LinkLoss, state.reason)
+    }
+
+    @Test
+    fun `auto connect peripheral is disconnected after bonding initiated by the peripheral failed`() = runTest {
+        // The bonding is not started by createBond(), but the link is terminated by the phone
+        // after the failure, and it is not reconnected.
+        val spec = spec(isBonded = false, eventHandler = rejectingHandler())
+        val manager = manager(spec)
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        manager.connect(peripheral, ConnectionOptions.AutoConnect())
+        val states = mutableListOf<ConnectionState>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            peripheral.state.toList(states)
+        }
+
+        spec.simulateBonding()
+        advanceTimeBy(10.seconds)
+        runCurrent()
+
+        assertEquals(
+            listOf(
+                ConnectionState.Connected,
+                ConnectionState.Disconnected(ConnectionState.Disconnected.Reason.TerminateLocalHost),
+            ),
+            states,
+        )
     }
 
     @Test
@@ -641,6 +704,87 @@ class ConnectionBondingTest {
         val state = assertIs<ConnectionState.Disconnected>(peripheral.state.value)
         assertEquals(ConnectionState.Disconnected.Reason.TerminateLocalHost, state.reason)
         assertEquals(listOf<DisconnectionReason>(DisconnectionReason.TerminatePeerUser), handler.connectionsLost)
+    }
+
+    @Test
+    fun `removing a bond does not reconnect a peripheral connected with auto connect`() = runTest {
+        val manager = manager(spec(isBonded = true))
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        manager.connect(peripheral, ConnectionOptions.AutoConnect())
+        val states = mutableListOf<ConnectionState>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            peripheral.state.toList(states)
+        }
+
+        peripheral.removeBond()
+        advanceTimeBy(5.seconds)
+        runCurrent()
+
+        assertEquals(
+            listOf(
+                ConnectionState.Connected,
+                ConnectionState.Disconnected(ConnectionState.Disconnected.Reason.TerminateLocalHost),
+            ),
+            states,
+        )
+    }
+
+    @Test
+    fun `bond state has no reason when the peripheral was never bonded`() = runTest {
+        val manager = manager(spec(isBonded = false))
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+
+        assertEquals(BondState.None(), peripheral.bondState.value)
+    }
+
+    @Test
+    fun `bond state contains the reason when bonding failed`() = runTest {
+        val manager = manager(spec(isBonded = false, eventHandler = RejectingHandler()))
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        manager.connect(peripheral)
+        assertFailsWith<BondingFailedException> { peripheral.createBond() }
+
+        assertEquals(BondState.None(BondState.Reason.AuthenticationRejected), peripheral.bondState.value)
+    }
+
+    @Test
+    fun `bond state contains the reason when bonding was cancelled by the user`() = runTest {
+        val handler = object : PeripheralSpecEventHandler {
+            override fun onBondRequest() = BondResult.Reject(BondingFailure.CANCELLED)
+        }
+        val manager = manager(spec(isBonded = false, eventHandler = handler))
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        manager.connect(peripheral)
+        assertFailsWith<BondingFailedException> { peripheral.createBond() }
+
+        assertEquals(BondState.None(BondState.Reason.AuthenticationCanceled), peripheral.bondState.value)
+    }
+
+    @Test
+    fun `bond state contains the reason when the bond was removed`() = runTest {
+        val manager = manager(spec(isBonded = true))
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+
+        peripheral.removeBond()
+
+        assertEquals(BondState.None(BondState.Reason.Removed), peripheral.bondState.value)
+    }
+
+    @Test
+    fun `reason of a failed bonding is cleared when bonding starts again`() = runTest {
+        var result: BondResult = BondResult.Reject()
+        val handler = object : PeripheralSpecEventHandler {
+            override fun onBondRequest() = result
+        }
+        val manager = manager(spec(isBonded = false, eventHandler = handler))
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        manager.connect(peripheral)
+        assertFailsWith<BondingFailedException> { peripheral.createBond() }
+
+        result = BondResult.Accept
+        peripheral.createBond()
+
+        assertEquals(BondState.Bonded, peripheral.bondState.value)
     }
 }
 

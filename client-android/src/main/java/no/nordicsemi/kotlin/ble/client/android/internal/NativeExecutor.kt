@@ -40,14 +40,13 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import no.nordicsemi.kotlin.ble.client.GattEvent
 import no.nordicsemi.kotlin.ble.client.RemoteService
+import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.ConnectionPriority
 import no.nordicsemi.kotlin.ble.client.android.EncryptionState
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
-import no.nordicsemi.kotlin.ble.client.android.exception.BondingFailedException
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.core.ATT_MTU_DEFAULT
-import no.nordicsemi.kotlin.ble.core.BondState
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.ConnectionState.Disconnected.Reason
 import no.nordicsemi.kotlin.ble.core.OperationStatus
@@ -116,19 +115,13 @@ internal class NativeExecutor(
     private var _bondState = MutableStateFlow(bluetoothDevice.bondState.toBondState())
     override val bondState = _bondState.asStateFlow()
 
-    override var bondFailureReason: BondingFailedException.Reason? = null
-        private set
-
     /**
      * This method is called when the bond state of the device changes.
-     *
-     * @param state The new bond state.
-     * @param failureReason The reason why bonding failed, if [state] is [BondState.NONE] after
-     * [BondState.BONDING].
      */
-    internal fun onBondStateChanged(state: BondState, failureReason: BondingFailedException.Reason? = null) {
-        // The reason is set before the state, so that it is available when the state is received.
-        bondFailureReason = failureReason
+    internal fun onBondStateChanged(state: BondState) {
+        if (state is BondState.None) {
+            gattCallback.onBondLost()
+        }
         _bondState.value = state
     }
 
@@ -233,6 +226,9 @@ internal class NativeExecutor(
         if (!result) {
             throw OperationFailedException(OperationStatus.RequestFailed)
         }
+        // Android terminates the link when the bond information is removed, and the bond state
+        // is reported some 100 ms later, after the disconnection, so mark the bond as lost now.
+        gattCallback.onBondLost()
         return true
     }
 

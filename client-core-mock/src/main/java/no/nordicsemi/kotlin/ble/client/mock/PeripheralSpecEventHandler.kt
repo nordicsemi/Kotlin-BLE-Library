@@ -31,6 +31,7 @@
 
 package no.nordicsemi.kotlin.ble.client.mock
 
+import no.nordicsemi.kotlin.ble.core.mock.BondingFailure
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.client.mock.internal.MockRemoteCharacteristic
 import no.nordicsemi.kotlin.ble.client.mock.internal.MockRemoteDescriptor
@@ -82,22 +83,9 @@ sealed class BondResult {
     /**
      * The bonding failed, for example because the user cancelled it or entered a wrong PIN.
      *
-     * @param reason The reason of the failure, reported to the client.
+     * @param failure What went wrong. The environment decides how it is reported to the client.
      */
-    data class Reject(val reason: Reason = Reason.Rejected) : BondResult() {
-
-        /** The reason of a failed bonding. */
-        enum class Reason {
-            /** The peripheral rejected the pairing. This is the default. */
-            Rejected,
-            /** The user cancelled the pairing. */
-            Cancelled,
-            /** The authentication failed, e.g. the PIN was wrong. */
-            AuthenticationFailed,
-            /** The pairing timed out. */
-            Timeout,
-        }
-    }
+    data class Reject(val failure: BondingFailure = BondingFailure.REJECTED) : BondResult()
 }
 
 /**
@@ -251,12 +239,12 @@ interface PeripheralSpecEventHandler {
     /**
      * Called when a client requests bonding with the mock peripheral.
      *
-     * By default, the request is accepted, and the peripheral becomes bonded.
+     * By default, the request is rejected, as if the peripheral did not support bonding.
      *
-     * @return The result of the bonding request, by default [BondResult.Accept].
+     * @return The result of the bonding request, by default [BondResult.Reject].
      */
     fun onBondRequest(): BondResult {
-        return BondResult.Accept
+        return BondResult.Reject(BondingFailure.REJECTED)
     }
 
     /**
