@@ -226,6 +226,9 @@ internal class NativeExecutor(
         if (!result) {
             throw OperationFailedException(OperationStatus.RequestFailed)
         }
+        // Android terminates the link when the bond information is removed, and the bond state
+        // is reported some 100 ms later, after the disconnection, so mark the bond as lost now.
+        gattCallback.onBondLost()
         return true
     }
 
