@@ -103,7 +103,8 @@ open class MockExecutor(
      * Converts the failure to the reason reported by Android.
      *
      * Android versions report different reasons for the same event. The values below were
-     * observed on: Samsung A5 (Android 8), Pixel 5 (Android 14) and Pixel 7 (Android 16).
+     * observed on: Samsung A5 (Android 8), Pixel 5 (Android 14) and Pixel 7 (Android 17).
+     * Android 16 is assumed to behave like Android 17.
      * Where the version was not tested, the reason of the closest tested version is used.
      */
     private fun BondingFailure.toBondStateReason(): BondState.Reason {
@@ -120,7 +121,7 @@ open class MockExecutor(
                 if (isAndroid16) BondState.Reason.AuthenticationFailed else BondState.Reason.Removed
             BondingFailure.WRONG_PIN ->
                 if (isAndroid14) BondState.Reason.Removed else BondState.Reason.AuthenticationFailed
-            // Android 16 reports Removed when the pairing timed out.
+            // Android 17 reports Removed when the pairing timed out (assumed for Android 16).
             BondingFailure.TIMED_OUT ->
                 if (isAndroid16) BondState.Reason.Removed else BondState.Reason.AuthenticationTimeout
         }

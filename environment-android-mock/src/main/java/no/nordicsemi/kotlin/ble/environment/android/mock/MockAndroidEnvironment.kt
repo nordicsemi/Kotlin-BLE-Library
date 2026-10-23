@@ -168,9 +168,10 @@ sealed class MockAndroidEnvironment(
     override fun disconnectionDelayAfterFailedBonding(failure: BondingFailure): Duration? = when {
         // Samsung A5 with Android 8 keeps the link after a failed pairing.
         androidSdkVersion == AndroidEnvironment.SdkVersion.OREO -> null
-        // Pixel 7 with Android 16 terminates the link at once when the pairing timed out.
+        // Pixel 7 with Android 17 terminates the link at once when the pairing timed out
+        // (assumed for Android 16).
         failure == BondingFailure.TIMED_OUT && androidSdkVersion >= AndroidEnvironment.SdkVersion.BAKLAVA -> Duration.ZERO
-        // Pixel 7 (Android 16), Pixel 5 (Android 14) and Folder (Android 6) terminate the link
+        // Pixel 7 (Android 17), Pixel 5 (Android 14) and Folder (Android 6) terminate the link
         // about 3 seconds after the pairing failed.
         else -> 3.seconds
     }
