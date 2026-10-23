@@ -1,0 +1,33 @@
+name: Unit tests
+on:
+  pull_request:
+  workflow_dispatch:
+# A new push to a pull request cancels the run for the previous commit.
+concurrency:
+  group: unit-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  unitTests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: 'jetbrains'
+          java-version: '21'
+          cache: 'gradle'
+      # `test` runs the unit tests of the Android and JVM modules, and `jvmTest` the ones of
+      # the multiplatform modules (:core). `--continue` runs all modules even if one fails.
+      - name: Run unit tests
+        shell: bash
+        run: ./gradlew test jvmTest --continue --stacktrace
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/'
+          if-no-files-found: ignore
