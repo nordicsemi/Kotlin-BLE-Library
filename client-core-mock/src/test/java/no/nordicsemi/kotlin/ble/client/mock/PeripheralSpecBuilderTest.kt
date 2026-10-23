@@ -424,7 +424,7 @@ class PeripheralSpecBuilderTest {
             connectable(
                 name = "Device",
                 eventHandler = object : PeripheralSpecEventHandler {
-                    override fun onConnectionRequest(phy: PrimaryPhy): ConnectionResult {
+                    override fun onConnectionRequest(peripheral: MockPeripheral, phy: PrimaryPhy): ConnectionResult {
                         connectionRequests++
                         return ConnectionResult.Accept
                     }

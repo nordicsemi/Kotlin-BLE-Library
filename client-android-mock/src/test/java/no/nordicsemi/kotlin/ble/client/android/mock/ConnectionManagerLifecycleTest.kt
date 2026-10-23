@@ -49,6 +49,7 @@ import no.nordicsemi.kotlin.ble.client.mock.AddressType
 import no.nordicsemi.kotlin.ble.client.mock.ConnectionResult
 import no.nordicsemi.kotlin.ble.client.mock.DisconnectionReason
 import no.nordicsemi.kotlin.ble.client.mock.MockServerScope
+import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.core.ConnectionState
@@ -86,13 +87,13 @@ class ConnectionManagerLifecycleTest {
         val connectionsLost = mutableListOf<DisconnectionReason>()
         var result: ConnectionResult = ConnectionResult.Accept
 
-        override fun onConnectionRequest(phy: PrimaryPhy): ConnectionResult {
+        override fun onConnectionRequest(peripheral: MockPeripheral, phy: PrimaryPhy): ConnectionResult {
             connectionRequests++
             phys += phy
             return result
         }
 
-        override fun onConnectionLost(reason: DisconnectionReason) {
+        override fun onConnectionLost(peripheral: MockPeripheral, reason: DisconnectionReason) {
             connectionsLost += reason
         }
     }

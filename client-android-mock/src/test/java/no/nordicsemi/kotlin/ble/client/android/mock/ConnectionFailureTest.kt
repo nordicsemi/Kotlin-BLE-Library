@@ -46,6 +46,7 @@ import no.nordicsemi.kotlin.ble.client.android.CentralManager.ConnectionOptions
 import no.nordicsemi.kotlin.ble.client.exception.ConnectionFailedException
 import no.nordicsemi.kotlin.ble.client.mock.AddressType
 import no.nordicsemi.kotlin.ble.client.mock.ConnectionResult
+import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.client.mock.Proximity
@@ -245,7 +246,7 @@ class ConnectionFailureTest {
     @Test
     fun `connection request denied by the device times out`() = runTest {
         val deny = object : PeripheralSpecEventHandler {
-            override fun onConnectionRequest(phy: PrimaryPhy) = ConnectionResult.Deny
+            override fun onConnectionRequest(peripheral: MockPeripheral, phy: PrimaryPhy) = ConnectionResult.Deny
         }
         val manager = newManager(spec(eventHandler = deny))
         val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
@@ -376,7 +377,7 @@ class ConnectionFailureTest {
         var count = 0
         var result: ConnectionResult = ConnectionResult.Accept
 
-        override fun onConnectionRequest(phy: PrimaryPhy): ConnectionResult {
+        override fun onConnectionRequest(peripheral: MockPeripheral, phy: PrimaryPhy): ConnectionResult {
             count++
             return result
         }

@@ -50,6 +50,7 @@ import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
 import no.nordicsemi.kotlin.ble.client.mock.ConnectionResult
+import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.client.mock.WriteResponse
@@ -93,9 +94,9 @@ class NotificationsTest {
     private var cccdWriteResponse: WriteResponse = WriteResponse.Success
 
     private val eventHandler = object : PeripheralSpecEventHandler {
-        override fun onConnectionRequest(phy: PrimaryPhy) = ConnectionResult.Accept
+        override fun onConnectionRequest(peripheral: MockPeripheral, phy: PrimaryPhy) = ConnectionResult.Accept
 
-        override fun onWriteRequest(descriptor: MockRemoteDescriptor, value: ByteArray): WriteResponse {
+        override fun onWriteRequest(peripheral: MockPeripheral, descriptor: MockRemoteDescriptor, value: ByteArray): WriteResponse {
             if (!descriptor.isClientCharacteristicConfiguration) return WriteResponse.Success
 
             cccdWrites++

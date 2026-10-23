@@ -158,7 +158,7 @@ class PeripheralSpec<ID: Any> private constructor(
     private var services: List<ServiceDefinition>?,
     private val cachedServices: List<ServiceDefinition>?,
     isServiceCacheValid: Boolean,
-) {
+): MockPeripheral {
     /** A flow of GATT events emitted by the peripheral. */
     private val _events: MutableSharedFlow<GattEvent> = MutableSharedFlow(extraBufferCapacity = 64)
     val events: SharedFlow<GattEvent> = _events.asSharedFlow()
@@ -285,7 +285,7 @@ class PeripheralSpec<ID: Any> private constructor(
                     if (field == Proximity.OUT_OF_RANGE && isConnected) {
                         // TODO Should the connection be dropped immediately, or after supervision timeout? See simulateReset().
                         connectionsCount = 0
-                        eventHandler!!.onConnectionLost(DisconnectionReason.Timeout)
+                        eventHandler!!.onConnectionLost(this@PeripheralSpec, DisconnectionReason.Timeout)
                         _events.emit(ConnectionStateChanged(ConnectionState.Disconnected(Reason.LinkLoss)))
                     }
                 }
@@ -345,7 +345,7 @@ class PeripheralSpec<ID: Any> private constructor(
     }
 
     /** Whether the phone has the bond information of the peripheral. */
-    val isBonded: Boolean
+    override val isBonded: Boolean
         get() = _bondState.value is MockBondState.Bonded
 
     /**
@@ -355,11 +355,11 @@ class PeripheralSpec<ID: Any> private constructor(
      * the peripheral rejects an attempt to pair again, until it forgets the bond too.
      */
     @Volatile
-    var peripheralHasBond: Boolean = peripheralHasBond
+    override var peripheralHasBond: Boolean = peripheralHasBond
         private set
 
     /** Whether the peripheral is connected. */
-    val isConnected: Boolean
+    override val isConnected: Boolean
         get() = connectionsCount > 0
 
     /**
@@ -796,7 +796,7 @@ class PeripheralSpec<ID: Any> private constructor(
         }
         // Otherwise, notify the event handler about the connection request.
         val eventHandler = checkNotNull(eventHandler) { "Cannot connect to not connectable device" }
-        when (eventHandler.onConnectionRequest(phy)) {
+        when (eventHandler.onConnectionRequest(this@PeripheralSpec, phy)) {
             is ConnectionResult.Accept -> {
                 connectionsCount += 1
                 // The connection is limited to what both the phone and the peripheral support.
@@ -823,7 +823,7 @@ class PeripheralSpec<ID: Any> private constructor(
      *
      */
     // TODO Add Error to be returned to the clients?
-    fun simulateDisconnection() {
+    override fun simulateDisconnection() {
         terminateConnection(
             reason = Reason.TerminatePeerUser,
             handlerReason = DisconnectionReason.TerminateLocalHost,
@@ -847,13 +847,15 @@ class PeripheralSpec<ID: Any> private constructor(
         if (isConnected) {
             // TODO Should we delay this to simulate connection interval?
             connectionsCount = 0
-            eventHandler!!.onConnectionLost(handlerReason)
+            eventHandler!!.onConnectionLost(this@PeripheralSpec, handlerReason)
             _events.tryEmit(ConnectionStateChanged(ConnectionState.Disconnected(reason)))
         }
     }
 
     /**
      * Simulates bonding of the phone and the peripheral.
+     *
+     * This simulates bond request from either of sides.
      *
      * The bond state changes to [MockBondState.Bonding] and then, depending on the response of
      * [PeripheralSpecEventHandler.onBondRequest], to [MockBondState.Bonded] or back to
@@ -866,7 +868,7 @@ class PeripheralSpec<ID: Any> private constructor(
      *
      * Does nothing if the peripheral is already bonded, or the bonding is in progress.
      */
-    fun simulateBonding() {
+    override fun simulateBondRequest() {
         if (_bondState.getAndUpdate { if (it is MockBondState.None) MockBondState.Bonding else it } !is MockBondState.None) {
             return
         }
@@ -876,7 +878,7 @@ class PeripheralSpec<ID: Any> private constructor(
                 when {
                     // The peripheral does not pair again with a phone that it is bonded with.
                     peripheralHasBond -> BondResult.Reject()
-                    else -> eventHandler?.onBondRequest() ?: BondResult.Reject()
+                    else -> eventHandler?.onBondRequest(this@PeripheralSpec) ?: BondResult.Reject()
                 }
             } catch (_: Exception) {
                 BondResult.Reject()
@@ -917,7 +919,7 @@ class PeripheralSpec<ID: Any> private constructor(
      * @return The result of the authentication.
      */
     internal suspend fun requestAuthentication(): Authentication {
-        simulateBonding()
+        simulateBondRequest()
         if (simulationEnvironment?.repeatsRequestsAfterBonding == false && !isBonded) {
             return Authentication.Dropped
         }
@@ -959,7 +961,7 @@ class PeripheralSpec<ID: Any> private constructor(
      *
      * @see simulateBondRemoval
      */
-    fun simulatePeripheralBondLoss() {
+    override fun simulatePeripheralBondLoss() {
         peripheralHasBond = false
     }
 
@@ -971,10 +973,10 @@ class PeripheralSpec<ID: Any> private constructor(
      *
      * @see ConnectionParameters.Specified.supervisionTimeout
      */
-    fun simulateReset() {
+    override fun simulateReset() {
         val supervisionTimeout = connectionParameters?.supervisionTimeoutMillis?.milliseconds
         connectionsCount = 0
-        eventHandler?.onReset()
+        eventHandler?.onReset(this@PeripheralSpec)
 
         // If the device was connected, notify about disconnection due to link loss.
         if (supervisionTimeout != null) {
@@ -1001,7 +1003,7 @@ class PeripheralSpec<ID: Any> private constructor(
      * @param handle The handle of the characteristic.
      * @param value The new value of the characteristic.
      */
-    fun simulateValueUpdate(handle: Int, value: ByteArray) {
+    override fun simulateValueUpdate(handle: Int, value: ByteArray) {
         if (!isConnected) return
 
         // Bluetooth Core Specification 6.2, Vol 3 (Host), Part F (ATT), 3.4.7.1 Handle Value
@@ -1034,7 +1036,7 @@ class PeripheralSpec<ID: Any> private constructor(
      *
      * @param newServices A builder for the set of services.
      */
-    fun simulateServiceChange(newServices: MockServerScope.() -> Unit) {
+    override fun simulateServiceChange(newServices: MockServerScope.() -> Unit) {
         val oldServices = services
 
         // Replace the services with new ones.
@@ -1105,9 +1107,9 @@ class PeripheralSpec<ID: Any> private constructor(
      * Defaults to 6, the minimum number of connection events before the instant, in which the
      * Link Layer applies them.
      */
-    fun simulateConnectionParametersRequest(
+    override fun simulateConnectionParametersRequest(
         parameters: ConnectionParameters.Specified,
-        delay: Int = LL_UPDATE_INSTANT_EVENTS,
+        delay: Int,
     ) {
         // TODO Validate parameters against preferred / possible parameters?
         connectionParameters?.connectionIntervalMillis?.let { connectionInterval ->
@@ -1138,7 +1140,7 @@ class PeripheralSpec<ID: Any> private constructor(
      *
      * @param mtu The requested MTU.
      */
-    fun simulateMtuRequest(mtu: Int) {
+    override fun simulateMtuRequest(mtu: Int) {
         // MTU and max MTU are null if peripheral is not connected.
         val currentMtu = this.mtu ?: return
         if (maxAttMtu == null) return
@@ -1410,7 +1412,7 @@ class PeripheralSpec<ID: Any> private constructor(
                 heldEpoch = null
                 connectionsCount -= 1
                 if (connectionsCount == 0) {
-                    eventHandler?.onConnectionLost(DisconnectionReason.TerminatePeerUser)
+                    eventHandler?.onConnectionLost(this@PeripheralSpec, DisconnectionReason.TerminatePeerUser)
                 }
             }
             heldEpoch = null
@@ -1455,7 +1457,7 @@ class PeripheralSpec<ID: Any> private constructor(
 
             // Notify the event handler about the connection request.
             // TODO LE Coded PHY seems to be ignored, devices connect only with LE 1M. To be investigated.
-            when (eventHandler.onConnectionRequest(phy)) {
+            when (eventHandler.onConnectionRequest(this@PeripheralSpec, phy)) {
                 // TODO add option to fail connection with 133-ish error
 
                 ConnectionResult.Accept -> {
@@ -1519,7 +1521,7 @@ class PeripheralSpec<ID: Any> private constructor(
             // If no more connections, notify the event handler.
             if (connectionsCount == 0) {
                 // Notify the event handler about the disconnection.
-                eventHandler.onConnectionLost(DisconnectionReason.TerminatePeerUser)
+                eventHandler.onConnectionLost(this@PeripheralSpec, DisconnectionReason.TerminatePeerUser)
             }
         }
 
@@ -1541,7 +1543,7 @@ class PeripheralSpec<ID: Any> private constructor(
             }
 
             // Notify the event handler about the service discovery request.
-            when (eventHandler.onServiceDiscoveryRequest(uuids)) {
+            when (eventHandler.onServiceDiscoveryRequest(this@PeripheralSpec, uuids)) {
                 is ServiceDiscoveryResult.Success -> {
                     // Simulate changing connection interval.
                     delay(connectionInterval)
@@ -1769,7 +1771,7 @@ class PeripheralSpec<ID: Any> private constructor(
             delay(connectionParameters.connectionIntervalMillis.milliseconds)
 
             val eventHandler = checkNotNull(eventHandler)
-            when (val response = eventHandler.onExecuteWriteRequest(execute)) {
+            when (val response = eventHandler.onExecuteWriteRequest(this@PeripheralSpec, execute)) {
                 is WriteResponse.Success -> {
                     _events.emit(ReliableWriteCompleted(OperationStatus.Success))
                 }

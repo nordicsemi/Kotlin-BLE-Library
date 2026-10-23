@@ -48,6 +48,7 @@ import no.nordicsemi.kotlin.ble.client.mock.DisconnectionReason
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
 import no.nordicsemi.kotlin.ble.core.WriteType
 import no.nordicsemi.kotlin.ble.client.mock.ConnectionResult
+import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.client.mock.Proximity
@@ -79,7 +80,7 @@ class ConnectionStateTest {
         var count = 0
         var result: ConnectionResult = ConnectionResult.Accept
 
-        override fun onConnectionRequest(phy: PrimaryPhy): ConnectionResult {
+        override fun onConnectionRequest(peripheral: MockPeripheral, phy: PrimaryPhy): ConnectionResult {
             count++
             return result
         }
@@ -89,11 +90,11 @@ class ConnectionStateTest {
         val connectionsLost = mutableListOf<DisconnectionReason>()
         var resets = 0
 
-        override fun onConnectionLost(reason: DisconnectionReason) {
+        override fun onConnectionLost(peripheral: MockPeripheral, reason: DisconnectionReason) {
             connectionsLost += reason
         }
 
-        override fun onReset() {
+        override fun onReset(peripheral: MockPeripheral) {
             resets++
         }
     }

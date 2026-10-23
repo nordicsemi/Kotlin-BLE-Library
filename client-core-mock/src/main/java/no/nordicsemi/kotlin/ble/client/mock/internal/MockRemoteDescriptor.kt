@@ -112,7 +112,7 @@ class MockRemoteDescriptor(
             is CCCD -> ReadResponse.Success(descriptor.value)
             is CUD -> ReadResponse.Success(descriptor.value)
             is CEPD -> ReadResponse.Success(descriptor.value)
-            else -> eventHandler.onReadRequest(this@MockRemoteDescriptor)
+            else -> eventHandler.onReadRequest(peripheralSpec, this@MockRemoteDescriptor)
         }
         when (result) {
             is ReadResponse.Success -> {
@@ -205,7 +205,7 @@ class MockRemoteDescriptor(
         // so only one connection interval delay is added below in case of failure.
         when (useLongWrite) {
             true -> {
-                val result = eventHandler.onPrepareWriteRequest(this@MockRemoteDescriptor, truncatedData)
+                val result = eventHandler.onPrepareWriteRequest(peripheralSpec, this@MockRemoteDescriptor, truncatedData)
                 when (result) {
                     is PrepareWriteResponse.Success -> {
                         // Writing descriptor value takes time depending on the size of the value
@@ -214,7 +214,7 @@ class MockRemoteDescriptor(
                         // Validate received data. In case of an incorrect data, throw an exception.
                         val match = truncatedData.contentEquals(result.value)
                         // Long Write automatically executes or aborts all prepared writes.
-                        val result = eventHandler.onExecuteWriteRequest(match)
+                        val result = eventHandler.onExecuteWriteRequest(peripheralSpec, match)
                         peripheralSpec.emulateDelay()
                         if (!match) {
                             throw ValueDoesNotMatchException()
@@ -246,7 +246,7 @@ class MockRemoteDescriptor(
                 }
             }
             false -> {
-                val result = eventHandler.onWriteRequest(this@MockRemoteDescriptor, truncatedData)
+                val result = eventHandler.onWriteRequest(peripheralSpec, this@MockRemoteDescriptor, truncatedData)
                 // Values 0x01-00 and 0x02-00 are used to enable notifications and indications, respectively.
                 // Value 0x00-00 is used to disable both.
                 // Any other value is RFU and ignored.

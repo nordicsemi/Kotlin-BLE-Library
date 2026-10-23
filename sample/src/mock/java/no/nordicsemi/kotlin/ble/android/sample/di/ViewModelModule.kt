@@ -49,6 +49,7 @@ import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.mock.mock
 import no.nordicsemi.kotlin.ble.client.mock.ConnectionResult
 import no.nordicsemi.kotlin.ble.client.mock.DisconnectionReason
+import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.client.mock.Proximity
@@ -124,32 +125,33 @@ object ViewModelModule {
 
         // Event handlers implementation
 
-        override fun onConnectionRequest(phy: PrimaryPhy): ConnectionResult {
+        override fun onConnectionRequest(peripheral: MockPeripheral, phy: PrimaryPhy): ConnectionResult {
             Timber.i("[Blinky] Connection request received on PHY: $phy")
             return ConnectionResult.Accept
         }
 
-        override fun onConnectionLost(reason: DisconnectionReason) {
+        override fun onConnectionLost(peripheral: MockPeripheral, reason: DisconnectionReason) {
             Timber.i("[Blinky] Connection terminated: $reason")
         }
 
-        override fun onReset() {
+        override fun onReset(peripheral: MockPeripheral) {
             Timber.i("[Blinky] --- Booting up ---")
             blinkCount = 0
             isLedOn = false
             isButtonPressed = false
         }
 
-        override fun onServiceDiscoveryRequest(uuids: List<Uuid>): ServiceDiscoveryResult {
+        override fun onServiceDiscoveryRequest(peripheral: MockPeripheral, uuids: List<Uuid>): ServiceDiscoveryResult {
             Timber.i("[Blinky] Service discovery requested for UUIDs: $uuids")
-            return super.onServiceDiscoveryRequest(uuids)
+            return super.onServiceDiscoveryRequest(peripheral, uuids)
         }
 
         override fun onWriteRequest(
+            peripheral: MockPeripheral,
             characteristic: MockRemoteCharacteristic,
             value: ByteArray
         ): WriteResponse {
-            onWriteCommand(characteristic, value)
+            onWriteCommand(peripheral, characteristic, value)
 
             // After 5 writes with response, simulate a service change.
             // Note, that the counter isn't reset, so the change happens only once.
@@ -200,13 +202,13 @@ object ViewModelModule {
             return WriteResponse.Success
         }
 
-        override fun onWriteCommand(characteristic: MockRemoteCharacteristic, value: ByteArray) {
+        override fun onWriteCommand(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic, value: ByteArray) {
             val on = value.isOn()
             isLedOn = on
             Timber.i("[Blinky] LED ${if (on) "ON" else "OFF"}")
         }
 
-        override fun onReadRequest(characteristic: MockRemoteCharacteristic): ReadResponse =
+        override fun onReadRequest(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic): ReadResponse =
             when (characteristic.instanceId) {
                 buttonHandle -> ReadResponse.Success(isButtonPressed.toBytes())
                 ledHandle -> ReadResponse.Success(isLedOn.toBytes())

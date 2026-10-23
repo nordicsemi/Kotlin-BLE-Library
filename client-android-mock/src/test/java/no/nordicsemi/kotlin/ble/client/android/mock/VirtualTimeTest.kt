@@ -45,6 +45,7 @@ import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.mock.AddressType
 import no.nordicsemi.kotlin.ble.client.mock.DisconnectionReason
 import no.nordicsemi.kotlin.ble.client.mock.MockServerScope
+import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.client.mock.Proximity
@@ -151,7 +152,7 @@ class VirtualTimeTest {
         fun trackedSpec(address: String) = connectableSpec(
             address = address,
             eventHandler = object : PeripheralSpecEventHandler {
-                override fun onConnectionLost(reason: DisconnectionReason) {
+                override fun onConnectionLost(peripheral: MockPeripheral, reason: DisconnectionReason) {
                     connectionsLost += address
                 }
             },

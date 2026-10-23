@@ -47,6 +47,7 @@ import no.nordicsemi.kotlin.ble.client.mock.AddressType
 import no.nordicsemi.kotlin.ble.client.mock.BondResult
 import no.nordicsemi.kotlin.ble.client.mock.ConnectionResult
 import no.nordicsemi.kotlin.ble.client.mock.MockServerScope
+import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.client.mock.PrepareWriteResponse
@@ -104,54 +105,54 @@ internal class GattHandler : PeripheralSpecEventHandler {
     val discoveryRequests = mutableListOf<List<Uuid>>()
     var bondRequests = 0
 
-    override fun onConnectionRequest(phy: PrimaryPhy) = ConnectionResult.Accept
+    override fun onConnectionRequest(peripheral: MockPeripheral, phy: PrimaryPhy) = ConnectionResult.Accept
 
-    override fun onBondRequest(): BondResult {
+    override fun onBondRequest(peripheral: MockPeripheral): BondResult {
         bondRequests++
         return bondResult
     }
 
-    override fun onServiceDiscoveryRequest(uuids: List<Uuid>): ServiceDiscoveryResult {
+    override fun onServiceDiscoveryRequest(peripheral: MockPeripheral, uuids: List<Uuid>): ServiceDiscoveryResult {
         discoveryRequests += uuids
         return discoveryResult
     }
 
-    override fun onReadRequest(characteristic: MockRemoteCharacteristic): ReadResponse {
+    override fun onReadRequest(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic): ReadResponse {
         reads += characteristic.uuid
         return readHandler(characteristic)
     }
 
-    override fun onReadRequest(descriptor: MockRemoteDescriptor): ReadResponse {
+    override fun onReadRequest(peripheral: MockPeripheral, descriptor: MockRemoteDescriptor): ReadResponse {
         descriptorReads += descriptor.uuid
         return descriptorReadHandler(descriptor)
     }
 
-    override fun onWriteRequest(characteristic: MockRemoteCharacteristic, value: ByteArray): WriteResponse {
+    override fun onWriteRequest(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic, value: ByteArray): WriteResponse {
         writeRequests += value
         return writeHandler(characteristic, value)
     }
 
-    override fun onWriteCommand(characteristic: MockRemoteCharacteristic, value: ByteArray) {
+    override fun onWriteCommand(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic, value: ByteArray) {
         writeCommands += value
         commandHandler(characteristic, value)
     }
 
-    override fun onPrepareWriteRequest(characteristic: MockRemoteCharacteristic, value: ByteArray): PrepareWriteResponse {
+    override fun onPrepareWriteRequest(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic, value: ByteArray): PrepareWriteResponse {
         prepareWrites += value
         return prepareHandler(characteristic, value)
     }
 
-    override fun onWriteRequest(descriptor: MockRemoteDescriptor, value: ByteArray): WriteResponse {
+    override fun onWriteRequest(peripheral: MockPeripheral, descriptor: MockRemoteDescriptor, value: ByteArray): WriteResponse {
         descriptorWrites += descriptor.uuid to value
         return descriptorWriteHandler(descriptor, value)
     }
 
-    override fun onPrepareWriteRequest(descriptor: MockRemoteDescriptor, value: ByteArray): PrepareWriteResponse {
+    override fun onPrepareWriteRequest(peripheral: MockPeripheral, descriptor: MockRemoteDescriptor, value: ByteArray): PrepareWriteResponse {
         descriptorPrepareWrites += descriptor.uuid to value
         return descriptorPrepareHandler(descriptor, value)
     }
 
-    override fun onExecuteWriteRequest(execute: Boolean): WriteResponse {
+    override fun onExecuteWriteRequest(peripheral: MockPeripheral, execute: Boolean): WriteResponse {
         executeWrites += execute
         return executeHandler(execute)
     }
