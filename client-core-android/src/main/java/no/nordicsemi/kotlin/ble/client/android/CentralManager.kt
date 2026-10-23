@@ -188,6 +188,16 @@ interface CentralManager:
          *
          * A bonded peripheral uses auto connect only.
          *
+         * Android terminates the link when bonding fails or when the bond information is removed.
+         * Such a peripheral is not reconnected, and is reported as disconnected, even if it was
+         * connected with auto connect. This applies to a bond removed using
+         * [Peripheral.removeBond] as well. If the user removes the bond in system settings
+         * ("Forget") while the peripheral is connected, the library may learn about it only
+         * after the link was lost, and starts auto connect. A peripheral that uses an RPA cannot be
+         * matched without the bond information then: Android 13+ reports
+         * [UnsupportedAddress][ConnectionState.Disconnected.Reason.UnsupportedAddress], and older
+         * versions keep the peripheral in [Connecting][ConnectionState.Connecting] state.
+         *
          * In general, the first ever connection to a device should be direct and subsequent
          * connections to known devices should be invoked with this option.
          *
