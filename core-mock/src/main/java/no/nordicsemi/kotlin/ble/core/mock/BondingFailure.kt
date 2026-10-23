@@ -38,15 +38,27 @@ package no.nordicsemi.kotlin.ble.core.mock
  * A peripheral that terminates the link itself after a failed bonding can be simulated by calling
  * `PeripheralSpec.simulateDisconnection()`.
  *
+ * Note: Most phones report all the failures, except [REJECTED] on some, with the same reason
+ * (the library reports it as `AuthenticationFailed`), and the exact reason differs between
+ * Android versions. Use [REJECTED] to emulate a real refusal of the peripheral. The other failures
+ * allow testing how the app reacts to the other reasons, which may be reported by phones in the future.
+ *
  * [CANCELLED] and [WRONG_PIN] only make sense for pairing that requires user interaction.
+ * [AUTH_FAILED] is the same as [WRONG_PIN], but reads better when the simulated peripheral
+ * does not use a PIN.
  */
 enum class BondingFailure {
     /** The peripheral refused to pair, e.g. it does not support bonding. This is the default. */
     REJECTED,
     /** The user cancelled the pairing, e.g. by tapping Cancel on the pairing dialog. */
     CANCELLED,
-    /** The user entered a wrong PIN. */
+    /** The user entered a wrong PIN. It is reported in the same way as [AUTH_FAILED]. */
     WRONG_PIN,
+    /**
+     * The authentication failed, e.g. the keys did not match. It is reported in the same way
+     * as [WRONG_PIN], and can be used when the simulated peripheral does not use a PIN.
+     */
+    AUTH_FAILED,
     /** The pairing was not completed in time, e.g. the user ignored the pairing dialog. */
     TIMED_OUT,
 }

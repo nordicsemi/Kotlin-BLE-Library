@@ -484,6 +484,18 @@ class ConnectionBondingTest {
     }
 
     @Test
+    fun `bonding that failed authentication is reported like a wrong PIN`() = runTest {
+        assertEquals(
+            failedBondingReason(BondingFailure.WRONG_PIN),
+            failedBondingReason(BondingFailure.AUTH_FAILED),
+        )
+        assertEquals(
+            BondState.Reason.AuthenticationFailed,
+            failedBondingReason(BondingFailure.AUTH_FAILED),
+        )
+    }
+
+    @Test
     fun `bonding that timed out reports the reason`() = runTest {
         assertEquals(
             BondState.Reason.AuthenticationTimeout,

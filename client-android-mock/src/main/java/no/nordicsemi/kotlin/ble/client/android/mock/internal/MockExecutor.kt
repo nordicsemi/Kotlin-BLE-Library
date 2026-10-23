@@ -98,7 +98,8 @@ open class MockExecutor(
         is MockBondState.Reason.Failed -> when (failure) {
             BondingFailure.REJECTED -> BondState.Reason.AuthenticationRejected
             BondingFailure.CANCELLED -> BondState.Reason.AuthenticationCanceled
-            BondingFailure.WRONG_PIN -> BondState.Reason.AuthenticationFailed
+            BondingFailure.WRONG_PIN,
+            BondingFailure.AUTH_FAILED -> BondState.Reason.AuthenticationFailed
             BondingFailure.TIMED_OUT -> BondState.Reason.AuthenticationTimeout
         }
         MockBondState.Reason.Removed -> BondState.Reason.Removed
