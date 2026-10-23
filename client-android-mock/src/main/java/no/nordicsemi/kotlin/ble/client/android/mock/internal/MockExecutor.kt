@@ -147,7 +147,7 @@ open class MockExecutor(
 
     override suspend fun createBond(): Boolean {
         // The result is reported by the bond state. A rejected request ends with BondState.None.
-        peripheralSpec.simulateBonding()
+        peripheralSpec.simulateBondRequest()
         return true
     }
 

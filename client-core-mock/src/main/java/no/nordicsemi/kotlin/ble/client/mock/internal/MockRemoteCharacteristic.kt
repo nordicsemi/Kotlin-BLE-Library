@@ -134,9 +134,9 @@ class MockRemoteCharacteristic(
                         supervisionTimeout.toByteArray()
                     )
                 }
-                else -> eventHandler.onReadRequest(this@MockRemoteCharacteristic)
+                else -> eventHandler.onReadRequest(peripheralSpec, this@MockRemoteCharacteristic)
             }
-            else -> eventHandler.onReadRequest(this@MockRemoteCharacteristic)
+            else -> eventHandler.onReadRequest(peripheralSpec, this@MockRemoteCharacteristic)
         }
         when (result) {
             is ReadResponse.Success -> {
@@ -229,6 +229,7 @@ class MockRemoteCharacteristic(
                 when (useLongWrite || useReliableWrite) {
                     true -> {
                         val response = eventHandler.onPrepareWriteRequest(
+                            peripheralSpec,
                             this@MockRemoteCharacteristic,
                             truncatedData
                         )
@@ -243,7 +244,7 @@ class MockRemoteCharacteristic(
                                 // aborts all prepared writes.
                                 var status: OperationStatus = OperationStatus.Success
                                 if (!useReliableWrite) {
-                                    when (val response = eventHandler.onExecuteWriteRequest(match)) {
+                                    when (val response = eventHandler.onExecuteWriteRequest(peripheralSpec, match)) {
                                         is WriteResponse.Success -> { /* no-op */ }
                                         is WriteResponse.Failure -> status = response.status
                                     }
@@ -271,6 +272,7 @@ class MockRemoteCharacteristic(
 
                     false -> {
                         val result = eventHandler.onWriteRequest(
+                            peripheralSpec,
                             this@MockRemoteCharacteristic,
                             truncatedData
                         )
@@ -310,6 +312,7 @@ class MockRemoteCharacteristic(
                 // Notify the event handler about the write command.
                 // There is no response for this operation.
                 eventHandler.onWriteCommand(
+                    peripheralSpec,
                     this@MockRemoteCharacteristic,
                     truncatedData
                 )

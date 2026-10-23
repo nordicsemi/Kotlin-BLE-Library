@@ -220,6 +220,10 @@ sealed class PrepareWriteResponse {
  *
  * For example, a mock Blinky device can handle requests to turn on an LED or send notifications
  * when a button was clicked.
+ *
+ * Each callback receives the [MockPeripheral] the event is for, so that the handler can simulate
+ * the behavior of the peripheral, e.g. call [MockPeripheral.simulateDisconnection] when it rejects
+ * a bonding request, without keeping a reference to the peripheral.
  */
 interface PeripheralSpecEventHandler {
 
@@ -228,11 +232,12 @@ interface PeripheralSpecEventHandler {
      *
      * By default, the connection request is accepted.
      *
+     * @param peripheral The peripheral the event is for. It can be used to simulate its behavior.
      * @param phy The PHY used for connection.
      * @return The result of the connection request, by default [ConnectionResult.Accept].
      */
     // Note: This cannot be suspended! It can request MTU, bonding, PHY update, etc., but in a coroutine.
-    fun onConnectionRequest(phy: PrimaryPhy): ConnectionResult {
+    fun onConnectionRequest(peripheral: MockPeripheral, phy: PrimaryPhy): ConnectionResult {
         return ConnectionResult.Accept
     }
 
@@ -241,18 +246,20 @@ interface PeripheralSpecEventHandler {
      *
      * By default, the request is rejected, as if the peripheral did not support bonding.
      *
+     * @param peripheral The peripheral the event is for. It can be used to simulate its behavior.
      * @return The result of the bonding request, by default [BondResult.Reject].
      */
-    fun onBondRequest(): BondResult {
+    fun onBondRequest(peripheral: MockPeripheral): BondResult {
         return BondResult.Reject(BondingFailure.REJECTED)
     }
 
     /**
      * Called when the connection is lost.
      *
+     * @param peripheral The peripheral the event is for. It can be used to simulate its behavior.
      * @param reason The reason for the disconnection.
      */
-    fun onConnectionLost(reason: DisconnectionReason) {
+    fun onConnectionLost(peripheral: MockPeripheral, reason: DisconnectionReason) {
         // no-op
     }
 
@@ -262,8 +269,10 @@ interface PeripheralSpecEventHandler {
      * This method is called when user calls [PeripheralSpec.simulateReset].
      *
      * All existing connections will time out. [onConnectionLost] will NOT be called.
+     *
+     * @param peripheral The peripheral the event is for. It can be used to simulate its behavior.
      */
-    fun onReset() {
+    fun onReset(peripheral: MockPeripheral) {
         // no-op
     }
 
@@ -274,10 +283,11 @@ interface PeripheralSpecEventHandler {
      * whether the discovery should succeed or fail. The actual list of services is determined
      * by the [PeripheralSpec] definition.
      *
+     * @param peripheral The peripheral the event is for. It can be used to simulate its behavior.
      * @param uuids The list of service UUIDs requested by the client.
      * @return The result of the service discovery request, by default [ServiceDiscoveryResult.Success].
      */
-    fun onServiceDiscoveryRequest(uuids: List<Uuid>): ServiceDiscoveryResult {
+    fun onServiceDiscoveryRequest(peripheral: MockPeripheral, uuids: List<Uuid>): ServiceDiscoveryResult {
         return ServiceDiscoveryResult.Success
     }
 
@@ -307,12 +317,13 @@ interface PeripheralSpecEventHandler {
      *
      * Any exception other than [OperationFailedException] will be wrapped into [BluetoothException].
      *
+     * @param peripheral The peripheral the event is for. It can be used to simulate its behavior.
      * @param characteristic The characteristic that was read.
      * @return The response of the read operation. This emulates a response received from the
      * peripheral, and it will be delayed to the client by one or more connection interval.
      * @throws OperationFailedException in case of a client error (reported without a delay).
      */
-    fun onReadRequest(characteristic: MockRemoteCharacteristic): ReadResponse {
+    fun onReadRequest(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic): ReadResponse {
         return ReadResponse.Success(byteArrayOf())
     }
 
@@ -338,11 +349,12 @@ interface PeripheralSpecEventHandler {
      *
      * Any exception other than [OperationFailedException] will be wrapped into [BluetoothException].
      *
+     * @param peripheral The peripheral the event is for. It can be used to simulate its behavior.
      * @param characteristic The characteristic that was written.
      * @param value The value written to the characteristic.
      * @throws OperationFailedException in case of a client error (reported without a delay).
      */
-    fun onWriteCommand(characteristic: MockRemoteCharacteristic, value: ByteArray) {
+    fun onWriteCommand(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic, value: ByteArray) {
         // no-op
     }
 
@@ -371,6 +383,7 @@ interface PeripheralSpecEventHandler {
      *
      * Any exception other than [OperationFailedException] will be wrapped into [BluetoothException].
      *
+     * @param peripheral The peripheral the event is for. It can be used to simulate its behavior.
      * @param characteristic The characteristic to write to.
      * @param value The value written to the characteristic.
      * @return The response of the write operation. This emulates a response received from the peripheral,
@@ -378,7 +391,7 @@ interface PeripheralSpecEventHandler {
      * @throws OperationFailedException in case of a client error (reported without a delay).
      * @see onPrepareWriteRequest
      */
-    fun onWriteRequest(characteristic: MockRemoteCharacteristic, value: ByteArray): WriteResponse {
+    fun onWriteRequest(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic, value: ByteArray): WriteResponse {
         return WriteResponse.Success
     }
 
@@ -448,6 +461,7 @@ interface PeripheralSpecEventHandler {
      *
      * Any exception other than [OperationFailedException] will be wrapped into [BluetoothException].
      *
+     * @param peripheral The peripheral the event is for. It can be used to simulate its behavior.
      * @param characteristic The characteristic to write to.
      * @param value The part of the value to be written to the characteristic.
      * @return The response of the prepare write operation. This emulates a response received from
@@ -455,9 +469,9 @@ interface PeripheralSpecEventHandler {
      * @throws OperationFailedException in case of a client error (reported without a delay).
      * @see onExecuteWriteRequest
      */
-    fun onPrepareWriteRequest(characteristic: MockRemoteCharacteristic, value: ByteArray): PrepareWriteResponse =
+    fun onPrepareWriteRequest(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic, value: ByteArray): PrepareWriteResponse =
         // By default, call the regular write request handler to simplify implementations.
-        when (val response = onWriteRequest(characteristic, value)) {
+        when (val response = onWriteRequest(peripheral, characteristic, value)) {
             is WriteResponse.Success -> PrepareWriteResponse.Success(value)
             is WriteResponse.Failure -> PrepareWriteResponse.Failure(response.status)
         }
@@ -488,12 +502,13 @@ interface PeripheralSpecEventHandler {
      *
      * Any exception other than [OperationFailedException] will be wrapped into [BluetoothException].
      *
+     * @param peripheral The peripheral the event is for. It can be used to simulate its behavior.
      * @param descriptor The characteristic descriptor that was read.
      * @return The response of the read operation. This emulates a response received from the
      * peripheral, and it will be delayed to the client by one or more connection interval.
      * @throws OperationFailedException in case of a client error (reported without a delay).
      */
-    fun onReadRequest(descriptor: MockRemoteDescriptor): ReadResponse {
+    fun onReadRequest(peripheral: MockPeripheral, descriptor: MockRemoteDescriptor): ReadResponse {
         return ReadResponse.Success(byteArrayOf())
     }
 
@@ -536,13 +551,14 @@ interface PeripheralSpecEventHandler {
      *
      * Any exception other than [OperationFailedException] will be wrapped into [BluetoothException].
      *
+     * @param peripheral The peripheral the event is for. It can be used to simulate its behavior.
      * @param descriptor The characteristic descriptor to write to.
      * @param value The value written to the characteristic descriptor.
      * @return The response of the write operation. This emulates a response received from the peripheral,
      * and it will be delayed to the client by one connection interval.
      * @throws OperationFailedException in case of a client error (reported without a delay).
      */
-    fun onWriteRequest(descriptor: MockRemoteDescriptor, value: ByteArray): WriteResponse {
+    fun onWriteRequest(peripheral: MockPeripheral, descriptor: MockRemoteDescriptor, value: ByteArray): WriteResponse {
         return WriteResponse.Success
     }
 
@@ -597,6 +613,7 @@ interface PeripheralSpecEventHandler {
      *
      * Any exception other than [OperationFailedException] will be wrapped into [BluetoothException].
      *
+     * @param peripheral The peripheral the event is for. It can be used to simulate its behavior.
      * @param descriptor The characteristic descriptor to write to.
      * @param value The part of the value to be written to the characteristic descriptor.
      * @return The response of the prepare write operation. This emulates a response received from
@@ -604,9 +621,9 @@ interface PeripheralSpecEventHandler {
      * @throws OperationFailedException in case of a client error (reported without a delay).
      * @see onExecuteWriteRequest
      */
-    fun onPrepareWriteRequest(descriptor: MockRemoteDescriptor, value: ByteArray): PrepareWriteResponse =
+    fun onPrepareWriteRequest(peripheral: MockPeripheral, descriptor: MockRemoteDescriptor, value: ByteArray): PrepareWriteResponse =
         // By default, call the regular write request handler to simplify implementations.
-        when (val response = onWriteRequest(descriptor, value)) {
+        when (val response = onWriteRequest(peripheral, descriptor, value)) {
             is WriteResponse.Success -> PrepareWriteResponse.Success(value)
             is WriteResponse.Failure -> PrepareWriteResponse.Failure(response.status)
         }
@@ -618,13 +635,14 @@ interface PeripheralSpecEventHandler {
      * all previously prepared writes should be committed and applied atomically in the order they
      * were received. When `execute` is `false`, all previously prepared writes should be discarded.
      *
+     * @param peripheral The peripheral the event is for. It can be used to simulate its behavior.
      * @param execute `true` to commit all previously prepared writes, `false` to discard them.
      * @return The response of the execute write operation. This emulates a response received from
      * the peripheral, and it will be delayed to the client by one connection interval.
      * @throws OperationFailedException in case of a client error (reported without a delay).
      * @see onPrepareWriteRequest
      */
-    fun onExecuteWriteRequest(execute: Boolean): WriteResponse {
+    fun onExecuteWriteRequest(peripheral: MockPeripheral, execute: Boolean): WriteResponse {
         return WriteResponse.Success
     }
 

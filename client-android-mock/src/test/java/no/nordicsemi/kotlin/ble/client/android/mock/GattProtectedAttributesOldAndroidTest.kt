@@ -171,7 +171,7 @@ class GattProtectedAttributesOldAndroidTest {
             var attempts = 0
             handler.readHandler = {
                 if (attempts++ == 0) {
-                    fixture.spec.simulateBonding()
+                    fixture.spec.simulateBondRequest()
                     ReadResponse.Failure(OperationStatus.InsufficientAuthentication)
                 } else {
                     ReadResponse.Success(byteArrayOf(0x01))
@@ -200,7 +200,7 @@ class GattProtectedAttributesOldAndroidTest {
             lateinit var fixture: GattFixture
             val handler = GattHandler()
             handler.readHandler = {
-                fixture.spec.simulateBonding()
+                fixture.spec.simulateBondRequest()
                 ReadResponse.Success(byteArrayOf(0x01))
             }
             fixture = gattSingleCharacteristic(
@@ -224,7 +224,7 @@ class GattProtectedAttributesOldAndroidTest {
             lateinit var fixture: GattFixture
             val handler = GattHandler().apply { bondResult = BondResult.Reject() }
             handler.readHandler = {
-                fixture.spec.simulateBonding()
+                fixture.spec.simulateBondRequest()
                 ReadResponse.Failure(OperationStatus.InsufficientAuthentication)
             }
             fixture = gattSingleCharacteristic(
