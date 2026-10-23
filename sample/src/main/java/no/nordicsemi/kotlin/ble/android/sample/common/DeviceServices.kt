@@ -859,11 +859,12 @@ private val genericPresetValues = listOf(
 )
 
 private val smpPresetValues = listOf(
-    PresetValue("Echo (Hello)",  "0A00000A00000000A161646648656C6C6F21"),
-    PresetValue("McuMgr Params", "0800000100000006A0"),
-    PresetValue("Memory Pools",  "0800000100000003A0"),
-    PresetValue("Reset",         "0A00000100000005A0"),
-    PresetValue("Image List",    "0800000100010000A0"),
+    PresetValue("Echo (Hello)",       "0A00000A00000000A161646648656C6C6F21"),
+    PresetValue("McuMgr Params",      "0800000100000006A0"),
+    PresetValue("Memory Pools",       "0800000100000003A0"),
+    PresetValue("Reset",              "0A00000100000005A0"),
+    PresetValue("Erase App Settings", "0A000001003F0000A0"),
+    PresetValue("Image List",         "0800000100010000A0"),
 )
 
 private val smpUuid = Uuid.parse("da2e7828-fbce-4e01-ae9e-261174997c48")
