@@ -86,6 +86,9 @@ import android.bluetooth.le.ScanSettings as NativeScanSettings
 private const val EXTRA_UNBOND_REASON = "android.bluetooth.device.extra.REASON"
 private const val UNBOND_REASON_UNKNOWN = 0
 
+/** The number of bond and encryption state broadcasts that can wait to be processed. */
+private const val BROADCAST_BUFFER_CAPACITY = 32
+
 /**
  * A native implementation of [CentralManager] for Android.
  *
@@ -102,7 +105,9 @@ internal class NativeCentralManagerImpl(
     /** A change of the bond state of the device with the given [address]. */
     private class BondEvent(val address: String, val state: BondState)
 
-    private val _bondState = MutableSharedFlow<BondEvent>(extraBufferCapacity = 1)
+    // The system may send a few broadcasts within a millisecond, e.g. Bonding and None when
+    // bonding fails immediately. None of them can be lost, as the last one is the current state.
+    private val _bondState = MutableSharedFlow<BondEvent>(extraBufferCapacity = BROADCAST_BUFFER_CAPACITY)
 
     private val bondStateBroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -131,14 +136,16 @@ internal class NativeCentralManagerImpl(
                 "Bond state of $device changed: $previousBondState -> $systemBondState" +
                         if (bondState != systemBondState) ", reported as $bondState" else ""
             }
-            _bondState.tryEmit(BondEvent(device.address, bondState))
+            if (!_bondState.tryEmit(BondEvent(device.address, bondState))) {
+                logger?.warn(Layer.SMP) { "Bond state change of $device was lost" }
+            }
         }
     }
 
     /** A change of the state of the encryption of the link with the device with the given [address]. */
     private class EncryptionEvent(val address: String, val state: EncryptionState)
 
-    private val _encryptionState = MutableSharedFlow<EncryptionEvent>(extraBufferCapacity = 1)
+    private val _encryptionState = MutableSharedFlow<EncryptionEvent>(extraBufferCapacity = BROADCAST_BUFFER_CAPACITY)
 
     /**
      * Whether the system is Android 16 QPR2 (API 36.1) or newer.
@@ -174,7 +181,9 @@ internal class NativeCentralManagerImpl(
                 else -> return
             }
             logger?.info(Layer.SMP) { "Encryption state of $device changed: $state" }
-            _encryptionState.tryEmit(EncryptionEvent(device.address, state))
+            if (!_encryptionState.tryEmit(EncryptionEvent(device.address, state))) {
+                logger?.warn(Layer.SMP) { "Encryption state change of $device was lost" }
+            }
         }
     }
 
