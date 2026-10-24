@@ -27,22 +27,22 @@ Current status:
        - [x] Using _AutoConnect_ feature
        - [x] Service discovery and subscribing to services changes
        - [x] Bonding and observing bond state
-          - [ ] [Advanced encryption events added in Android 16](https://developer.android.com/reference/android/bluetooth/BluetoothDevice#ACTION_ENCRYPTION_CHANGE)
+          - [x] [Advanced encryption events added in Android 16](https://developer.android.com/reference/android/bluetooth/BluetoothDevice#ACTION_ENCRYPTION_CHANGE)
     - [x] Basic GATT operations
        - [x] Reading / writing characteristics
        - [x] Enabling notifications / indications
        - [x] Subscribing to value changes
        - [x] Requesting highest MTU
-    - [ ] Advanced GATT operations
+    - [x] Advanced GATT operations
        - [x] Requesting PHY
        - [x] Subscribing to PHY changes
        - [x] Requesting connection priority
        - [x] Subscribing to connection parameter changes
-       - [ ] Reliable write
+       - [x] Reliable write
     - [x] Mock implementation
        - [x] Basic GATT operations
        - [x] Advanced GATT operations
-       - [ ] Bonding
+       - [x] Bonding
 - [ ] Peripheral role
     - [x] Advertising
     - [ ] Setting up GATT server
