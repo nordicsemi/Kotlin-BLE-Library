@@ -1,0 +1,79 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. 2.0.0-beta08'
+        required: true
+        type: string
+# Only one release at a time.
+concurrency:
+  group: release
+  cancel-in-progress: false
+permissions:
+  contents: write # Push the documentation and the tag.
+  actions: write # Start the "Deploy to Nexus" workflow.
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # The version used by the Nordic Gradle plugins for the documentation, and the libraries.
+      RELEASE_VERSION: ${{ inputs.version }}
+      BRANCH: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check the version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref_type }}" != "branch" ]]; then
+            echo "::error::Run this workflow on a branch: choose the branch in \"Use workflow from\"."
+            exit 1
+          fi
+          if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::'$RELEASE_VERSION' is not a valid version, e.g. 2.0.0 or 2.0.0-beta08."
+            exit 1
+          fi
+          if gh api "repos/${{ github.repository }}/git/ref/tags/$RELEASE_VERSION" > /dev/null 2>&1; then
+            echo "::error::The tag $RELEASE_VERSION already exists."
+            exit 1
+          fi
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: 'jetbrains'
+          java-version: '21'
+          cache: 'gradle'
+      # The merge commit of a pull request was not tested by the "Unit tests" workflow, so test it.
+      - name: Run unit tests
+        shell: bash
+        run: ./gradlew test jvmTest --continue --stacktrace
+      # The version is taken from RELEASE_VERSION, there is no need to create a tag first.
+      - name: Generate documentation
+        shell: bash
+        run: ./gradlew dokkaGenerate --stacktrace
+      - name: Commit the documentation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs
+          git commit -m "Docs for $RELEASE_VERSION"
+          git push origin "HEAD:$BRANCH"
+      # The tag points at the commit with the documentation.
+      - name: Create the tag
+        shell: bash
+        run: |
+          git tag "$RELEASE_VERSION"
+          git push origin "refs/tags/$RELEASE_VERSION"
+      # A tag pushed with the default token does not trigger other workflows, so start the deployment.
+      - name: Deploy to Nexus
+        shell: bash
+        run: gh workflow run deploy-to-nexus.yml --ref "$RELEASE_VERSION"
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/'
+          if-no-files-found: ignore
