@@ -21,7 +21,6 @@ class ScanFiltersBuilderTest {
     private val serviceA = Uuid.fromShortUuid(0x180F)
     private val serviceB = Uuid.fromShortUuid(0x180A)
     private val serviceC = Uuid.fromShortUuid(0x180D)
-    private val serviceD = Uuid.fromShortUuid(0x1800)
 
     private fun filters(block: ConjunctionFilter.() -> Unit): List<ScanFilter>? =
         ConjunctionFilter().apply(block).filters
@@ -272,7 +271,7 @@ class ScanFiltersBuilderTest {
     fun `merging does not modify the original filters`() {
         val first = ScanFilter().apply { name = "first" }
         val second = ScanFilter().apply { address = "01:23:45:67:89:AB" }
-        first.merged(second)
+        val _ = first.merged(second)
         assertNull(first.address)
         assertNull(second.name)
     }

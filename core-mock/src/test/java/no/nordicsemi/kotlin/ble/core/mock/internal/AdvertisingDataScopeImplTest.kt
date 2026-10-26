@@ -1,6 +1,7 @@
 package no.nordicsemi.kotlin.ble.core.mock.internal
 
 import no.nordicsemi.kotlin.ble.core.AdvertisingDataFlag
+import no.nordicsemi.kotlin.ble.core.mock.AdvertisingDataScope
 import no.nordicsemi.kotlin.ble.core.util.fromShortUuid
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -13,7 +14,7 @@ import kotlin.uuid.Uuid
 
 class AdvertisingDataScopeImplTest {
 
-    private fun scope(txPowerLevel: Int = -7, block: AdvertisingDataScopeImpl.() -> Unit) =
+    private fun scope(txPowerLevel: Int = -7, block: AdvertisingDataScope.() -> Unit) =
         AdvertisingDataScopeImpl(txPowerLevel).apply(block)
 
     @Test
@@ -125,8 +126,8 @@ class AdvertisingDataScopeImplTest {
 
     @Test
     fun `manufacturer data company ID boundaries are accepted`() {
-        scope { ManufacturerData(0x0000, byteArrayOf(1)) }
-        scope { ManufacturerData(0xFFFF, byteArrayOf(1)) }
+        val _ = scope { ManufacturerData(0x0000, byteArrayOf(1)) }
+        val _ = scope { ManufacturerData(0xFFFF, byteArrayOf(1)) }
     }
 
     @Test

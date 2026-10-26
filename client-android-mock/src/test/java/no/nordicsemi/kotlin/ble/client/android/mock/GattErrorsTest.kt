@@ -268,7 +268,7 @@ class GattErrorsTest {
             val fixture = readWriteFixture(handler)
             val characteristic = fixture.characteristic()
 
-            val job = launch { characteristic.read() }
+            val job = launch { val _ = characteristic.read() }
             runCurrent()
             job.cancelAndJoin()
 
@@ -348,7 +348,7 @@ class GattErrorsTest {
             val fixture = readWriteFixture(handler)
             val characteristic = fixture.characteristic()
             val before = testScheduler.currentTime
-            characteristic.read()
+            val _ = characteristic.read()
             val readDuration = testScheduler.currentTime - before
             events.clear()
 

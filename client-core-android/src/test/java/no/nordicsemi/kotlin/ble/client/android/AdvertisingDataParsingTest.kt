@@ -37,8 +37,8 @@ class AdvertisingDataParsingTest {
 
     @Test
     fun `data shorter than the smallest AD structure does not crash`() {
-        AdvertisingData(bytes(0x02))
-        AdvertisingData(bytes(0x02, 0x01))
+        val _ = AdvertisingData(bytes(0x02))
+        val _ = AdvertisingData(bytes(0x02, 0x01))
     }
 
     @Test

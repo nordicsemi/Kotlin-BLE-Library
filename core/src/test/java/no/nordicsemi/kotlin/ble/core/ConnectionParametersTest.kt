@@ -30,8 +30,8 @@ class ConnectionParametersTest {
 
     @Test
     fun `connection interval boundaries are accepted`() {
-        ConnectionParameters.Specified(6, 0, 400)
-        ConnectionParameters.Specified(3200, 0, 3200)
+        val _ = ConnectionParameters.Specified(6, 0, 400)
+        val _ = ConnectionParameters.Specified(3200, 0, 3200)
     }
 
     @Test
@@ -46,8 +46,8 @@ class ConnectionParametersTest {
 
     @Test
     fun `latency boundaries are accepted`() {
-        ConnectionParameters.Specified(24, 0, 400)
-        ConnectionParameters.Specified(24, 499, 400)
+        val _ = ConnectionParameters.Specified(24, 0, 400)
+        val _ = ConnectionParameters.Specified(24, 499, 400)
     }
 
     @Test
@@ -62,8 +62,8 @@ class ConnectionParametersTest {
 
     @Test
     fun `supervision timeout boundaries are accepted`() {
-        ConnectionParameters.Specified(24, 0, 10)
-        ConnectionParameters.Specified(24, 0, 3200)
+        val _ = ConnectionParameters.Specified(24, 0, 10)
+        val _ = ConnectionParameters.Specified(24, 0, 3200)
     }
 
     @Test

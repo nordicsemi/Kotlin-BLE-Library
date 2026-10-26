@@ -32,7 +32,6 @@
 package no.nordicsemi.kotlin.ble.client.android.mock
 
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
@@ -80,14 +79,13 @@ class GattSubscriptionTest {
     private suspend fun TestScope.collect(
         characteristic: RemoteCharacteristic,
         values: MutableList<ByteArray>,
-    ): Job {
+    ) {
         val enabled = CompletableDeferred<Unit>()
-        val job = characteristic
+        characteristic
             .subscribe { enabled.complete(Unit) }
             .onEach { values += it }
             .launchIn(backgroundScope)
         enabled.await()
-        return job
     }
 
     private fun lastCccdWrite(handler: GattHandler) =
@@ -287,7 +285,7 @@ class GattSubscriptionTest {
             val fixture = notifyingFixture(handler = handler)
             val characteristic = fixture.characteristic()
 
-            characteristic.subscribe()
+            val _ = characteristic.subscribe()
             gattSettle()
 
             assertFalse(characteristic.isNotifying.value)

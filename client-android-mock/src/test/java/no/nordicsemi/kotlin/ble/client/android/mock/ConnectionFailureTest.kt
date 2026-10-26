@@ -656,7 +656,7 @@ class ConnectionFailureTest {
         val otherManager = newManager(spec)
         val foreignPeripheral = checkNotNull(otherManager.getPeripheralById(ADDRESS))
         // Make the first manager know the device as well.
-        manager.getPeripheralById(ADDRESS)
+        val _ = manager.getPeripheralById(ADDRESS)
 
         assertFailsWith<IllegalArgumentException> {
             manager.connect(foreignPeripheral)

@@ -630,7 +630,7 @@ class GattReadWriteTest {
             }
             val (first, second) = fixture.discover().single().characteristics
             val before = testScheduler.currentTime
-            first.read()
+            val _ = first.read()
             val single = testScheduler.currentTime - before
 
             val start = testScheduler.currentTime

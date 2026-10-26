@@ -3,6 +3,7 @@ package no.nordicsemi.kotlin.ble.core
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
@@ -43,9 +44,9 @@ class OperationStatusTest {
         assertEquals(133, OperationStatus.GattError.code)
         assertEquals(0x8F, OperationStatus.ConnectionCongested.code)
         assertEquals(0x93, OperationStatus.ConnectionTimeout.code)
-        assertTrue(OperationStatus.GattError is OperationStatus.ApplicationError)
-        assertTrue(OperationStatus.ConnectionCongested is OperationStatus.ApplicationError)
-        assertTrue(OperationStatus.ConnectionTimeout is OperationStatus.ApplicationError)
+        assertIs<OperationStatus.ApplicationError>(OperationStatus.GattError)
+        assertIs<OperationStatus.ApplicationError>(OperationStatus.ConnectionCongested)
+        assertIs<OperationStatus.ApplicationError>(OperationStatus.ConnectionTimeout)
     }
 
     @Test

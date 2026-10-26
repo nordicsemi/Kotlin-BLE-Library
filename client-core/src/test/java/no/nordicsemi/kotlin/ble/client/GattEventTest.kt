@@ -7,6 +7,7 @@ import no.nordicsemi.kotlin.ble.core.PhyInUse
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class GattEventTest {
@@ -65,8 +66,8 @@ class GattEventTest {
 
     @Test
     fun `service discovery results are service discovery completion events`() {
-        assertTrue(ServicesDiscovered(emptyList()) is ServiceDiscoveryCompleted)
-        assertTrue(ServiceDiscoveryFailed(RemoteServices.Failed.Reason.InternalError) is ServiceDiscoveryCompleted)
+        assertIs<ServiceDiscoveryCompleted>(ServicesDiscovered(emptyList()))
+        assertIs<ServiceDiscoveryCompleted>(ServiceDiscoveryFailed(RemoteServices.Failed.Reason.InternalError))
     }
 
     @Test

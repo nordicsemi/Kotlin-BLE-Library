@@ -119,7 +119,7 @@ class ConnectionPhyTest {
         val peripheral = connect(spec(supports2M = true))
         val start = testScheduler.currentTime
 
-        peripheral.setPreferredPhy(Phy.PHY_LE_2M)
+        val _ = peripheral.setPreferredPhy(Phy.PHY_LE_2M)
 
         // The Central allows a minimum of 6 connection events before the instant.
         // The connection interval of 25 units is 31 ms.
@@ -183,7 +183,7 @@ class ConnectionPhyTest {
     @Test
     fun `phy can be changed back to 1M`() = runTest {
         val peripheral = connect()
-        peripheral.setPreferredPhy(Phy.PHY_LE_2M)
+        val _ = peripheral.setPreferredPhy(Phy.PHY_LE_2M)
 
         val phy = peripheral.setPreferredPhy(Phy.PHY_LE_1M)
         runCurrent()
@@ -199,7 +199,7 @@ class ConnectionPhyTest {
             .apply { simulatePeripherals(listOf(spec)) }
         val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
         manager.connect(peripheral)
-        peripheral.setPreferredPhy(Phy.PHY_LE_2M)
+        val _ = peripheral.setPreferredPhy(Phy.PHY_LE_2M)
         peripheral.disconnect()
 
         manager.connect(peripheral)

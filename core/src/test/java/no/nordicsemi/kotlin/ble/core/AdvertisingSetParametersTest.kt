@@ -29,7 +29,7 @@ class AdvertisingSetParametersTest {
     @Test
     fun `advertising interval presets are within the allowed range`() {
         listOf(AdvertisingInterval.LOW, AdvertisingInterval.MEDIUM, AdvertisingInterval.HIGH).forEach {
-            LegacyAdvertisingSetParameters(connectable = true, interval = it)
+            val _ = LegacyAdvertisingSetParameters(connectable = true, interval = it)
         }
     }
 
@@ -39,7 +39,7 @@ class AdvertisingSetParametersTest {
         assertTrue(TxPowerLevel.LOW < TxPowerLevel.MEDIUM)
         assertTrue(TxPowerLevel.MEDIUM < TxPowerLevel.HIGH)
         listOf(TxPowerLevel.ULTRA_LOW, TxPowerLevel.LOW, TxPowerLevel.MEDIUM, TxPowerLevel.HIGH).forEach {
-            LegacyAdvertisingSetParameters(connectable = true, txPowerLevel = it)
+            val _ = LegacyAdvertisingSetParameters(connectable = true, txPowerLevel = it)
         }
     }
 
@@ -47,8 +47,8 @@ class AdvertisingSetParametersTest {
 
     @Test
     fun `interval boundaries of 20 ms and 10_24 s are accepted`() {
-        LegacyAdvertisingSetParameters(connectable = true, interval = 20.milliseconds)
-        LegacyAdvertisingSetParameters(connectable = true, interval = 10240.milliseconds)
+        val _ = LegacyAdvertisingSetParameters(connectable = true, interval = 20.milliseconds)
+        val _ = LegacyAdvertisingSetParameters(connectable = true, interval = 10240.milliseconds)
     }
 
     @Test
@@ -79,8 +79,8 @@ class AdvertisingSetParametersTest {
 
     @Test
     fun `TX power boundaries of -127 and 10 dBm are accepted`() {
-        LegacyAdvertisingSetParameters(connectable = true, txPowerLevel = -127)
-        LegacyAdvertisingSetParameters(connectable = true, txPowerLevel = 10)
+        val _ = LegacyAdvertisingSetParameters(connectable = true, txPowerLevel = -127)
+        val _ = LegacyAdvertisingSetParameters(connectable = true, txPowerLevel = 10)
     }
 
     @Test
@@ -149,7 +149,7 @@ class AdvertisingSetParametersTest {
     @Test
     fun `1M 2M and Coded PHYs can be used as secondary PHY`() {
         listOf(Phy.PHY_LE_1M, Phy.PHY_LE_2M, Phy.PHY_LE_CODED).forEach {
-            Bluetooth5AdvertisingSetParameters(connectable = true, secondaryPhy = it)
+            val _ = Bluetooth5AdvertisingSetParameters(connectable = true, secondaryPhy = it)
         }
     }
 

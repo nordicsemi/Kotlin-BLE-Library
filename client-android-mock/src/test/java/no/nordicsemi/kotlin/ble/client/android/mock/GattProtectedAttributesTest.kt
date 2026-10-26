@@ -92,8 +92,8 @@ class GattProtectedAttributesTest {
             )
             val characteristic = fixture.characteristic()
 
-            characteristic.read()
-            characteristic.read()
+            val _ = characteristic.read()
+            val _ = characteristic.read()
 
             assertEquals(1, handler.bondRequests)
             assertEquals(2, handler.reads.size)
@@ -106,7 +106,7 @@ class GattProtectedAttributesTest {
             val handler = GattHandler()
             val fixture = gattSingleCharacteristic(handler, properties = readable, permissions = setOf(Permission.READ))
 
-            fixture.characteristic().read()
+            val _ = fixture.characteristic().read()
 
             assertEquals(0, handler.bondRequests)
             assertIs<BondState.None>(fixture.peripheral.bondState.value)
@@ -217,7 +217,7 @@ class GattProtectedAttributesTest {
                 permissions = setOf(Permission.READ_ENCRYPTED),
             )
 
-            fixture.characteristic().read()
+            val _ = fixture.characteristic().read()
 
             assertEquals(listOf(GATT_ADDRESS), fixture.manager.getBondedPeripherals().map { it.address })
         }
