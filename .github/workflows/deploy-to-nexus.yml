@@ -32,7 +32,7 @@ jobs:
           OSSR_PASSWORD: ${{ secrets.OSSR_PASSWORD }}
           SONATYPE_STAGING_PROFILE_ID: ${{ secrets.SONATYPE_STAGING_PROFILE_ID }}
         # The script generates sec.gpg file that is required by gradle/publish-module.gradle
-        # and runs the Gradle tasks (the same as the deployNexus lane in fastlane/Fastfile).
+        # and runs the Gradle tasks.
         run: |
           java --version
           echo "${{ secrets.GPG_FILE }}" > sec.gpg.asc
