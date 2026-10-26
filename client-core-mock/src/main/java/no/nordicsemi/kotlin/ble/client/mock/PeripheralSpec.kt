@@ -2140,7 +2140,7 @@ class PeripheralSpec<ID: Any> private constructor(
          *
          * Bonded devices are automatically allowed for retrieval.
          */
-        fun allowForRetrieval(): Builder<ID> = apply {
+        fun allowForRetrieval() {
             isKnown = true
         }
 
