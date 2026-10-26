@@ -8,15 +8,22 @@ jobs:
   deployToNexus:
     runs-on: ubuntu-latest
     steps:
+      # The version is the name of the tag, so a branch can't be published by mistake.
+      - name: Check the ref
+        if: github.ref_type != 'tag'
+        shell: bash
+        run: |
+          echo "::error::Run this workflow on a tag: choose the tag in \"Use workflow from\"."
+          exit 1
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
       - uses: actions/setup-java@v6
         with:
           distribution: 'jetbrains'
           java-version: '21'
       - shell: bash
         env:
+          # The version of the release, used by the Nordic Gradle plugins.
+          RELEASE_VERSION: ${{ github.ref_name }}
           # The following env variables are used by gradle/publish-module.gradle
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_PASSWORD: ${{ secrets.GPG_PASSWORD }}
