@@ -7,7 +7,7 @@ on:
         required: true
         type: string
       dry-run:
-        description: 'Dry run: test, generate the documentation and build the libraries, but do not push, tag or publish anything'
+        description: 'Dry run'
         required: false
         type: boolean
         default: false
@@ -29,7 +29,7 @@ env:
 jobs:
   check:
     name: Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     env:
       GH_TOKEN: ${{ github.token }}
@@ -57,7 +57,7 @@ jobs:
   test:
     name: Test
     needs: check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
@@ -81,7 +81,7 @@ jobs:
   docs:
     name: Docs
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
       contents: write # Push the documentation.
@@ -118,7 +118,7 @@ jobs:
   tag:
     name: Tag
     needs: docs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       contents: write # Push the tag.
@@ -139,7 +139,7 @@ jobs:
   publish:
     name: Publish
     needs: tag
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 45
     steps:
       # A dry run does not create the tag, so it builds the commit that was tested.

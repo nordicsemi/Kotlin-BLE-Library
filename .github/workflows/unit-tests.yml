@@ -10,7 +10,7 @@ permissions:
   contents: read
 jobs:
   unitTests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
       # The tests do not need the git history. Without a tag the version is 0.0.0.
