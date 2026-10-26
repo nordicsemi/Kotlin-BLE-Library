@@ -6,6 +6,11 @@ on:
         description: 'Version to release, e.g. 2.0.0-beta08'
         required: true
         type: string
+      dry-run:
+        description: 'Dry run: test, generate the documentation and build the libraries, but do not push, tag or publish anything'
+        required: false
+        type: boolean
+        default: false
 # Only one release at a time.
 concurrency:
   group: release
@@ -17,6 +22,8 @@ env:
   RELEASE_VERSION: ${{ inputs.version }}
   # The branch to release.
   BRANCH: ${{ github.ref_name }}
+  # When true, nothing is pushed, tagged or published.
+  DRY_RUN: ${{ inputs.dry-run }}
 # The release is made in stages. Each one depends on the previous one, so the graph shows where
 # it failed. After fixing the problem, use "Re-run failed jobs" to continue from that stage.
 jobs:
@@ -38,8 +45,13 @@ jobs:
             exit 1
           fi
           if gh api "repos/${{ github.repository }}/git/ref/tags/$RELEASE_VERSION" > /dev/null 2>&1; then
-            echo "::error::The tag $RELEASE_VERSION already exists."
-            exit 1
+            # A dry run does not create the tag, so it may be run for a version that was released.
+            if [[ "$DRY_RUN" == "true" ]]; then
+              echo "::warning::The tag $RELEASE_VERSION already exists, it is ignored in a dry run."
+            else
+              echo "::error::The tag $RELEASE_VERSION already exists."
+              exit 1
+            fi
           fi
 
   test:
@@ -89,6 +101,7 @@ jobs:
         run: ./gradlew dokkaGenerate --stacktrace
       - name: Commit the documentation
         id: commit
+        if: ${{ !inputs.dry-run }}
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -97,6 +110,10 @@ jobs:
           git commit -m "Docs for $RELEASE_VERSION"
           git push origin "HEAD:$BRANCH"
           echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Show the changes in the documentation (dry run)
+        if: ${{ inputs.dry-run }}
+        shell: bash
+        run: git status --short docs | wc -l
 
   tag:
     name: Tag
@@ -106,14 +123,18 @@ jobs:
     permissions:
       contents: write # Push the tag.
     steps:
-      # The tag points at the commit with the documentation.
+      # The tag points at the commit with the documentation. A dry run does not commit it.
       - uses: actions/checkout@v7
         with:
-          ref: ${{ needs.docs.outputs.commit }}
+          ref: ${{ needs.docs.outputs.commit || github.sha }}
       - shell: bash
         run: |
           git tag "$RELEASE_VERSION"
-          git push origin "refs/tags/$RELEASE_VERSION"
+          if [[ "$DRY_RUN" == "true" ]]; then
+            echo "Dry run: the tag $RELEASE_VERSION is not pushed."
+          else
+            git push origin "refs/tags/$RELEASE_VERSION"
+          fi
 
   publish:
     name: Publish
@@ -121,9 +142,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      # A dry run does not create the tag, so it builds the commit that was tested.
       - uses: actions/checkout@v7
         with:
-          ref: refs/tags/${{ inputs.version }}
+          ref: ${{ inputs.dry-run && github.sha || format('refs/tags/{0}', inputs.version) }}
       - uses: actions/setup-java@v6
         with:
           distribution: 'jetbrains'
@@ -138,10 +160,15 @@ jobs:
           OSSR_PASSWORD: ${{ secrets.OSSR_PASSWORD }}
           SONATYPE_STAGING_PROFILE_ID: ${{ secrets.SONATYPE_STAGING_PROFILE_ID }}
         # The script generates sec.gpg file that is required by gradle/publish-module.gradle
-        # and runs the Gradle tasks.
+        # and runs the Gradle tasks. A dry run builds and signs the libraries into the local
+        # Maven repository of the runner, which checks the signing, but publishes nothing.
         run: |
           java --version
           echo "${{ secrets.GPG_FILE }}" > sec.gpg.asc
           gpg -d --passphrase "${{ secrets.GPG_FILE_PSWD }}" --batch sec.gpg.asc > sec.gpg
-          ./gradlew publish
-          ./gradlew releaseStagingRepositories
+          if [[ "$DRY_RUN" == "true" ]]; then
+            ./gradlew publishToMavenLocal
+          else
+            ./gradlew publish
+            ./gradlew releaseStagingRepositories
+          fi

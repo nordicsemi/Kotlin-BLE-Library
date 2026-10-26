@@ -10,7 +10,8 @@ and starts the deployment to Maven Central. The version of the release is the na
    the **Unit tests** workflow passed on the last pull request.
 2. Open **Actions → Release → Run workflow**.
 3. Choose the release branch in **Use workflow from**, e.g. `version/2.0`.
-4. Enter the **version**, e.g. `2.0.0-beta08`, and run the workflow.
+4. Enter the **version**, e.g. `2.0.0-beta08`, and run the workflow. To try it first, tick
+   **Dry run** (see [Dry run](#dry-run)).
 
 The workflow runs in five stages. Each one is a job that depends on the previous one, so the graph of
 the run shows which stage failed:
@@ -35,6 +36,22 @@ After the workflow finished:
 * the artifacts appear on [Maven Central](https://central.sonatype.com/search?q=no.nordicsemi.kotlin.ble)
   within a few minutes to an hour,
 * create a release on GitHub from the existing tag, with the release notes.
+
+## Dry run
+
+With **Dry run** ticked the workflow goes through all the five stages, but nothing leaves the runner:
+
+1. **Check** passes also for a version that was already released (it only warns that the tag exists).
+2. **Test** runs the unit tests.
+3. **Docs** generates the documentation, and prints the number of changed files in `docs`. It does not
+   commit or push them.
+4. **Tag** creates the tag locally, on the runner, and does not push it.
+5. **Publish** builds and signs the libraries into the local Maven repository of the runner
+   (`./gradlew publishToMavenLocal`). This checks the signing key and the secrets, but does not
+   upload anything, and the staging repository is not touched.
+
+Use it to check a change of the release workflow, or the secrets, before a real release. The default
+is not a dry run.
 
 ## How the version is set
 
