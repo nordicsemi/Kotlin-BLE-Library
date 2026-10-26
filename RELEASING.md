@@ -15,15 +15,15 @@ and starts the deployment to Maven Central. The version of the release is the na
 The workflow runs in five stages. Each one is a job that depends on the previous one, so the graph of
 the run shows which stage failed:
 
-1. **Check the version.** Checks that it runs on a branch, that the version looks like `2.0.0` or
+1. **Check.** Checks that it runs on a branch, that the version looks like `2.0.0` or
    `2.0.0-beta08`, and that the tag does not exist yet.
 2. **Test.** Runs the unit tests (`./gradlew test jvmTest`). The merge commit of a pull request was
    not tested by the **Unit tests** workflow, as that one runs on pull requests.
-3. **Generate documentation.** Runs `./gradlew dokkaGenerate` for the given version, and commits the
+3. **Docs.** Runs `./gradlew dokkaGenerate` for the given version, and commits the
    result to the branch as `Docs for <version>`. The documentation is written to `docs/html`, which
    is published by GitHub Pages.
 4. **Tag.** Creates the tag `<version>` on the commit with the documentation, and pushes it.
-5. **Publish to Maven Central.** Builds the tag, publishes all the libraries and releases the
+5. **Publish.** Builds the tag, publishes all the libraries and releases the
    staging repository.
 
 Pushing a tag does not start any workflow. Publishing is a stage of the **Release** workflow, so the
@@ -31,7 +31,7 @@ only way to release is to run it. Creating a GitHub Release does not publish any
 
 After the workflow finished:
 
-* check that the last stage, **Publish to Maven Central**, succeeded,
+* check that the last stage, **Publish**, succeeded,
 * the artifacts appear on [Maven Central](https://central.sonatype.com/search?q=no.nordicsemi.kotlin.ble)
   within a few minutes to an hour,
 * create a release on GitHub from the existing tag, with the release notes.
@@ -61,16 +61,16 @@ credentials are needed to publish: the environment variables `GPG_SIGNING_KEY`, 
 # 2. Test.
 ./gradlew test jvmTest --continue
 
-# 3. Generate the documentation, and commit it.
+# 3. Docs: generate the documentation, and commit it.
 ./gradlew dokkaGenerate -PreleaseVersion=2.0.0-beta08
 git add docs
 git commit -m "Docs for 2.0.0-beta08"
 
-# 4. Tag the commit, and push both.
+# 4. Tag: tag the commit, and push both.
 git tag 2.0.0-beta08
 git push origin version/2.0 2.0.0-beta08
 
-# 5. Publish to Maven Central.
+# 5. Publish.
 ./gradlew publish -PreleaseVersion=2.0.0-beta08
 ./gradlew releaseStagingRepositories -PreleaseVersion=2.0.0-beta08
 ```
@@ -82,12 +82,12 @@ git push origin version/2.0 2.0.0-beta08
   version, and the documentation commit, stay. Only the failed stage and the following ones run.
   If the cause needs a change in the code, it is simpler to delete the tag and the documentation
   commit, if they were created, and run the workflow again.
-* **Check the version: the tag already exists.** The version was released, or a previous run
+* **Check: the tag already exists.** The version was released, or a previous run
   failed after it created the tag. Delete the tag if nothing was published
   (`git push origin :refs/tags/<version>`), or use a new version.
-* **Generate documentation: the push was rejected.** The branch changed during the release. Run the
+* **Docs: the push was rejected.** The branch changed during the release. Run the
   workflow again.
-* **Publish to Maven Central failed.** Use **Re-run failed jobs**. The tag is built again.
+* **Publish failed.** Use **Re-run failed jobs**. The tag is built again.
 * **The documentation has a wrong version.** Generate it again with
   `./gradlew dokkaGenerate -PreleaseVersion=<version>`. Without the property, and without a tag,
   the version is `0.0.0`.

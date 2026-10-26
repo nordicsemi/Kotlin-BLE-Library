@@ -21,7 +21,7 @@ env:
 # it failed. After fixing the problem, use "Re-run failed jobs" to continue from that stage.
 jobs:
   check:
-    name: 1. Check the version
+    name: Check
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -43,7 +43,7 @@ jobs:
           fi
 
   test:
-    name: 2. Test
+    name: Test
     needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -66,8 +66,8 @@ jobs:
           path: '**/build/reports/tests/'
           if-no-files-found: ignore
 
-  documentation:
-    name: 3. Generate documentation
+  docs:
+    name: Docs
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -99,8 +99,8 @@ jobs:
           echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   tag:
-    name: 4. Tag
-    needs: documentation
+    name: Tag
+    needs: docs
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -109,14 +109,14 @@ jobs:
       # The tag points at the commit with the documentation.
       - uses: actions/checkout@v7
         with:
-          ref: ${{ needs.documentation.outputs.commit }}
+          ref: ${{ needs.docs.outputs.commit }}
       - shell: bash
         run: |
           git tag "$RELEASE_VERSION"
           git push origin "refs/tags/$RELEASE_VERSION"
 
   publish:
-    name: 5. Publish to Maven Central
+    name: Publish
     needs: tag
     runs-on: ubuntu-latest
     timeout-minutes: 45
