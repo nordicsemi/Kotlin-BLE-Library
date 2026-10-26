@@ -292,7 +292,7 @@ class GattProtectedAttributesOldAndroidTest {
                 permissions = setOf(Permission.READ_ENCRYPTED),
             )
 
-            fixture.characteristic().read()
+            val _ = fixture.characteristic().read()
 
             assertEquals(BondState.Bonded, fixture.peripheral.bondState.value)
             assertEquals(1, handler.reads.size)

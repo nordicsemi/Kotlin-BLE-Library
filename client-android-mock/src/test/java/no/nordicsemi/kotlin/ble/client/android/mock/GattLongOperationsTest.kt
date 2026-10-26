@@ -115,12 +115,12 @@ class GattLongOperationsTest {
             val characteristic = fixture.characteristic()
 
             var start = testScheduler.currentTime
-            characteristic.read()
+            val _ = characteristic.read()
             val short = testScheduler.currentTime - start
 
             value = gattBytes(200)
             start = testScheduler.currentTime
-            characteristic.read()
+            val _ = characteristic.read()
             val long = testScheduler.currentTime - start
 
             // Each Read Blob Request takes at least one connection interval.
@@ -400,7 +400,7 @@ class GattLongOperationsTest {
         withTimeout(10.seconds) {
             val handler = GattHandler()
             val fixture = gattSingleCharacteristic(handler, properties = writable, permissions = setOf(Permission.WRITE))
-            fixture.characteristic()
+            val _ = fixture.characteristic()
 
             fixture.peripheral.executeReliableWrite()
 

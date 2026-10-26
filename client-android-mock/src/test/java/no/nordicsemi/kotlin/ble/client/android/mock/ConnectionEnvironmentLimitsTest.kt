@@ -177,7 +177,7 @@ class ConnectionEnvironmentLimitsTest {
     @Test
     fun `link layer mtu is capped by the environment`() = runTest {
         val spec = spec()
-        connect(spec, MockAndroidEnvironment.Api31(maxLlMtu = 100))
+        val _ = connect(spec, MockAndroidEnvironment.Api31(maxLlMtu = 100))
 
         assertEquals(100, spec.llMtu)
     }
@@ -185,7 +185,7 @@ class ConnectionEnvironmentLimitsTest {
     @Test
     fun `link layer mtu of a connection made by another application is capped by the environment`() = runTest {
         val spec = spec()
-        manager(spec, MockAndroidEnvironment.Api31(maxLlMtu = 100))
+        val _ = manager(spec, MockAndroidEnvironment.Api31(maxLlMtu = 100))
 
         spec.simulateConnection()
 

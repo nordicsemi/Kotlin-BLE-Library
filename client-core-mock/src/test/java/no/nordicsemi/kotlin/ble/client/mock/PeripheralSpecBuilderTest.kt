@@ -266,7 +266,7 @@ class PeripheralSpecBuilderTest {
 
     @Test
     fun `boundary values are accepted`() {
-        PeripheralSpec.simulatePeripheral("id") {
+        val _ = PeripheralSpec.simulatePeripheral("id") {
             connectable(
                 name = "Boundary",
                 preferredConnectionInterval = 6..3200,
@@ -278,7 +278,7 @@ class PeripheralSpecBuilderTest {
                 services = { },
             )
         }
-        PeripheralSpec.simulatePeripheral("id") {
+        val _ = PeripheralSpec.simulatePeripheral("id") {
             connectable(
                 name = "Boundary",
                 preferredConnectionInterval = 6..6,

@@ -129,7 +129,7 @@ class ConnectionMtuTest {
             spec.events.filterIsInstance<MtuChanged>().collect { changes += it.mtu }
         }
 
-        connect(spec, environment = MockAndroidEnvironment.Api37())
+        val _ = connect(spec, environment = MockAndroidEnvironment.Api37())
         advanceTimeBy(1.seconds)
         runCurrent()
 

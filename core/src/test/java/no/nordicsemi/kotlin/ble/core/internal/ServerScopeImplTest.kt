@@ -3,6 +3,7 @@ package no.nordicsemi.kotlin.ble.core.internal
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.Descriptor
 import no.nordicsemi.kotlin.ble.core.Permission
+import no.nordicsemi.kotlin.ble.core.ServerScope
 import no.nordicsemi.kotlin.ble.core.and
 import no.nordicsemi.kotlin.ble.core.util.fromShortUuid
 import kotlin.test.Test
@@ -16,7 +17,7 @@ import kotlin.uuid.Uuid
 
 class ServerScopeImplTest {
 
-    private fun build(block: ServerScopeImpl.() -> Unit): List<ServiceDefinition> =
+    private fun build(block: ServerScope.() -> Unit): List<ServiceDefinition> =
         ServerScopeImpl().apply(block).build()
 
     private fun ServiceDefinition.allHandles(): List<Int> =
@@ -376,7 +377,7 @@ class ServerScopeImplTest {
     @Test
     fun `original properties set is not modified by builder`() {
         val properties = setOf(CharacteristicProperty.READ)
-        build {
+        val _ = build {
             Service(0x180F) {
                 Characteristic(0x2A19, properties, emptySet()) {
                     CharacteristicUserDescriptionDescriptor("Battery", writable = true)

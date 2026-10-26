@@ -131,7 +131,7 @@ class EncryptionStateTest {
                 }
             }
 
-            fixture.characteristic().read()
+            val _ = fixture.characteristic().read()
             runCurrent()
 
             assertEquals(listOf<MockEncryptionState?>(MockEncryptionState.Encrypted), encryptionWhenBonded)

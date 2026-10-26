@@ -371,7 +371,7 @@ class GattServiceDiscoveryTest {
                 Service(serviceA)
             }
 
-            fixture.discover()
+            val _ = fixture.discover()
             gattSettle()
 
             val cccdWrite = handler.descriptorWrites.single { it.first == Descriptor.CLIENT_CHAR_CONF_UUID }
@@ -416,7 +416,7 @@ class GattServiceDiscoveryTest {
                 GenericAttributeService(initiallyEnabled = false)
                 Service(serviceA)
             }
-            fixture.discover()
+            val _ = fixture.discover()
             gattSettle()
 
             fixture.spec.simulateServiceChange {
@@ -451,7 +451,7 @@ class GattServiceDiscoveryTest {
     fun `services are not discovered again after reconnection when the cache is valid`() = runTest {
         withTimeout(10.seconds) {
             val fixture = gattFixture { Service(serviceA) }
-            fixture.discover()
+            val _ = fixture.discover()
             fixture.peripheral.disconnect()
             gattSettle()
             assertEquals(1, fixture.handler.discoveryRequests.size)
@@ -471,7 +471,7 @@ class GattServiceDiscoveryTest {
                 GenericAttributeService()
                 Service(serviceA)
             }
-            fixture.discover()
+            val _ = fixture.discover()
             fixture.peripheral.disconnect()
             gattSettle()
 

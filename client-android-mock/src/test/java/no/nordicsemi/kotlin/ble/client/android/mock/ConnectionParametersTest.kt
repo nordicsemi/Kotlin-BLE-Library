@@ -241,7 +241,7 @@ class ConnectionParametersTest {
             peripheral.connectionParameters.collect { values += it }
         }
 
-        peripheral.services()
+        val _ = peripheral.services()
         advanceTimeBy(10.seconds)
         runCurrent()
 
@@ -257,7 +257,7 @@ class ConnectionParametersTest {
         val peripheral = connect()
         val high = peripheral.requestConnectionPriority(ConnectionPriority.HIGH)
 
-        peripheral.services()
+        val _ = peripheral.services()
         advanceTimeBy(10.seconds)
         runCurrent()
 

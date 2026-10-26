@@ -666,7 +666,7 @@ class ConnectionManagerLifecycleTest {
         val manager = newManager(spec)
         val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
 
-        runCatching { manager.connect(peripheral, ConnectionOptions.Direct(timeout = 5.seconds)) }
+        val _ = runCatching { manager.connect(peripheral, ConnectionOptions.Direct(timeout = 5.seconds)) }
         advanceTimeBy(1.seconds)
 
         assertEquals(0, events.connectionRequests)
