@@ -38,7 +38,7 @@
             </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
         </button>
         <div class="navigation-controls--break ui-kit_mobile-only"></div>
-        <div class="library-version" id="library-version">2.0.0-beta07
+        <div class="library-version" id="library-version">2.0.0-beta08
         </div>
         <div class="navigation-controls">
         <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
@@ -93,7 +93,7 @@
   <div class="breadcrumbs"><a href="../../../index.html">client-core-mock</a><span class="delimiter">/</span><a href="../../index.html">no.nordicsemi.kotlin.ble.client.mock</a><span class="delimiter">/</span><a href="../index.html">ServiceDiscoveryResult</a><span class="delimiter">/</span><span class="current">Success</span></div>
   <div class="cover ">
     <h1 class="cover"><span><span>Success</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">object </span><a href="index.html">Success</a> : <a href="../index.html">ServiceDiscoveryResult</a></div><p class="paragraph">The service discovery operation succeeded.</p><p class="paragraph">The client will receive a list of requested services (which may be empty if no matching services were found).</p></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">object </span><a href="index.html">Success</a> : <a href="../index.html">ServiceDiscoveryResult</a></div><p class="paragraph">The service discovery operation succeeded.</p><p class="paragraph">The client will receive a list of requested services. If the peripheral has no services at all, the discovery is reported as failed, as a real peripheral always has at least the Generic Access and Generic Attribute services.</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"></div>

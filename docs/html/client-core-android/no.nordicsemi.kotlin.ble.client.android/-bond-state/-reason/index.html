@@ -1,0 +1,276 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>Reason</title>
+<link href="../../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../../styles/style.css" rel="Stylesheet">
+<link href="../../../../styles/main.css" rel="Stylesheet">
+<link href="../../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../../index.html" tabindex="1">
+                    Kotlin BLE Library
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.0-beta08
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":client-core-android/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":client-core-android/main" data-filter=":client-core-android/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    Kotlin BLE Library
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="client-core-android::no.nordicsemi.kotlin.ble.client.android/BondState.Reason///PointingToDeclaration//1655438001">
+  <div class="breadcrumbs"><a href="../../../index.html">client-core-android</a><span class="delimiter">/</span><a href="../../index.html">no.nordicsemi.kotlin.ble.client.android</a><span class="delimiter">/</span><a href="../index.html">BondState</a><span class="delimiter">/</span><span class="current">Reason</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>Reason</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="index.html">Reason</a></div><p class="paragraph">The reason why a device is not bonded after the bonding process, or after it had been bonded.</p><p class="paragraph">The reasons are reported by the system. They depend on the Android version and manufacturer.</p><h4 class="tableheader">See also</h4><div class="table"><div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../-none/index.html"><span>BondState.</span><wbr><span>None</span></a></div></span></div><div></div></div></div></div><h4 class="tableheader">Inheritors</h4><div class="table"><div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="-unknown/index.html">Unknown</a></div></span></div><div></div></div></div><div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="-authentication-failed/index.html">AuthenticationFailed</a></div></span></div><div></div></div></div><div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="-authentication-rejected/index.html">AuthenticationRejected</a></div></span></div><div></div></div></div><div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="-authentication-canceled/index.html">AuthenticationCanceled</a></div></span></div><div></div></div></div><div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="-remote-device-down/index.html">RemoteDeviceDown</a></div></span></div><div></div></div></div><div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="-discovery-in-progress/index.html">DiscoveryInProgress</a></div></span></div><div></div></div></div><div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="-authentication-timeout/index.html">AuthenticationTimeout</a></div></span></div><div></div></div></div><div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="-repeated-attempts/index.html">RepeatedAttempts</a></div></span></div><div></div></div></div><div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="-remote-authentication-canceled/index.html">RemoteAuthenticationCanceled</a></div></span></div><div></div></div></div><div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="-removed/index.html">Removed</a></div></span></div><div></div></div></div></div></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="TYPE">
+        <h2 class="tableheader">Types</h2>
+        <div class="table"><a data-name="1123256511%2FClasslikes%2F1655438001" anchor-label="AuthenticationCanceled" id="1123256511%2FClasslikes%2F1655438001" data-filterable-set=":client-core-android/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-authentication-canceled/index.html"><span>Authentication</span><wbr><span><span>Canceled</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1123256511%2FClasslikes%2F1655438001"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">object </span><a href="-authentication-canceled/index.html">AuthenticationCanceled</a> : <a href="index.html">BondState.Reason</a></div><div class="brief "><p class="paragraph">The pairing was cancelled by the user.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1909837989%2FClasslikes%2F1655438001" anchor-label="AuthenticationFailed" id="-1909837989%2FClasslikes%2F1655438001" data-filterable-set=":client-core-android/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-authentication-failed/index.html"><span>Authentication</span><wbr><span><span>Failed</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1909837989%2FClasslikes%2F1655438001"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">object </span><a href="-authentication-failed/index.html">AuthenticationFailed</a> : <a href="index.html">BondState.Reason</a></div><div class="brief "><p class="paragraph">The authentication failed, e.g. the PIN or passkey was wrong.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1527303046%2FClasslikes%2F1655438001" anchor-label="AuthenticationRejected" id="-1527303046%2FClasslikes%2F1655438001" data-filterable-set=":client-core-android/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-authentication-rejected/index.html"><span>Authentication</span><wbr><span><span>Rejected</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1527303046%2FClasslikes%2F1655438001"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">object </span><a href="-authentication-rejected/index.html">AuthenticationRejected</a> : <a href="index.html">BondState.Reason</a></div><div class="brief "><p class="paragraph">The peripheral rejected the pairing.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1712906761%2FClasslikes%2F1655438001" anchor-label="AuthenticationTimeout" id="1712906761%2FClasslikes%2F1655438001" data-filterable-set=":client-core-android/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-authentication-timeout/index.html"><span>Authentication</span><wbr><span><span>Timeout</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1712906761%2FClasslikes%2F1655438001"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">object </span><a href="-authentication-timeout/index.html">AuthenticationTimeout</a> : <a href="index.html">BondState.Reason</a></div><div class="brief "><p class="paragraph">The authentication timed out.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-774594576%2FClasslikes%2F1655438001" anchor-label="DiscoveryInProgress" id="-774594576%2FClasslikes%2F1655438001" data-filterable-set=":client-core-android/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-discovery-in-progress/index.html"><span>Discovery</span><wbr><span>In</span><wbr><span><span>Progress</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-774594576%2FClasslikes%2F1655438001"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">object </span><a href="-discovery-in-progress/index.html">DiscoveryInProgress</a> : <a href="index.html">BondState.Reason</a></div><div class="brief "><p class="paragraph">Bonding was not possible because a discovery was in progress.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1138829223%2FClasslikes%2F1655438001" anchor-label="RemoteAuthenticationCanceled" id="-1138829223%2FClasslikes%2F1655438001" data-filterable-set=":client-core-android/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-remote-authentication-canceled/index.html"><span>Remote</span><wbr><span>Authentication</span><wbr><span><span>Canceled</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1138829223%2FClasslikes%2F1655438001"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">object </span><a href="-remote-authentication-canceled/index.html">RemoteAuthenticationCanceled</a> : <a href="index.html">BondState.Reason</a></div><div class="brief "><p class="paragraph">The peripheral cancelled the pairing.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1527504594%2FClasslikes%2F1655438001" anchor-label="RemoteDeviceDown" id="1527504594%2FClasslikes%2F1655438001" data-filterable-set=":client-core-android/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-remote-device-down/index.html"><span>Remote</span><wbr><span>Device</span><wbr><span><span>Down</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1527504594%2FClasslikes%2F1655438001"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">object </span><a href="-remote-device-down/index.html">RemoteDeviceDown</a> : <a href="index.html">BondState.Reason</a></div><div class="brief "><p class="paragraph">The peripheral did not respond, for example it disconnected.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-937499886%2FClasslikes%2F1655438001" anchor-label="Removed" id="-937499886%2FClasslikes%2F1655438001" data-filterable-set=":client-core-android/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-removed/index.html"><span><span>Removed</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-937499886%2FClasslikes%2F1655438001"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">object </span><a href="-removed/index.html">Removed</a> : <a href="index.html">BondState.Reason</a></div><div class="brief "><p class="paragraph">The bond information was removed from Android side, after the peripheral had been bonded.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1672175920%2FClasslikes%2F1655438001" anchor-label="RepeatedAttempts" id="1672175920%2FClasslikes%2F1655438001" data-filterable-set=":client-core-android/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-repeated-attempts/index.html"><span>Repeated</span><wbr><span><span>Attempts</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1672175920%2FClasslikes%2F1655438001"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">object </span><a href="-repeated-attempts/index.html">RepeatedAttempts</a> : <a href="index.html">BondState.Reason</a></div><div class="brief "><p class="paragraph">Bonding was attempted too many times in a row.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1991158376%2FClasslikes%2F1655438001" anchor-label="Unknown" id="1991158376%2FClasslikes%2F1655438001" data-filterable-set=":client-core-android/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-unknown/index.html"><span><span>Unknown</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1991158376%2FClasslikes%2F1655438001"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">class </span><a href="-unknown/index.html">Unknown</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>code<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></span></span><span class="token punctuation">)</span> : <a href="index.html">BondState.Reason</a></div><div class="brief "><p class="paragraph">The system reported a reason that is not known to the library.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>Copyright © 2022 - 2026 Nordic Semiconductor ASA. All Rights Reserved.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

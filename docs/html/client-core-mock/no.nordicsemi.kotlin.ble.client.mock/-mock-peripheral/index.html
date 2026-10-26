@@ -1,0 +1,295 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>MockPeripheral</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../index.html" tabindex="1">
+                    Kotlin BLE Library
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.0-beta08
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":client-core-mock/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":client-core-mock/main" data-filter=":client-core-mock/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    Kotlin BLE Library
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="client-core-mock::no.nordicsemi.kotlin.ble.client.mock/MockPeripheral///PointingToDeclaration//-1834677258">
+  <div class="breadcrumbs"><a href="../../index.html">client-core-mock</a><span class="delimiter">/</span><a href="../index.html">no.nordicsemi.kotlin.ble.client.mock</a><span class="delimiter">/</span><span class="current">MockPeripheral</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Mock</span><wbr><span><span>Peripheral</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="index.html">MockPeripheral</a></div><p class="paragraph">A simulated peripheral, as seen by its <a href="../-peripheral-spec-event-handler/index.html">PeripheralSpecEventHandler</a>.</p><p class="paragraph">It is the peripheral for which the event was called. The handler can use it to make the peripheral do something, e.g. disconnect, send a notification, or change its services, and to check its state.</p><p class="paragraph">The behavior is defined in <a href="../-peripheral-spec/index.html">PeripheralSpec</a>, which implements this interface. See the documentation there for the details of each method.</p><h4 class="tableheader">See also</h4><div class="table"><div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../-peripheral-spec/index.html"><span>Peripheral</span><wbr><span><span>Spec</span></span></a></div></span></div><div></div></div></div></div><h4 class="tableheader">Inheritors</h4><div class="table"><div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../-peripheral-spec/index.html">PeripheralSpec</a></div></span></div><div></div></div></div></div></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="-1157253596%2FProperties%2F-1834677258" anchor-label="isBonded" id="-1157253596%2FProperties%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="is-bonded.html"><span>is</span><wbr><span><span>Bonded</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1157253596%2FProperties%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="is-bonded.html">isBonded</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">Whether the phone has the bond information of the peripheral.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1278852757%2FProperties%2F-1834677258" anchor-label="isConnected" id="-1278852757%2FProperties%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="is-connected.html"><span>is</span><wbr><span><span>Connected</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1278852757%2FProperties%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="is-connected.html">isConnected</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">Whether the peripheral is connected.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-168089719%2FProperties%2F-1834677258" anchor-label="peripheralHasBond" id="-168089719%2FProperties%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="peripheral-has-bond.html"><span>peripheral</span><wbr><span>Has</span><wbr><span><span>Bond</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-168089719%2FProperties%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="peripheral-has-bond.html">peripheralHasBond</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">Whether the peripheral has the bond information of the phone.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="1212739586%2FFunctions%2F-1834677258" anchor-label="simulateBondRequest" id="1212739586%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="simulate-bond-request.html"><span>simulate</span><wbr><span>Bond</span><wbr><span><span>Request</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1212739586%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">fun </span><a href="simulate-bond-request.html"><span class="token function">simulateBondRequest</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">The peripheral requests bonding, or a bonding request from the phone is processed.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-955876139%2FFunctions%2F-1834677258" anchor-label="simulateConnectionParametersRequest" id="-955876139%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="simulate-connection-parameters-request.html"><span>simulate</span><wbr><span>Connection</span><wbr><span>Parameters</span><wbr><span><span>Request</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-955876139%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">fun </span><a href="simulate-connection-parameters-request.html"><span class="token function">simulateConnectionParametersRequest</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">parameters<span class="token operator">: </span><a href="../../../core/no.nordicsemi.kotlin.ble.core/-connection-parameters/-specified/index.html">ConnectionParameters.Specified</a><span class="token punctuation">, </span></span><span class="parameter ">delay<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a><span class="token operator"> = </span><span class="token constant">6</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">The peripheral requests a connection parameters update.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2099947486%2FFunctions%2F-1834677258" anchor-label="simulateDisconnection" id="-2099947486%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="simulate-disconnection.html"><span>simulate</span><wbr><span><span>Disconnection</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2099947486%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">fun </span><a href="simulate-disconnection.html"><span class="token function">simulateDisconnection</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">The peripheral disconnects.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1383944055%2FFunctions%2F-1834677258" anchor-label="simulateMtuRequest" id="-1383944055%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="simulate-mtu-request.html"><span>simulate</span><wbr><span>Mtu</span><wbr><span><span>Request</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1383944055%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">fun </span><a href="simulate-mtu-request.html"><span class="token function">simulateMtuRequest</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">mtu<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">The peripheral requests an MTU exchange. The MTU may be changed only once per connection.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1512103510%2FFunctions%2F-1834677258" anchor-label="simulatePeripheralBondLoss" id="-1512103510%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="simulate-peripheral-bond-loss.html"><span>simulate</span><wbr><span>Peripheral</span><wbr><span>Bond</span><wbr><span><span>Loss</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1512103510%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">fun </span><a href="simulate-peripheral-bond-loss.html"><span class="token function">simulatePeripheralBondLoss</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">The peripheral forgets the bond information, for example after a factory reset.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="904678175%2FFunctions%2F-1834677258" anchor-label="simulateReset" id="904678175%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="simulate-reset.html"><span>simulate</span><wbr><span><span>Reset</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="904678175%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">fun </span><a href="simulate-reset.html"><span class="token function">simulateReset</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">The peripheral resets. Connected clients get a link loss after the supervision timeout.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1057420172%2FFunctions%2F-1834677258" anchor-label="simulateServiceChange" id="1057420172%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="simulate-service-change.html"><span>simulate</span><wbr><span>Service</span><wbr><span><span>Change</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1057420172%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">fun </span><a href="simulate-service-change.html"><span class="token function">simulateServiceChange</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">newServices<span class="token operator">: </span><a href="../-mock-server-scope/index.html">MockServerScope</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-unit/index.html">Unit</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">The peripheral changes the services it offers.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-372781623%2FFunctions%2F-1834677258" anchor-label="simulateValueUpdate" id="-372781623%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="simulate-value-update.html"><span>simulate</span><wbr><span>Value</span><wbr><span><span>Update</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-372781623%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">fun </span><a href="simulate-value-update.html"><span class="token function">simulateValueUpdate</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">handle<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a><span class="token punctuation">, </span></span><span class="parameter ">value<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-byte-array/index.html">ByteArray</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">The peripheral notifies clients that the value of a characteristic has changed.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>Copyright © 2022 - 2026 Nordic Semiconductor ASA. All Rights Reserved.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

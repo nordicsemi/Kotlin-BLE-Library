@@ -38,7 +38,7 @@
             </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
         </button>
         <div class="navigation-controls--break ui-kit_mobile-only"></div>
-        <div class="library-version" id="library-version">2.0.0-beta07
+        <div class="library-version" id="library-version">2.0.0-beta08
         </div>
         <div class="navigation-controls">
         <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
@@ -93,24 +93,24 @@
   <div class="breadcrumbs"><a href="../../index.html">client-core-android</a><span class="delimiter">/</span><a href="../index.html">no.nordicsemi.kotlin.ble.client.android.exception</a><span class="delimiter">/</span><span class="current">BondingFailedException</span></div>
   <div class="cover ">
     <h1 class="cover"><span>Bonding</span><wbr><span>Failed</span><wbr><span><span>Exception</span></span></h1>
-    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">BondingFailedException</a> : <a href="../../../core/no.nordicsemi.kotlin.ble.core.exception/-bluetooth-exception/index.html">BluetoothException</a></div><p class="paragraph">An exception thrown when bonding process failed.</p><p class="paragraph">This may be caused by invalid PIN / passphrase, rejecting pairing or an internal error.</p></div></div>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">BondingFailedException</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>reason<span class="token operator">: </span><a href="../../no.nordicsemi.kotlin.ble.client.android/-bond-state/-reason/index.html">BondState.Reason</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span> : <a href="../../../core/no.nordicsemi.kotlin.ble.core.exception/-bluetooth-exception/index.html">BluetoothException</a></div><p class="paragraph">An exception thrown when bonding process failed.</p><p class="paragraph">This may be caused by invalid PIN / passphrase, rejecting pairing or an internal error.</p></div></div>
   </div>
   <div class="tabbedcontent">
     <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
     <div class="tabs-section-body">
       <div data-togglable="CONSTRUCTOR">
         <h2 class="tableheader">Constructors</h2>
-        <div class="table"><a data-name="-1126795114%2FConstructors%2F1655438001" anchor-label="BondingFailedException" id="-1126795114%2FConstructors%2F1655438001" data-filterable-set=":client-core-android/main"></a>
+        <div class="table"><a data-name="-720445767%2FConstructors%2F1655438001" anchor-label="BondingFailedException" id="-720445767%2FConstructors%2F1655438001" data-filterable-set=":client-core-android/main"></a>
           <div class="table-row table-row_content" data-togglable="CONSTRUCTOR" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main">
             <div class="main-subrow keyValue ">
               <div class=""><span class="inline-flex">
                   <div><a href="-bonding-failed-exception.html"><span>Bonding</span><wbr><span>Failed</span><wbr><span><span>Exception</span></span></a></div>
-<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1126795114%2FConstructors%2F1655438001"></span>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-720445767%2FConstructors%2F1655438001"></span>
                     <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">reason<span class="token operator">: </span><a href="../../no.nordicsemi.kotlin.ble.client.android/-bond-state/-reason/index.html">BondState.Reason</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span></div></div></div>
                 </div>
               </div>
             </div>
@@ -145,6 +145,21 @@
               <div>
                 <div class="title">
                   <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">val </span><a href="../-scanning-failed-to-start-exception/index.html#1824300659%2FProperties%2F1655438001">message</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1198815259%2FProperties%2F1655438001" anchor-label="reason" id="-1198815259%2FProperties%2F1655438001" data-filterable-set=":client-core-android/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-android/main" data-filterable-set=":client-core-android/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="reason.html"><span><span>reason</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1198815259%2FProperties%2F1655438001"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-android/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="reason.html">reason</a><span class="token operator">: </span><a href="../../no.nordicsemi.kotlin.ble.client.android/-bond-state/-reason/index.html">BondState.Reason</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">The reason why bonding failed, as reported by the system, or <code class="lang-kotlin">null</code> if the system does not report it.</p></div></div></div>
                 </div>
               </div>
             </div>
