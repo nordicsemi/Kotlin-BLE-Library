@@ -155,6 +155,7 @@ internal class NativeExecutor(
     private fun readEncryptionState() {
         if (!isBaklava1OrNewer) return
         val state = try {
+            logger?.d(Layer.SMP) { "device.getEncryptionStatus()" }
             val status = bluetoothDevice.getEncryptionStatus(BluetoothDevice.TRANSPORT_LE)
             when (val algorithm = status?.algorithm) {
                 // The status is not available, e.g. the device is not connected.
@@ -164,8 +165,11 @@ internal class NativeExecutor(
                     algorithm = algorithm.toEncryptionAlgorithm(),
                     keySize = status.keySize.takeIf { it > 0 },
                 )
+            }.also {
+                logger?.i(Layer.SMP) { "Encryption state: $it" }
             }
-        } catch (_: SecurityException) {
+        } catch (e: SecurityException) {
+            logger?.w(Layer.SMP) { "Failed to read the encryption state: ${e.message}" }
             EncryptionState.Unknown
         }
         encryptionState.value = state
