@@ -133,4 +133,16 @@ class OperationStatusTest {
     fun `description of an unknown error contains its code in hex`() {
         assertTrue(OperationStatus.UnknownError(0xAB).toString().contains("ab", ignoreCase = true))
     }
+
+    @Test
+    fun `connection timeout is described by its name`() {
+        assertEquals("Connection Timeout", OperationStatus.ConnectionTimeout.toString())
+    }
+
+    @Test
+    fun `codes in descriptions are two digit hex with a prefix`() {
+        assertEquals("Application Error (code: 0x80)", OperationStatus.ApplicationError(0x80).toString())
+        assertEquals("Profile Error (code: 0xE0)", OperationStatus.ProfileError(0xE0).toString())
+        assertEquals("Unknown Error (code: 0x0A)", OperationStatus.UnknownError(0x0A).toString())
+    }
 }

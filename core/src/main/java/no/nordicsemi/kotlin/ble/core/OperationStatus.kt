@@ -153,15 +153,19 @@ sealed class OperationStatus(
         ValueNotAllowed -> "Value Not Allowed"
         ConnectionCongested -> "Connection Congested"
         GattError -> "Gatt Error"
-        is ApplicationError -> "Application Error (code: ${code.toHexString()})"
+        ConnectionTimeout -> "Connection Timeout"
+        is ApplicationError -> "Application Error (code: ${code.toHexCode()})"
         WriteRequestRejected -> "Write Request Rejected"
         ClientCharacteristicConfigurationDescriptorImproperlyConfigured -> "Client Characteristic Configuration Descriptor Improperly Configured"
         ProcedureAlreadyInProgress -> "Procedure Already In Progress"
         OutOfRange -> "Out of Range"
-        is ProfileError -> "Profile Error (code: ${code.toHexString()})"
-        is UnknownError -> "Unknown Error (code: ${code.toHexString()})"
+        is ProfileError -> "Profile Error (code: ${code.toHexCode()})"
+        is UnknownError -> "Unknown Error (code: ${code.toHexCode()})"
         RequestFailed -> "Request Failed"
         Busy -> "Busy"
         SubscribeNotPermitted -> "Subscribe Not Permitted"
     }
 }
+
+/** Formats the status code as hexadecimal, with at least two digits, e.g. `0x0A` or `0x93`. */
+private fun Int.toHexCode() = "0x" + toUInt().toString(16).uppercase().padStart(2, '0')
