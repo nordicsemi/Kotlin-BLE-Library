@@ -37,7 +37,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import no.nordicsemi.kotlin.ble.client.GattEvent
 import no.nordicsemi.kotlin.ble.client.Peripheral
@@ -98,15 +97,14 @@ open class MockExecutor(
      * for this client, e.g. the result of its own disconnection or service discovery, which are
      * emitted by [PeripheralSpec.Api] of this client.
      */
-    private val clientEvents = MutableSharedFlow<GattEvent>(extraBufferCapacity = 64)
-
-    override val events: SharedFlow<GattEvent> = clientEvents.asSharedFlow()
+    final override val events: SharedFlow<GattEvent>
+        field = MutableSharedFlow<GattEvent>(extraBufferCapacity = 64)
 
     init {
         // Forward the events of the peripheral to this client. Unconfined and undispatched, so
         // that the subscription is made right away, and the events are forwarded as they are emitted.
         scope.launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
-            peripheralSpec.events.collect { clientEvents.emit(it) }
+            peripheralSpec.events.collect { events.emit(it) }
         }
     }
 
@@ -127,7 +125,7 @@ open class MockExecutor(
             opportunistic = opportunistic,
             advertisements = advertisements,
             managerScope = scope,
-            clientEvents = clientEvents,
+            clientEvents = events,
         )
     }
 
