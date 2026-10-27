@@ -471,7 +471,7 @@ open class Peripheral(
 
         // Start connection attempt, based on the connection options.
         logger?.trace(Layer.GAP) { "Connecting to $this using $options" }
-        _state.update { ConnectionState.Connecting }
+        updateState { ConnectionState.Connecting }
         when (options) {
             // In case of auto connect, the connection attempt does not time out.
             // Cancel the coroutine to abort.
@@ -499,10 +499,10 @@ open class Peripheral(
                             // Request MTU, read PHY, etc. before reporting connected state.
                             if (!prepareConnection()) {
                                 logger?.warn(Layer.GAP) { "Connection attempt failed (reason: ${Reason.LinkLoss})" }
-                                _state.update { ConnectionState.Disconnected(Reason.LinkLoss) }
+                                updateState { ConnectionState.Disconnected(Reason.LinkLoss) }
                                 throw ConnectionFailedException(Reason.LinkLoss)
                             }
-                            _state.update { ConnectionState.Connected }
+                            updateState { ConnectionState.Connected }
                             // Since we're connected, let's start collecting GATT events, including
                             // connection state changes. The device may disconnect and reconnect at
                             // any time. To stop collecting the events one needs to call disconnect().
@@ -522,11 +522,11 @@ open class Peripheral(
                             val reason = state.reason!!
                             if (state.isUnsupportedAddressError()) {
                                 logger?.warn(Layer.GAP) { "Connection attempt failed (reason: ${Reason.UnsupportedAddress})" }
-                                _state.update { ConnectionState.Disconnected(Reason.UnsupportedAddress) }
+                                updateState { ConnectionState.Disconnected(Reason.UnsupportedAddress) }
                                 throw ConnectionFailedException(Reason.UnsupportedAddress)
                             }
                             logger?.warn(Layer.GAP) { "Connection attempt failed (reason: $reason)" }
-                            _state.update { state }
+                            updateState { state }
                             throw ConnectionFailedException(reason)
                         }
                         else -> {}
@@ -535,12 +535,12 @@ open class Peripheral(
                     // Although the connection using AutoConnect does not time out on its own,
                     // it's still possible to wrap it in withTimeout. Report this as a timeout, not cancellation.
                     logger?.warn(Layer.GAP) { "Connection attempt timed out" }
-                    _state.update { ConnectionState.Disconnected(Reason.Timeout(e.timeout ?: Duration.ZERO)) }
+                    updateState { ConnectionState.Disconnected(Reason.Timeout(e.timeout ?: Duration.ZERO)) }
                     close()
                     throw e
                 } catch (e: CancellationException) {
                     logger?.warn(Layer.GAP) { "Connection attempt cancelled" }
-                    _state.update { ConnectionState.Disconnected(Reason.Cancelled) }
+                    updateState { ConnectionState.Disconnected(Reason.Cancelled) }
                     close()
                     throw e
                 }
@@ -578,10 +578,10 @@ open class Peripheral(
                             // Request MTU, read PHY, etc. before reporting connected state.
                             if (!prepareConnection()) {
                                 logger?.warn(Layer.GAP) { "Connection attempt failed (reason: ${Reason.LinkLoss})" }
-                                _state.update { ConnectionState.Disconnected(Reason.LinkLoss) }
+                                updateState { ConnectionState.Disconnected(Reason.LinkLoss) }
                                 throw ConnectionFailedException(Reason.LinkLoss)
                             }
-                            _state.update { state }
+                            updateState { state }
                             // Since we're connected, let's start collecting GATT events.
                             // In case of a direct connection, a disconnection will cancel
                             // event collection and close the peripheral.
@@ -609,7 +609,7 @@ open class Peripheral(
                             // Do not try again when the user has disconnected, i.e. cancelled the connection.
                             check(options.retry > 0 && !state.isUserInitiated) {
                                 logger?.warn(Layer.GAP) { "Connection attempt failed (reason: $reason)" }
-                                _state.update { state }
+                                updateState { state }
                                 throw ConnectionFailedException(reason)
                             }
                             logger?.warn(Layer.GAP) { "Connection attempt failed (reason: ${state.reason}), retrying in ${options.retryDelay}..." }
@@ -621,12 +621,12 @@ open class Peripheral(
                 } catch (e: TimeoutCancellationException) {
                     val timeout = timeoutReached ?: e.timeout ?: start.elapsedNow()
                     logger?.warn(Layer.GAP) { "Connection attempt timed out after $timeout" }
-                    _state.update { ConnectionState.Disconnected(Reason.Timeout(timeout)) }
+                    updateState { ConnectionState.Disconnected(Reason.Timeout(timeout)) }
                     close()
                     throw e
                 } catch (e: CancellationException) {
                     logger?.warn(Layer.GAP) { "Connection attempt cancelled" }
-                    _state.update { ConnectionState.Disconnected(Reason.Cancelled) }
+                    updateState { ConnectionState.Disconnected(Reason.Cancelled) }
                     close()
                     throw e
                 }
@@ -1374,7 +1374,7 @@ open class Peripheral(
             // Returned error is 0x08 (TIMEOUT).
             it.reason == Reason.LinkLoss &&
             // This happens before the services are discovered,
-            _services.value !is RemoteServices.Discovered &&
+            !hasDiscoveredServices &&
             // ...but after the app is notified about change to PHY LE 2M.
             _phy.value?.txPhy == Phy.PHY_LE_2M
         } ?: false

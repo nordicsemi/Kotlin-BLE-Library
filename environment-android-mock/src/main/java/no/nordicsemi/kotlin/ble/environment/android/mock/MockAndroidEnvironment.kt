@@ -34,7 +34,7 @@
 package no.nordicsemi.kotlin.ble.environment.android.mock
 
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import no.nordicsemi.kotlin.ble.core.ATT_MTU_DEFAULT
 import no.nordicsemi.kotlin.ble.core.ATT_MTU_MAX
@@ -194,7 +194,7 @@ sealed class MockAndroidEnvironment(
 
         // Ignore if the state has not changed.
         if (newState != bluetoothState.value) {
-            _bluetoothState.update { newState }
+            bluetoothState.update { newState }
         }
     }
 
@@ -209,24 +209,24 @@ sealed class MockAndroidEnvironment(
      * @param newState The new state of the Location service.
      */
     fun simulateLocationState(newState: Boolean) {
-        _locationState.update { newState }
+        locationState.update { newState }
     }
 
-    private val _bluetoothState = MutableStateFlow(
-        when {
-            !isBluetoothSupported -> Manager.State.UNSUPPORTED
-            !isBluetoothEnabled -> Manager.State.POWERED_OFF
-            else -> Manager.State.POWERED_ON
-        }
-    )
-    override val bluetoothState = _bluetoothState.asStateFlow()
+    final override val bluetoothState: StateFlow<Manager.State>
+        field = MutableStateFlow(
+            when {
+                !isBluetoothSupported -> Manager.State.UNSUPPORTED
+                !isBluetoothEnabled -> Manager.State.POWERED_OFF
+                else -> Manager.State.POWERED_ON
+            }
+        )
 
     override fun enableBluetooth() {
         simulatePowerOn()
     }
 
-    private val _locationState = MutableStateFlow(isLocationEnabled)
-    override val locationState = _locationState.asStateFlow()
+    final override val locationState: StateFlow<Boolean>
+        field = MutableStateFlow(isLocationEnabled)
 
     private var _deviceName: String = deviceName
     override var deviceName: String

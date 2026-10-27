@@ -52,7 +52,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import no.nordicsemi.kotlin.ble.android.sample.graph.RssiGraph
 import no.nordicsemi.kotlin.ble.android.sample.graph.RssiGraphState
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
@@ -82,16 +81,16 @@ class RssiMonitor(
         clock = clock,
     )
 
-    private val _rssi = MutableStateFlow<Int?>(null)
-    val rssi: StateFlow<Int?> = _rssi.asStateFlow()
+    val rssi: StateFlow<Int?>
+        field = MutableStateFlow<Int?>(null)
 
     fun add(rssi: Int, time: Long = clock()) {
         graph.add(KEY, rssi, time)
-        _rssi.value = rssi
+        this.rssi.value = rssi
     }
 
     fun clear() {
-        _rssi.value = null
+        rssi.value = null
     }
 
     private companion object {

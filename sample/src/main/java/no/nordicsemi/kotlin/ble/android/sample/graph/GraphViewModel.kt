@@ -40,7 +40,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.onCompletion
@@ -83,14 +82,14 @@ class GraphViewModel @Inject constructor(
         // averagingWindow = 1.seconds,
     )
 
-    private val _isScanning = MutableStateFlow(false)
-    val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
+    val isScanning: StateFlow<Boolean>
+        field = MutableStateFlow(false)
 
-    private val _devices = MutableStateFlow<List<GraphDevice>>(emptyList())
-    val devices: StateFlow<List<GraphDevice>> = _devices.asStateFlow()
+    val devices: StateFlow<List<GraphDevice>>
+        field = MutableStateFlow<List<GraphDevice>>(emptyList())
 
-    private val _selected = MutableStateFlow<Set<String>>(emptySet())
-    val selected: StateFlow<Set<String>> = _selected.asStateFlow()
+    val selected: StateFlow<Set<String>>
+        field = MutableStateFlow<Set<String>>(emptySet())
 
     /** Names of found devices, by address, in order of discovery. */
     private val names = LinkedHashMap<String, String?>()
@@ -108,9 +107,9 @@ class GraphViewModel @Inject constructor(
                 }
             }
             centralManager.scan()
-                .onStart { _isScanning.update { true } }
+                .onStart { isScanning.update { true } }
                 .catch { t -> Timber.e("Scan failed: $t") }
-                .onCompletion { _isScanning.update { false } }
+                .onCompletion { isScanning.update { false } }
                 .filter { it.advertisingData.name != null || names[it.peripheral.address] != null }
                 .collect { result ->
                     // Android reports 127 if RSSI is not available.
@@ -141,22 +140,22 @@ class GraphViewModel @Inject constructor(
             names.clear()
             graphState.clear()
         }
-        _selected.update { emptySet() }
+        selected.update { emptySet() }
         refreshDevices()
     }
 
     fun onDeviceClicked(address: String) {
-        _selected.update { if (address in it) it - address else it + address }
+        selected.update { if (address in it) it - address else it + address }
     }
 
     fun onClearSelectionRequested() {
-        _selected.update { emptySet() }
+        selected.update { emptySet() }
     }
 
     private fun refreshDevices() {
         val now = graphState.clock()
         val snapshot = synchronized(names) { names.toList() }
-        _devices.update {
+        devices.update {
             snapshot.map { (address, name) ->
                 GraphDevice(
                     address = address,

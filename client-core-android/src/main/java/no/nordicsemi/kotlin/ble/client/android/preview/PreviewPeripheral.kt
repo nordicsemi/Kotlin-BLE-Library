@@ -37,8 +37,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.onStart
@@ -120,11 +118,11 @@ private class StubExecutor(
     hasBondInformation: Boolean,
 ): Peripheral.Executor {
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
-    private val _events = MutableSharedFlow<GattEvent>(extraBufferCapacity = 64)
-    override val events: SharedFlow<GattEvent> = _events.asSharedFlow()
+    override val events: SharedFlow<GattEvent>
+        field = MutableSharedFlow<GattEvent>(extraBufferCapacity = 64)
 
-    private val _bondState = MutableStateFlow<BondState>(if (hasBondInformation) BondState.Bonded else BondState.None())
-    override val bondState: StateFlow<BondState> = _bondState.asStateFlow()
+    override val bondState: StateFlow<BondState>
+        field = MutableStateFlow<BondState>(if (hasBondInformation) BondState.Bonded else BondState.None())
 
     override val encryptionState: StateFlow<EncryptionState> = MutableStateFlow(EncryptionState.Unknown)
 
@@ -140,27 +138,27 @@ private class StubExecutor(
         autoMtu: Boolean,
         opportunistic: Boolean,
     ) {
-        _events.emit(ConnectionStateChanged(ConnectionState.Connected))
+        events.emit(ConnectionStateChanged(ConnectionState.Connected))
     }
     
     override suspend fun discoverServices(uuids: List<Uuid>): Boolean {
-        _events.emit(ServicesDiscovered(initialServices))
+        events.emit(ServicesDiscovered(initialServices))
         return true
     }
 
     override suspend fun createBond(): Boolean {
-        _bondState.emit(BondState.Bonded)
+        bondState.emit(BondState.Bonded)
         return true
     }
 
     override suspend fun removeBond(): Boolean {
-        _bondState.emit(BondState.None(BondState.Reason.Removed))
-        _events.emit(ConnectionStateChanged(ConnectionState.Disconnected(Reason.TerminateLocalHost)))
+        bondState.emit(BondState.None(BondState.Reason.Removed))
+        events.emit(ConnectionStateChanged(ConnectionState.Disconnected(Reason.TerminateLocalHost)))
         return true
     }
 
     override suspend fun refreshCache(): Boolean {
-        _events.emit(ServicesChanged)
+        events.emit(ServicesChanged)
         return true
     }
 
@@ -187,27 +185,27 @@ private class StubExecutor(
                 supervisionTimeout = 5.seconds
             )
         }
-        _events.emit(ConnectionParametersChanged(parameters))
+        events.emit(ConnectionParametersChanged(parameters))
         return true
     }
 
     override suspend fun requestMtu(mtu: @Range(from = 23, to = 517) Int): Boolean {
-        _events.emit(MtuChanged(mtu))
+        events.emit(MtuChanged(mtu))
         return true
     }
 
     override suspend fun requestPhy(txPhy: Phy, rxPhy: Phy, phyOptions: PhyOption): Boolean {
-        _events.emit(PhyChanged(PhyInUse(txPhy, rxPhy)))
+        events.emit(PhyChanged(PhyInUse(txPhy, rxPhy)))
         return true
     }
 
     override suspend fun readPhy(): Boolean {
-        _events.emit(PhyChanged(phy))
+        events.emit(PhyChanged(phy))
         return true
     }
 
     override suspend fun readRssi(): Boolean {
-        _events.emit(RssiRead(rssi))
+        events.emit(RssiRead(rssi))
         return true
     }
 
@@ -218,18 +216,18 @@ private class StubExecutor(
 
     override suspend fun executeReliableWrite(): Boolean {
         isReliableWriteEnabled = false
-        _events.emit(ReliableWriteCompleted(status = OperationStatus.Success))
+        events.emit(ReliableWriteCompleted(status = OperationStatus.Success))
         return true
     }
 
     override suspend fun abortReliableWrite(): Boolean {
         isReliableWriteEnabled = false
-        _events.emit(ReliableWriteCompleted(status = OperationStatus.Success))
+        events.emit(ReliableWriteCompleted(status = OperationStatus.Success))
         return true
     }
 
     override suspend fun disconnect(reason: Reason): Boolean {
-        _events.emit(ConnectionStateChanged(ConnectionState.Disconnected(reason)))
+        events.emit(ConnectionStateChanged(ConnectionState.Disconnected(reason)))
         return true
     }
 
@@ -341,13 +339,12 @@ private class StubRemoteCharacteristic(
 
     private val _value = MutableStateFlow(byteArrayOf())
 
-    private var _isNotifying = MutableStateFlow(false)
     override val isNotifying: StateFlow<Boolean>
-        get() = _isNotifying.asStateFlow()
+        field = MutableStateFlow(false)
 
     override suspend fun setNotifying(enabled: Boolean) = when {
         owner == null -> throw InvalidAttributeException()
-        isSubscribable() -> _isNotifying.update { enabled }
+        isSubscribable() -> isNotifying.update { enabled }
         else -> throw OperationFailedException(OperationStatus.SubscribeNotPermitted)
     }
 
@@ -376,7 +373,7 @@ private class StubRemoteCharacteristic(
 
     override fun subscribe(onSubscription: suspend RemoteCharacteristic.() -> Unit): Flow<ByteArray> = when {
         owner == null -> throw InvalidAttributeException()
-        isSubscribable() -> _value.filter { _isNotifying.value }.onStart { onSubscription() }
+        isSubscribable() -> _value.filter { isNotifying.value }.onStart { onSubscription() }
         else -> throw OperationFailedException(OperationStatus.SubscribeNotPermitted)
     }
 

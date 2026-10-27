@@ -37,7 +37,7 @@ import android.bluetooth.BluetoothGatt
 import android.os.Build
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import no.nordicsemi.kotlin.ble.client.GattEvent
 import no.nordicsemi.kotlin.ble.client.RemoteService
 import no.nordicsemi.kotlin.ble.client.android.BondState
@@ -112,8 +112,8 @@ internal class NativeExecutor(
         .also { it.logger = logger }
 
     /** The current bond state. */
-    private var _bondState = MutableStateFlow(bluetoothDevice.bondState.toBondState())
-    override val bondState = _bondState.asStateFlow()
+    override val bondState: StateFlow<BondState>
+        field = MutableStateFlow(bluetoothDevice.bondState.toBondState())
 
     /**
      * This method is called when the bond state of the device changes.
@@ -122,7 +122,7 @@ internal class NativeExecutor(
         if (state is BondState.None) {
             gattCallback.onBondLost()
         }
-        _bondState.value = state
+        bondState.value = state
     }
 
     /**
@@ -130,14 +130,14 @@ internal class NativeExecutor(
      *
      * It is reported from Android 16, when the broadcasts became public.
      */
-    private val _encryptionState = MutableStateFlow<EncryptionState>(EncryptionState.Unknown)
-    override val encryptionState = _encryptionState.asStateFlow()
+    override val encryptionState: StateFlow<EncryptionState>
+        field = MutableStateFlow<EncryptionState>(EncryptionState.Unknown)
 
     /**
      * This method is called when the state of the encryption of the link changes.
      */
     internal fun onEncryptionStateChanged(state: EncryptionState) {
-        _encryptionState.value = state
+        encryptionState.value = state
     }
 
     // Implementation
