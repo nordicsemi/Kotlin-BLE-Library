@@ -109,7 +109,10 @@ internal class NativeExecutor(
      * as [GattEvent] to [events].
      */
     private val gattCallback: NativeGattCallback = NativeGattCallback(identifier)
-        .also { it.logger = logger }
+        .also {
+            it.logger = logger
+            it.onConnected = ::readEncryptionState
+        }
 
     /** The current bond state. */
     override val bondState: StateFlow<BondState>
@@ -137,6 +140,34 @@ internal class NativeExecutor(
      * This method is called when the state of the encryption of the link changes.
      */
     internal fun onEncryptionStateChanged(state: EncryptionState) {
+        encryptionState.value = state
+    }
+
+    /**
+     * Reads the current encryption of the link, when the device connects.
+     *
+     * The broadcasts are sent only when the encryption changes. If the device reconnects while
+     * the previous link is still up (the system keeps it for a few seconds after the GATT was
+     * closed), the link is already encrypted, there is no broadcast, and the state would stay
+     * unknown, or stale. The status is available since Android 16 QPR2 (API 36.1).
+     */
+    @SuppressLint("NewApi", "MissingPermission")
+    private fun readEncryptionState() {
+        if (!isBaklava1OrNewer) return
+        val state = try {
+            val status = bluetoothDevice.getEncryptionStatus(BluetoothDevice.TRANSPORT_LE)
+            when (val algorithm = status?.algorithm) {
+                // The status is not available, e.g. the device is not connected.
+                null -> EncryptionState.Unknown
+                BluetoothDevice.ENCRYPTION_ALGORITHM_NONE -> EncryptionState.NotEncrypted()
+                else -> EncryptionState.Encrypted(
+                    algorithm = algorithm.toEncryptionAlgorithm(),
+                    keySize = status.keySize.takeIf { it > 0 },
+                )
+            }
+        } catch (_: SecurityException) {
+            EncryptionState.Unknown
+        }
         encryptionState.value = state
     }
 

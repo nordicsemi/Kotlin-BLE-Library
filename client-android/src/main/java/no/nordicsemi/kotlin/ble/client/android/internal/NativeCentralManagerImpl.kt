@@ -148,16 +148,6 @@ internal class NativeCentralManagerImpl(
     private val encryptionEvents = MutableSharedFlow<EncryptionEvent>(extraBufferCapacity = BROADCAST_BUFFER_CAPACITY)
 
     /**
-     * Whether the system is Android 16 QPR2 (API 36.1) or newer.
-     *
-     * Android 16 made the encryption broadcasts public, but the bond loss reason, the constants
-     * of its values, and [BluetoothDevice.ENCRYPTION_ALGORITHM_UNKNOWN] were added in 36.1.
-     */
-    private val isBaklava1OrNewer: Boolean
-        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA &&
-                Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1
-
-    /**
      * Receives the encryption state of the link.
      *
      * The broadcasts are public since Android 16 (API 36). Before, they required
@@ -194,12 +184,8 @@ internal class NativeCentralManagerImpl(
         return when {
             status != 0 -> EncryptionState.NotEncrypted(EncryptionState.Reason.ControllerError(status))
             getBooleanExtra(BluetoothDevice.EXTRA_ENCRYPTION_ENABLED, false) -> EncryptionState.Encrypted(
-                // ENCRYPTION_ALGORITHM_UNKNOWN is not available in 36.0, so any other value is unknown.
-                algorithm = when (getIntExtra(BluetoothDevice.EXTRA_ENCRYPTION_ALGORITHM, BluetoothDevice.ENCRYPTION_ALGORITHM_NONE)) {
-                    BluetoothDevice.ENCRYPTION_ALGORITHM_AES -> EncryptionState.Algorithm.AES
-                    BluetoothDevice.ENCRYPTION_ALGORITHM_E0 -> EncryptionState.Algorithm.E0
-                    else -> EncryptionState.Algorithm.Unknown
-                },
+                algorithm = getIntExtra(BluetoothDevice.EXTRA_ENCRYPTION_ALGORITHM, BluetoothDevice.ENCRYPTION_ALGORITHM_NONE)
+                    .toEncryptionAlgorithm(),
                 keySize = getIntExtra(BluetoothDevice.EXTRA_KEY_SIZE, 0).takeIf { it > 0 },
             )
             else -> EncryptionState.NotEncrypted()
@@ -583,4 +569,23 @@ internal class NativeCentralManagerImpl(
             logger?.trace(Layer.GAP) { "Scanning stopped" }
         }
     }
+}
+
+/**
+ * Whether the system is Android 16 QPR2 (API 36.1) or newer.
+ *
+ * Android 16 made the encryption broadcasts public, but the bond loss reason, the constants
+ * of its values, [BluetoothDevice.ENCRYPTION_ALGORITHM_UNKNOWN] and
+ * [BluetoothDevice.getEncryptionStatus] were added in 36.1.
+ */
+internal val isBaklava1OrNewer: Boolean
+    get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA &&
+            Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1
+
+/** Converts the `BluetoothDevice.ENCRYPTION_ALGORITHM_*` constant. */
+internal fun Int.toEncryptionAlgorithm(): EncryptionState.Algorithm = when (this) {
+    BluetoothDevice.ENCRYPTION_ALGORITHM_AES -> EncryptionState.Algorithm.AES
+    BluetoothDevice.ENCRYPTION_ALGORITHM_E0 -> EncryptionState.Algorithm.E0
+    // ENCRYPTION_ALGORITHM_UNKNOWN is not available in 36.0, so any other value is unknown.
+    else -> EncryptionState.Algorithm.Unknown
 }

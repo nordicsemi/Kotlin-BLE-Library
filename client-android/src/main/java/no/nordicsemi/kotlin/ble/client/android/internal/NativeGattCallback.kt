@@ -69,6 +69,9 @@ internal class NativeGattCallback(
     override val identifier: String,
 ): BluetoothGattCallback(), Log.IdentifiableEmitter<String> {
     var logger: Log.Sink<Layer>? = null
+
+    /** Called when the device connects, before the event is emitted. */
+    var onConnected: (() -> Unit)? = null
     val events: SharedFlow<GattEvent>
         field = MutableSharedFlow<GattEvent>(extraBufferCapacity = 64)
 
@@ -122,6 +125,9 @@ internal class NativeGattCallback(
         isConnected = newState == BluetoothGatt.STATE_CONNECTED
         isServiceDiscoveryComplete = false
         isBondLostWhileConnected = false
+        if (isConnected) {
+            onConnected?.invoke()
+        }
         events.tryEmit(ConnectionStateChanged(newState.toConnectionState(betterStatus, disconnectReason)))
     }
 
