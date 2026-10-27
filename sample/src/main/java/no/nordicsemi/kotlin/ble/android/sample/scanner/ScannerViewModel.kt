@@ -44,7 +44,6 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
@@ -107,35 +106,35 @@ class ScannerViewModel @Inject constructor(
     // as soon as they receive the first state.
     private val connectionScopeMap = mutableMapOf<Peripheral, CoroutineScope>()
 
-    private val _peripherals: MutableStateFlow<List<ScanResult>> = MutableStateFlow(
-        listOf(
-            // Note: It's not possible to connect to PreviewPeripheral instances.
-            //       An exception is thrown, that it was obtained using a different CentralManager.
-            // TODO Allow it?
-            PreviewScanResult(
-                peripheral = PreviewPeripheral(scope, phy = PhyInUse(txPhy = Phy.PHY_LE_1M, rxPhy = Phy.PHY_LE_2M))
-                    .apply {
-                        // Track state of each peripheral.
-                        // Note, that the states are observed using the view model scope, even when the
-                        // device isn't connected.
-                        observePeripheralState(this, scope)
-                        // Track bond state of each peripheral.
-                        observeBondState(this, scope)
-                    },
-                isConnectable = true,
+    val peripherals: StateFlow<List<ScanResult>>
+        field = MutableStateFlow<List<ScanResult>>(
+            listOf(
+                // Note: It's not possible to connect to PreviewPeripheral instances.
+                //       An exception is thrown, that it was obtained using a different CentralManager.
+                // TODO Allow it?
+                PreviewScanResult(
+                    peripheral = PreviewPeripheral(scope, phy = PhyInUse(txPhy = Phy.PHY_LE_1M, rxPhy = Phy.PHY_LE_2M))
+                        .apply {
+                            // Track state of each peripheral.
+                            // Note, that the states are observed using the view model scope, even when the
+                            // device isn't connected.
+                            observePeripheralState(this, scope)
+                            // Track bond state of each peripheral.
+                            observeBondState(this, scope)
+                        },
+                    isConnectable = true,
+                )
             )
         )
-    )
-    val peripherals = _peripherals.asStateFlow()
 
-    private val _isScanning: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
+    val isScanning: StateFlow<Boolean>
+        field = MutableStateFlow(false)
 
     /**
      * The last values of characteristics and descriptors, keyed by the attribute instance.
      */
-    private val _attributeValues: MutableStateFlow<Map<Any, AttributeValue>> = MutableStateFlow(emptyMap())
-    val attributeValues: StateFlow<Map<Any, AttributeValue>> = _attributeValues.asStateFlow()
+    val attributeValues: StateFlow<Map<Any, AttributeValue>>
+        field = MutableStateFlow<Map<Any, AttributeValue>>(emptyMap())
 
     /**
      * Subscriptions to notifications or indications started from the UI.
@@ -170,17 +169,17 @@ class ScannerViewModel @Inject constructor(
                 }
             }
             .onStart {
-                _isScanning.update { true }
+                isScanning.update { true }
             }
             .distinctByPeripheral()
             .filterNot { result ->
-                _peripherals.value.any { it.peripheral == result.peripheral }
+                peripherals.value.any { it.peripheral == result.peripheral }
             }
             //.distinct()
             .onEach { result ->
                 val newPeripheral = result.peripheral
                 Timber.i("Found new device: ${newPeripheral.name} (${newPeripheral.address}), connectable: ${result.isConnectable}")
-                _peripherals.update { peripherals.value + result }
+                peripherals.update { peripherals.value + result }
             }
             .map { it.peripheral }
             .onEach { peripheral ->
@@ -195,7 +194,7 @@ class ScannerViewModel @Inject constructor(
                 Timber.e("Scan failed: $t")
             }
             .onCompletion {
-                _isScanning.update { false }
+                isScanning.update { false }
             }
             .launchIn(scope)
     }
@@ -476,7 +475,7 @@ class ScannerViewModel @Inject constructor(
             }
             .onEach {
                 // Forget values of invalidated attributes.
-                _attributeValues.update { values ->
+                attributeValues.update { values ->
                     values.filterKeys { attribute ->
                         when (attribute) {
                             is RemoteCharacteristic -> attribute.owner != null
@@ -712,7 +711,7 @@ class ScannerViewModel @Inject constructor(
     }
 
     private fun updateValue(attribute: Any, transform: AttributeValue.() -> AttributeValue) {
-        _attributeValues.update { values ->
+        attributeValues.update { values ->
             values + (attribute to (values[attribute] ?: AttributeValue()).transform())
         }
     }

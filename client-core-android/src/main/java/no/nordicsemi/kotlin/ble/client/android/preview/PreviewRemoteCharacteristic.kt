@@ -34,7 +34,6 @@ package no.nordicsemi.kotlin.ble.client.android.preview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.update
 import no.nordicsemi.kotlin.ble.client.AnyRemoteService
@@ -58,9 +57,8 @@ class PreviewRemoteCharacteristic : RemoteCharacteristic {
     override val service: AnyRemoteService
     override val uuid: Uuid
     override val instanceId: Int
-    private val _isNotifying = MutableStateFlow(false)
     override val isNotifying: StateFlow<Boolean>
-        get() = _isNotifying.asStateFlow()
+        field = MutableStateFlow(false)
     override val properties: Set<CharacteristicProperty>
     override val descriptors: List<RemoteDescriptor>
 
@@ -156,7 +154,7 @@ class PreviewRemoteCharacteristic : RemoteCharacteristic {
         this.service = PreviewRemoteService(serviceDefinition.uuid, 0, this)
         this.uuid = uuid
         this.instanceId = instanceId
-        this._isNotifying.update { isNotifying }
+        this.isNotifying.update { isNotifying }
         this.properties = properties
         this.definition = serviceDefinition.characteristics.first()
         this.descriptors = definition.descriptors.map {
@@ -169,7 +167,7 @@ class PreviewRemoteCharacteristic : RemoteCharacteristic {
     }
 
     override suspend fun setNotifying(enabled: Boolean) {
-        this._isNotifying.update { enabled }
+        this.isNotifying.update { enabled }
     }
 
     override suspend fun read(): ByteArray = byteArrayOf()

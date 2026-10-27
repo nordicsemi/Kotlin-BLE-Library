@@ -44,8 +44,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.getAndUpdate
@@ -160,8 +158,8 @@ class PeripheralSpec<ID: Any> private constructor(
     isServiceCacheValid: Boolean,
 ): MockPeripheral {
     /** A flow of GATT events emitted by the peripheral. */
-    private val _events: MutableSharedFlow<GattEvent> = MutableSharedFlow(extraBufferCapacity = 64)
-    val events: SharedFlow<GattEvent> = _events.asSharedFlow()
+    val events: SharedFlow<GattEvent>
+        field = MutableSharedFlow<GattEvent>(extraBufferCapacity = 64)
 
     /** Guards [simulations] and [sharedJob]. */
     private val lock = Any()
@@ -286,7 +284,7 @@ class PeripheralSpec<ID: Any> private constructor(
                         // TODO Should the connection be dropped immediately, or after supervision timeout? See simulateReset().
                         connectionsCount = 0
                         eventHandler!!.onConnectionLost(this@PeripheralSpec, DisconnectionReason.Timeout)
-                        _events.emit(ConnectionStateChanged(ConnectionState.Disconnected(Reason.LinkLoss)))
+                        events.emit(ConnectionStateChanged(ConnectionState.Disconnected(Reason.LinkLoss)))
                     }
                 }
             }
@@ -305,8 +303,6 @@ class PeripheralSpec<ID: Any> private constructor(
     var isKnown: Boolean = isKnown
         private set
 
-    private val _bondState = MutableStateFlow<MockBondState>(if (isBonded) MockBondState.Bonded else MockBondState.None())
-
     /**
      * The bond state of the peripheral, as seen by the phone.
      *
@@ -316,9 +312,8 @@ class PeripheralSpec<ID: Any> private constructor(
      *
      * @see peripheralHasBond
      */
-    val bondState: StateFlow<MockBondState> = _bondState.asStateFlow()
-
-    private val _encryptionState = MutableStateFlow<MockEncryptionState?>(null)
+    val bondState: StateFlow<MockBondState>
+        field = MutableStateFlow<MockBondState>(if (isBonded) MockBondState.Bonded else MockBondState.None())
 
     /**
      * The encryption of the link with the phone.
@@ -328,7 +323,8 @@ class PeripheralSpec<ID: Any> private constructor(
      *
      * The value is `null` while the peripheral is not connected, as there is no link to encrypt.
      */
-    val encryptionState: StateFlow<MockEncryptionState?> = _encryptionState.asStateFlow()
+    val encryptionState: StateFlow<MockEncryptionState?>
+        field = MutableStateFlow<MockEncryptionState?>(null)
 
     /**
      * Updates [encryptionState] after the connection state or bond state changed.
@@ -336,7 +332,7 @@ class PeripheralSpec<ID: Any> private constructor(
      * @param bonded Whether the phone is (being) bonded.
      */
     private fun updateEncryptionState(bonded: Boolean = isBonded) {
-        _encryptionState.value = when {
+        encryptionState.value = when {
             !isConnected -> null
             !bonded -> MockEncryptionState.NotEncrypted()
             peripheralHasBond -> MockEncryptionState.Encrypted
@@ -346,7 +342,7 @@ class PeripheralSpec<ID: Any> private constructor(
 
     /** Whether the phone has the bond information of the peripheral. */
     override val isBonded: Boolean
-        get() = _bondState.value is MockBondState.Bonded
+        get() = bondState.value is MockBondState.Bonded
 
     /**
      * Whether the peripheral has the bond information of the phone.
@@ -848,7 +844,7 @@ class PeripheralSpec<ID: Any> private constructor(
             // TODO Should we delay this to simulate connection interval?
             connectionsCount = 0
             eventHandler!!.onConnectionLost(this@PeripheralSpec, handlerReason)
-            _events.tryEmit(ConnectionStateChanged(ConnectionState.Disconnected(reason)))
+            events.tryEmit(ConnectionStateChanged(ConnectionState.Disconnected(reason)))
         }
     }
 
@@ -869,7 +865,7 @@ class PeripheralSpec<ID: Any> private constructor(
      * Does nothing if the peripheral is already bonded, or the bonding is in progress.
      */
     override fun simulateBondRequest() {
-        if (_bondState.getAndUpdate { if (it is MockBondState.None) MockBondState.Bonding else it } !is MockBondState.None) {
+        if (bondState.getAndUpdate { if (it is MockBondState.None) MockBondState.Bonding else it } !is MockBondState.None) {
             return
         }
         // The result is reported later, so that the clients can observe the Bonding state.
@@ -888,10 +884,10 @@ class PeripheralSpec<ID: Any> private constructor(
                     peripheralHasBond = true
                     // The link is encrypted, and then the bond is created.
                     updateEncryptionState(bonded = true)
-                    _bondState.value = MockBondState.Bonded
+                    bondState.value = MockBondState.Bonded
                 }
                 is BondResult.Reject -> {
-                    _bondState.value = MockBondState.None(MockBondState.Reason.Failed(result.failure))
+                    bondState.value = MockBondState.None(MockBondState.Reason.Failed(result.failure))
                     // The phone terminates the link after a failed pairing.
                     if (isConnected) {
                         val epoch = connectionEpoch
@@ -923,10 +919,10 @@ class PeripheralSpec<ID: Any> private constructor(
         if (simulationEnvironment?.repeatsRequestsAfterBonding == false && !isBonded) {
             return Authentication.Dropped
         }
-        val bonded = _bondState.first { it !is MockBondState.Bonding } is MockBondState.Bonded
+        val bonded = bondState.first { it !is MockBondState.Bonding } is MockBondState.Bonded
         // The peripheral does not have the key, so the link cannot be encrypted.
         return when {
-            bonded && _encryptionState.value != MockEncryptionState.NotEncrypted(MockEncryptionState.Reason.KEY_MISSING) -> Authentication.Granted
+            bonded && encryptionState.value != MockEncryptionState.NotEncrypted(MockEncryptionState.Reason.KEY_MISSING) -> Authentication.Granted
             else -> Authentication.Denied
         }
     }
@@ -950,7 +946,7 @@ class PeripheralSpec<ID: Any> private constructor(
      * @see simulatePeripheralBondLoss
      */
     fun simulateBondRemoval() {
-        _bondState.value = MockBondState.None(MockBondState.Reason.Removed)
+        bondState.value = MockBondState.None(MockBondState.Reason.Removed)
         terminateConnectionByPhone()
     }
 
@@ -983,7 +979,7 @@ class PeripheralSpec<ID: Any> private constructor(
             launchShared {
                 // Simulate supervision timeout delay before notifying clients.
                 delay(supervisionTimeout)
-                _events.emit(ConnectionStateChanged(ConnectionState.Disconnected(Reason.LinkLoss)))
+                events.emit(ConnectionStateChanged(ConnectionState.Disconnected(Reason.LinkLoss)))
             }
         }
     }
@@ -1024,7 +1020,7 @@ class PeripheralSpec<ID: Any> private constructor(
 
             // If any client is still connected, emit the event.
             if (isConnected) {
-                _events.emit(CharacteristicChanged(handle, notifiedValue))
+                events.emit(CharacteristicChanged(handle, notifiedValue))
             }
         }
     }
@@ -1062,7 +1058,7 @@ class PeripheralSpec<ID: Any> private constructor(
                     // TODO Pre-Oreo Android versions do not report Service Changed events.
                     // TODO Android 6+ (until 15?) report 7.5ms interval during service discovery.
                     // On Android 16 the 7.5 ms interval is not reported? No longer a thing?
-                    _events.emit(ServicesChanged)
+                    events.emit(ServicesChanged)
                 }
             }
         }
@@ -1092,7 +1088,7 @@ class PeripheralSpec<ID: Any> private constructor(
             this.identifier = newIdentifier
             this.addressType = addressType
             this.isKnown = false
-            _bondState.value = MockBondState.None()
+            bondState.value = MockBondState.None()
         }
         // TODO what with cached connections in central managers? PeripheralSpec instance is the same.
     }
@@ -1122,7 +1118,7 @@ class PeripheralSpec<ID: Any> private constructor(
                 if (epoch != connectionEpoch) return@launchShared
 
                 connectionParameters = parameters
-                _events.emit(ConnectionParametersChanged(parameters))
+                events.emit(ConnectionParametersChanged(parameters))
             }
         }
     }
@@ -1162,7 +1158,7 @@ class PeripheralSpec<ID: Any> private constructor(
             if (epoch != connectionEpoch) return@launchShared
 
             this@PeripheralSpec.mtu = newMtu
-            _events.emit(MtuChanged(newMtu))
+            events.emit(MtuChanged(newMtu))
         }
     }
 
@@ -1550,7 +1546,7 @@ class PeripheralSpec<ID: Any> private constructor(
 
                     // Android changes connection parameters during service discovery.
                     if (environment.reportsConnectionParameters) {
-                        _events.emit(ConnectionParametersChanged(
+                        events.emit(ConnectionParametersChanged(
                             ConnectionParameters.Specified(
                                 connectionInterval = 6, // 7.5 ms
                                 // TODO Are those kept the same?
@@ -1582,7 +1578,7 @@ class PeripheralSpec<ID: Any> private constructor(
                     if (environment.reportsConnectionParameters) {
                         managerScope.launch {
                             delay(connectionInterval * 2)
-                            _events.emit(ConnectionParametersChanged(connectionParameters))
+                            events.emit(ConnectionParametersChanged(connectionParameters))
                         }
                     }
                 }
@@ -1625,7 +1621,7 @@ class PeripheralSpec<ID: Any> private constructor(
                 // This will clear the cached services on all clients.
                 // See `cacheMonitoring` in Api init.
                 // TODO All clients will start service discovery again, independently.
-                _events.emit(ServicesChanged)
+                events.emit(ServicesChanged)
                 return true
             }
             return false
@@ -1641,7 +1637,7 @@ class PeripheralSpec<ID: Any> private constructor(
             val connectionParameters = connectionParameters ?: return false
             delay(connectionParameters.connectionIntervalMillis.milliseconds)
 
-            _events.emit(RssiRead(proximity.randomRssi()))
+            events.emit(RssiRead(proximity.randomRssi()))
             return true
         }
 
@@ -1655,7 +1651,7 @@ class PeripheralSpec<ID: Any> private constructor(
             // MTU can be change just once per connection.
             val currentMtu = this@PeripheralSpec.mtu ?: return false
             if (currentMtu > ATT_MTU_DEFAULT || mtu == currentMtu) {
-                _events.emit(MtuChanged(currentMtu))
+                events.emit(MtuChanged(currentMtu))
                 return true
             }
 
@@ -1668,7 +1664,7 @@ class PeripheralSpec<ID: Any> private constructor(
             val newMtu = mtu.coerceIn(ATT_MTU_DEFAULT, maxAttMtu(environment))
 
             this@PeripheralSpec.mtu = newMtu
-            _events.emit(MtuChanged(newMtu))
+            events.emit(MtuChanged(newMtu))
             return true
         }
 
@@ -1690,7 +1686,7 @@ class PeripheralSpec<ID: Any> private constructor(
                 // Check if the peripheral is still connected and emit the event.
                 if (isConnected) {
                     this@PeripheralSpec.connectionParameters = parameters
-                    _events.emit(ConnectionParametersChanged(parameters))
+                    events.emit(ConnectionParametersChanged(parameters))
                     return true
                 } else {
                     return false
@@ -1712,7 +1708,7 @@ class PeripheralSpec<ID: Any> private constructor(
          */
         suspend fun onConnectionUpdated() {
             val newParameters = ConnectionParameters.Unknown
-            _events.emit(ConnectionParametersChanged(newParameters))
+            events.emit(ConnectionParametersChanged(newParameters))
         }
 
         /**
@@ -1736,7 +1732,7 @@ class PeripheralSpec<ID: Any> private constructor(
             // If the requested PHY is already in use, just emit it.
             // The collector is waiting for the PhyChanged event.
             if (currentPhy == requestedPhy) {
-                _events.emit(PhyChanged(currentPhy))
+                events.emit(PhyChanged(currentPhy))
                 return
             }
 
@@ -1748,7 +1744,7 @@ class PeripheralSpec<ID: Any> private constructor(
             // Check if the peripheral is still connected.
             if (isConnected) {
                 this@PeripheralSpec.phy = requestedPhy
-                _events.emit(PhyChanged(requestedPhy))
+                events.emit(PhyChanged(requestedPhy))
             }
         }
 
@@ -1757,7 +1753,7 @@ class PeripheralSpec<ID: Any> private constructor(
          */
         suspend fun readPhy() {
             val phy = phy ?: return
-            _events.emit(PhyChanged(phy.limitedTo(environment)))
+            events.emit(PhyChanged(phy.limitedTo(environment)))
         }
 
         /**
@@ -1773,11 +1769,11 @@ class PeripheralSpec<ID: Any> private constructor(
             val eventHandler = checkNotNull(eventHandler)
             when (val response = eventHandler.onExecuteWriteRequest(this@PeripheralSpec, execute)) {
                 is WriteResponse.Success -> {
-                    _events.emit(ReliableWriteCompleted(OperationStatus.Success))
+                    events.emit(ReliableWriteCompleted(OperationStatus.Success))
                 }
 
                 is WriteResponse.Failure -> {
-                    _events.emit(ReliableWriteCompleted(response.status))
+                    events.emit(ReliableWriteCompleted(response.status))
                 }
             }
             return true

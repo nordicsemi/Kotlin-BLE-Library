@@ -80,8 +80,8 @@ import kotlin.uuid.Uuid
  *     private lateinit var ledCharacteristic: RemoteCharacteristic
  *
  *     // Public API.
- *     private val _buttonState = MutableStateFlow(false)
- *     override val buttonState: StateFlow<Boolean> = _buttonState.asStateFlow()
+ *     override val buttonState: StateFlow<Boolean>
+ *         field = MutableStateFlow(false)
  *     override val ledState: MutableStateFlow<Boolean> = MutableStateFlow(false)
  *
  *     // Implementation.
@@ -103,13 +103,13 @@ import kotlin.uuid.Uuid
  *         buttonCharacteristic
  *             .subscribe()
  *             .map { value -> value.singleOrNull() == 1.toByte() }
- *             .onEach { isPressed -> _buttonState.update { isPressed } }
+ *             .onEach { isPressed -> buttonState.update { isPressed } }
  *             .launchIn(this)
  *
  *         // Read current Button state.
  *         try {
  *             val currentState = buttonCharacteristic.read()
- *             _buttonState.update { currentState.singleOrNull() == 1.toByte() }
+ *             buttonState.update { currentState.singleOrNull() == 1.toByte() }
  *         } catch (e: OperationFailedException) {
  *             println("Reading button characteristic failed: ${e.message}")
  *         }

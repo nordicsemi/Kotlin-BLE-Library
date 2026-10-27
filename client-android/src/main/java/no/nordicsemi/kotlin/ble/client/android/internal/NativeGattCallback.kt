@@ -43,7 +43,6 @@ import android.os.Build
 import androidx.annotation.Keep
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import no.nordicsemi.kotlin.ble.client.ConnectionParametersChanged
 import no.nordicsemi.kotlin.ble.client.ConnectionStateChanged
 import no.nordicsemi.kotlin.ble.client.GattEvent
@@ -70,8 +69,8 @@ internal class NativeGattCallback(
     override val identifier: String,
 ): BluetoothGattCallback(), Log.IdentifiableEmitter<String> {
     var logger: Log.Sink<Layer>? = null
-    private val _events: MutableSharedFlow<GattEvent> = MutableSharedFlow(extraBufferCapacity = 64)
-    val events: SharedFlow<GattEvent> = _events.asSharedFlow()
+    val events: SharedFlow<GattEvent>
+        field = MutableSharedFlow<GattEvent>(extraBufferCapacity = 64)
 
     /**
      * A requested disconnection reason.
@@ -123,7 +122,7 @@ internal class NativeGattCallback(
         isConnected = newState == BluetoothGatt.STATE_CONNECTED
         isServiceDiscoveryComplete = false
         isBondLostWhileConnected = false
-        _events.tryEmit(ConnectionStateChanged(newState.toConnectionState(betterStatus, disconnectReason)))
+        events.tryEmit(ConnectionStateChanged(newState.toConnectionState(betterStatus, disconnectReason)))
     }
 
     /** Called when the bond state changed to None. */
@@ -135,7 +134,7 @@ internal class NativeGattCallback(
         logger?.debug(Layer.GATT) { "onServicesDiscovered(status=$status)" }
         isServiceDiscoveryComplete = true
         if (status != BluetoothGatt.GATT_SUCCESS) {
-            _events.tryEmit(ServiceDiscoveryFailed(RemoteServices.Failed.Reason.Unknown(status)))
+            events.tryEmit(ServiceDiscoveryFailed(RemoteServices.Failed.Reason.Unknown(status)))
             return
         }
         // Expect status to be GATT_SUCCESS (0) and at least 2 services:
@@ -144,7 +143,7 @@ internal class NativeGattCallback(
         val services = gatt.services
         if (services.size < 2) {
             logger?.warn(Layer.GATT) { "Services discovery returned ${services.size} services (>= 2 expected)" }
-            _events.tryEmit(ServiceDiscoveryFailed(RemoteServices.Failed.Reason.EmptyResult))
+            events.tryEmit(ServiceDiscoveryFailed(RemoteServices.Failed.Reason.EmptyResult))
             return
         }
         val remoteServices = services
@@ -154,12 +153,12 @@ internal class NativeGattCallback(
             .filter { it.type == BluetoothGattService.SERVICE_TYPE_PRIMARY }
             // Map each primary BluetoothGattService to NativeRemoteService.
             .map { NativeRemoteService(gatt, it, events) }
-        _events.tryEmit(ServicesDiscovered(remoteServices))
+        events.tryEmit(ServicesDiscovered(remoteServices))
     }
 
     override fun onServiceChanged(gatt: BluetoothGatt) {
         logger?.debug(Layer.GATT) { "onServiceChanged()" }
-        _events.tryEmit(ServicesChanged)
+        events.tryEmit(ServicesChanged)
     }
 
     // Handling value changes.
@@ -170,7 +169,7 @@ internal class NativeGattCallback(
         value: ByteArray
     ) {
         logger?.debug(Layer.GATT) { "onCharacteristicChanged(${characteristic.uuid}, value=0x${value.toHexString() })" }
-        _events.tryEmit(CharacteristicChanged(characteristic, value))
+        events.tryEmit(CharacteristicChanged(characteristic, value))
     }
 
     override fun onCharacteristicRead(
@@ -180,7 +179,7 @@ internal class NativeGattCallback(
         status: Int
     ) {
         logger?.debug(Layer.GATT) { "onCharacteristicRead(${characteristic.uuid}, value=0x${value.toHexString()}, status=$status)" }
-        _events.tryEmit(CharacteristicRead(characteristic, value, status.toOperationStatus()))
+        events.tryEmit(CharacteristicRead(characteristic, value, status.toOperationStatus()))
     }
 
     override fun onCharacteristicWrite(
@@ -189,7 +188,7 @@ internal class NativeGattCallback(
         status: Int
     ) {
         logger?.debug(Layer.GATT) { "onCharacteristicWrite(${characteristic.uuid}, status=$status)" }
-        _events.tryEmit(CharacteristicWrite(characteristic, status.toOperationStatus()))
+        events.tryEmit(CharacteristicWrite(characteristic, status.toOperationStatus()))
     }
 
     override fun onDescriptorRead(
@@ -199,7 +198,7 @@ internal class NativeGattCallback(
         value: ByteArray
     ) {
         logger?.debug(Layer.GATT) { "onDescriptorRead(${descriptor.uuid}, value=0x${value.toHexString()}, status=$status)" }
-        _events.tryEmit(DescriptorRead(descriptor, value, status.toOperationStatus()))
+        events.tryEmit(DescriptorRead(descriptor, value, status.toOperationStatus()))
     }
 
     override fun onDescriptorWrite(
@@ -208,14 +207,14 @@ internal class NativeGattCallback(
         status: Int
     ) {
         logger?.debug(Layer.GATT) { "onDescriptorWrite(${descriptor.uuid}, status=$status)" }
-        _events.tryEmit(DescriptorWrite(descriptor, status.toOperationStatus()))
+        events.tryEmit(DescriptorWrite(descriptor, status.toOperationStatus()))
     }
 
     // Note, this is called when Reliable Write was executed or aborted.
     // There is no way to distinguish between the two without keeping state.
     override fun onReliableWriteCompleted(gatt: BluetoothGatt, status: Int) {
         logger?.debug(Layer.GATT) { "onReliableWriteCompleted(status=$status)" }
-        _events.tryEmit(ReliableWriteCompleted(status.toOperationStatus()))
+        events.tryEmit(ReliableWriteCompleted(status.toOperationStatus()))
     }
 
     // Handling connection parameter updates
@@ -226,7 +225,7 @@ internal class NativeGattCallback(
             logger?.warn(Layer.GATT) { "MTU request failed with status $status" }
             // no return, event must be emitted
         }
-        _events.tryEmit(MtuChanged(mtu))
+        events.tryEmit(MtuChanged(mtu))
     }
 
     override fun onReadRemoteRssi(gatt: BluetoothGatt, rssi: Int, status: Int) {
@@ -235,7 +234,7 @@ internal class NativeGattCallback(
             logger?.warn(Layer.LINK) { "RSSI request failed with status $status" }
             // no return, event must be emitted
         }
-        _events.tryEmit(RssiRead(rssi))
+        events.tryEmit(RssiRead(rssi))
     }
 
     override fun onPhyUpdate(gatt: BluetoothGatt, txPhy: Int, rxPhy: Int, status: Int) {
@@ -245,7 +244,7 @@ internal class NativeGattCallback(
             // no return, event must be emitted
         }
         val phyInUse = PhyInUse(txPhy.toPhy(), rxPhy.toPhy())
-        _events.tryEmit(PhyChanged(phyInUse))
+        events.tryEmit(PhyChanged(phyInUse))
     }
 
     override fun onPhyRead(gatt: BluetoothGatt, txPhy: Int, rxPhy: Int, status: Int) {
@@ -255,7 +254,7 @@ internal class NativeGattCallback(
             // no return, event must be emitted
         }
         val phyInUse = PhyInUse(txPhy.toPhy(), rxPhy.toPhy())
-        _events.tryEmit(PhyChanged(phyInUse))
+        events.tryEmit(PhyChanged(phyInUse))
     }
 
     // Note:
@@ -270,7 +269,7 @@ internal class NativeGattCallback(
             // no return, event must be emitted
         }
         val newParameters = ConnectionParameters.Specified(interval, latency, timeout)
-        _events.tryEmit(ConnectionParametersChanged(newParameters))
+        events.tryEmit(ConnectionParametersChanged(newParameters))
 
         // Android starts reporting Service Changed event starting from API 31 (S).
         // However, since API 26 it was possible to detect it by listening to connection
@@ -294,7 +293,7 @@ internal class NativeGattCallback(
     fun onConnectionUpdated() {
         logger?.debug(Layer.LINK) { "onConnectionUpdated(unknown)" }
         val newParameters = ConnectionParameters.Unknown
-        _events.tryEmit(ConnectionParametersChanged(newParameters))
+        events.tryEmit(ConnectionParametersChanged(newParameters))
     }
 
     // Backward compatibility

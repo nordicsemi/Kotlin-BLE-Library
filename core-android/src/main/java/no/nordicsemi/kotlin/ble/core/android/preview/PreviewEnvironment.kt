@@ -33,7 +33,6 @@ package no.nordicsemi.kotlin.ble.core.android.preview
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import no.nordicsemi.kotlin.ble.core.Manager
 import no.nordicsemi.kotlin.ble.core.android.AndroidEnvironment
@@ -63,11 +62,11 @@ class PreviewEnvironment(
     override val isLePeriodicAdvertisingSupported: Boolean = true,
     override val leMaximumAdvertisingDataLength: Int = 1650,
 ): AndroidEnvironment {
-    private val _bluetoothState = MutableStateFlow(bluetoothState)
-    override val bluetoothState: StateFlow<Manager.State> = _bluetoothState.asStateFlow()
+    override val bluetoothState: StateFlow<Manager.State>
+        field = MutableStateFlow(bluetoothState)
 
     override fun enableBluetooth() {
-        _bluetoothState.update { Manager.State.POWERED_ON }
+        this.bluetoothState.update { Manager.State.POWERED_ON }
     }
     override fun close() {}
 }

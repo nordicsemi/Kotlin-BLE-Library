@@ -37,7 +37,6 @@ import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.firstOrNull
@@ -130,9 +129,8 @@ abstract class BaseRemoteCharacteristic(
      *
      * This is updated only after the CCCD write has been confirmed by the peripheral.
      */
-    private var _isNotifying: MutableStateFlow<Boolean> = MutableStateFlow(false)
     final override val isNotifying: StateFlow<Boolean>
-        get() = _isNotifying.asStateFlow()
+        field = MutableStateFlow(false)
 
     /**
      * A flag indicating whether received notifications or indications should be passed to
@@ -152,7 +150,7 @@ abstract class BaseRemoteCharacteristic(
 
     internal fun reset() {
         isDelivering.set(false)
-        _isNotifying.update { false }
+        isNotifying.update { false }
     }
 
     final override suspend fun setNotifying(enabled: Boolean) = withCallSite("setNotifying") {
@@ -212,7 +210,7 @@ abstract class BaseRemoteCharacteristic(
                 }
                 throw e
             }
-            _isNotifying.update { enabled }
+            isNotifying.update { enabled }
         }
     }
 

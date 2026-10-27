@@ -46,7 +46,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.location.LocationManagerCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import no.nordicsemi.kotlin.ble.core.Manager
 import no.nordicsemi.kotlin.ble.core.android.AndroidEnvironment
@@ -121,10 +120,8 @@ class NativeAndroidEnvironment private constructor(
      * This is a [kotlinx.coroutines.flow.MutableStateFlow] that emits the current state of the Bluetooth adapter.
      * The state is updated when the adapter state changes.
      */
-    private val _bluetoothState =
-        MutableStateFlow(bluetoothManager?.adapter?.state?.toState() ?: Manager.State.UNSUPPORTED)
     override val bluetoothState: StateFlow<Manager.State>
-        get() = _bluetoothState.asStateFlow()
+        field = MutableStateFlow(bluetoothManager?.adapter?.state?.toState() ?: Manager.State.UNSUPPORTED)
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override fun enableBluetooth() {
@@ -138,32 +135,30 @@ class NativeAndroidEnvironment private constructor(
      */
     private val bluetoothStateBroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            val oldState = _bluetoothState.value
+            val oldState = bluetoothState.value
             val newState = bluetoothManager?.adapter?.state?.toState() ?: Manager.State.UNKNOWN
 
             // Ignore if the state has not changed.
             if (oldState != newState) {
-                _bluetoothState.update { newState }
+                bluetoothState.update { newState }
             }
         }
     }
 
-    private val _locationState =
-        MutableStateFlow(locationManager != null && LocationManagerCompat.isLocationEnabled(locationManager))
     override val locationState: StateFlow<Boolean>
-        get() = _locationState.asStateFlow()
+        field = MutableStateFlow(locationManager != null && LocationManagerCompat.isLocationEnabled(locationManager))
 
     /**
      * Broadcast receiver that listens for Location state changes and emits [locationState].
      */
     private val locationStateBroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            val oldState = _locationState.value
+            val oldState = locationState.value
             val newState = locationManager != null && LocationManagerCompat.isLocationEnabled(locationManager)
 
             // Ignore if the state has not changed.
             if (oldState != newState) {
-                _locationState.update { newState }
+                locationState.update { newState }
             }
         }
     }

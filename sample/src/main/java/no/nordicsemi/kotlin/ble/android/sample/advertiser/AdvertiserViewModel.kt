@@ -37,7 +37,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import no.nordicsemi.kotlin.ble.advertiser.android.AdvertisingPayload
@@ -55,10 +55,10 @@ class AdvertiserViewModel @Inject constructor(
     // also connected to the ViewModel lifecycle, but which can be replaced in tests.
     private val scope: CoroutineScope,
 ): ViewModel() {
-    private val _isAdvertising = MutableStateFlow(false)
-    var isAdvertising = _isAdvertising.asStateFlow()
-    private val _error: MutableStateFlow<String?> = MutableStateFlow(null)
-    val error = _error.asStateFlow()
+    val isAdvertising: StateFlow<Boolean>
+        field = MutableStateFlow(false)
+    val error: StateFlow<String?>
+        field = MutableStateFlow<String?>(null)
 
     private var job: Job? = null
 
@@ -67,7 +67,7 @@ class AdvertiserViewModel @Inject constructor(
     ) {
         job = scope.launch {
             try {
-                _error.update { null }
+                error.update { null }
                 advertiser.advertise(
                     parameters = parameters,
                     payload = AdvertisingPayload(
@@ -88,15 +88,15 @@ class AdvertiserViewModel @Inject constructor(
                     timeout = 3.seconds,
                 ) { txPower ->
                     Timber.i("Tx power: $txPower")
-                    _isAdvertising.update { true }
+                    isAdvertising.update { true }
                 }
             } catch (_: CancellationException) {
                 Timber.i("Advertising cancelled")
             } catch (e: Exception) {
                 Timber.e(e, "Advertising failed")
-                _error.update { e.message }
+                error.update { e.message }
             } finally {
-                _isAdvertising.update { false }
+                isAdvertising.update { false }
             }
         }
     }
