@@ -192,17 +192,18 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      */
     protected open fun currentMtu(): Int = maximumWriteValueLength(WriteType.WITHOUT_RESPONSE) + 3
 
-    /**
-     * Current list of GATT services.
-     * @hide
-     */
-    protected var _services: MutableStateFlow<RemoteServices> = MutableStateFlow(
+    /** Current list of GATT services. */
+    private val remoteServices = MutableStateFlow<RemoteServices>(
         value = impl.takeIf { it.initialState == ConnectionState.Connected }?.initialServices
             ?.let { initialServices ->
                 RemoteServices.Discovered(initialServices.onEach { it.owner = this })
             }
             ?: RemoteServices.Unknown
     )
+
+    /** Whether the GATT services were discovered, and are available in [services]. */
+    protected val hasDiscoveredServices: Boolean
+        get() = remoteServices.value is RemoteServices.Discovered
 
     /**
      * A flag indicating that the services have been discovered.
@@ -527,8 +528,8 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      * Invalidates current GATT services.
      */
     private fun invalidateServices() {
-        _services.value.invalidate()
-        _services.update { RemoteServices.Unknown }
+        remoteServices.value.invalidate()
+        remoteServices.update { RemoteServices.Unknown }
         servicesDiscovered = false
         // Note!
         // Don't clear the serviceDiscoveryRequested flag here.
@@ -643,13 +644,13 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
                 //  can keep the wrappers of CBService objects and emit the accumulated list), so
                 //  that the objects held by the app stay valid. The services can only be
                 //  matched by UUID here, which fails for services with the same UUID.
-                _services.update { RemoteServices.Discovered(services) }
+                remoteServices.update { RemoteServices.Discovered(services) }
             }
 
             is ServiceDiscoveryFailed -> {
                 logger?.warn(Layer.GATT) { "Service discovery failed: ${event.reason}" }
                 invalidateServices()
-                _services.update { RemoteServices.Failed(event.reason) }
+                remoteServices.update { RemoteServices.Failed(event.reason) }
             }
 
             else -> { /* Ignore */ }
@@ -702,7 +703,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
                     impl.events
                         .onSubscription {
                             logger?.trace(Layer.GATT) { "Discovering services" }
-                            _services.update { RemoteServices.Discovering }
+                            remoteServices.update { RemoteServices.Discovering }
                             if (!isConnected || !impl.discoverServices(uuids)) {
                                 throw PeripheralNotConnectedException()
                             }
@@ -714,9 +715,9 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: PeripheralNotConnectedException) {
-                    _services.update { RemoteServices.Unknown }
+                    remoteServices.update { RemoteServices.Unknown }
                 } catch (e: Exception) {
-                    _services.update { RemoteServices.Failed(RemoteServices.Failed.Reason.InternalError) }
+                    remoteServices.update { RemoteServices.Failed(RemoteServices.Failed.Reason.InternalError) }
                     logger?.error(Layer.GATT) { "Discovering services failed: ${e.message}" }
                 }
             }
@@ -802,18 +803,18 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
         //  the discovery of UUIDs that haven't been covered yet. Currently, the services that
         //  were not requested by the first call are never discovered, and the filtered flow
         //  below reports an empty list (as if they were not found).
-        if (isConnected && _services.value == RemoteServices.Unknown) {
+        if (isConnected && remoteServices.value == RemoteServices.Unknown) {
             discoverServices(uuids)
         }
 
         // If there is no filter, return the original flow.
         if (uuids.isEmpty()) {
-            return _services.asStateFlow()
+            return remoteServices.asStateFlow()
         }
 
         // If there is a filter, create a new flow that will emit filtered services only.
-        val filteredState = _services.value.filteredBy(uuids)
-        return _services
+        val filteredState = remoteServices.value.filteredBy(uuids)
+        return remoteServices
             .map { it.filteredBy(uuids) }
             .stateIn(scope, SharingStarted.Lazily, filteredState)
     }

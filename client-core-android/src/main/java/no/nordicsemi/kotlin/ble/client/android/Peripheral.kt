@@ -1374,7 +1374,7 @@ open class Peripheral(
             // Returned error is 0x08 (TIMEOUT).
             it.reason == Reason.LinkLoss &&
             // This happens before the services are discovered,
-            _services.value !is RemoteServices.Discovered &&
+            !hasDiscoveredServices &&
             // ...but after the app is notified about change to PHY LE 2M.
             _phy.value?.txPhy == Phy.PHY_LE_2M
         } ?: false
