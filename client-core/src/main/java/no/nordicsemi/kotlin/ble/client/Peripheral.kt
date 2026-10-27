@@ -126,19 +126,26 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
 
     /**
      * The current state of the peripheral as a state flow.
-     * @hide
      */
-    protected var _state: MutableStateFlow<ConnectionState> = MutableStateFlow(impl.initialState)
-        .also {
-            if (impl.initialState.isConnected) {
-                scope.launch {
-                    val _ = prepareConnection()
-                    startCollectingGattEvents()
-                    initiateConnection()
+    val state: StateFlow<ConnectionState>
+        field = MutableStateFlow(impl.initialState)
+            .also {
+                if (impl.initialState.isConnected) {
+                    scope.launch {
+                        val _ = prepareConnection()
+                        startCollectingGattEvents()
+                        initiateConnection()
+                    }
                 }
             }
-        }
-    val state = _state.asStateFlow()
+
+    /**
+     * Updates the [state] of the peripheral.
+     *
+     * @param transform A function that returns the new state for the current one.
+     * @hide
+     */
+    protected fun updateState(transform: (ConnectionState) -> ConnectionState) = state.update(transform)
 
     /**
      * The ATT MTU (Attribute Protocol Maximum Transfer Unit) negotiated for the connection.
@@ -540,10 +547,10 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
         when (event) {
             is ConnectionStateChanged -> {
                 // If the state didn't change, ignore the event.
-                if (_state.value == event.newState) {
+                if (state.value == event.newState) {
                     return
                 }
-                val previousState = _state.value
+                val previousState = state.value
                 when (event.newState) {
                     is ConnectionState.Connecting ->
                         if (previousState.isConnected) {
@@ -562,7 +569,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
                     logger?.warn(Layer.GAP) { "Link lost while preparing the connection to $this" }
                     return
                 }
-                _state.update { event.newState }
+                state.update { event.newState }
                 when (event.newState) {
                     is ConnectionState.Connected -> {
                         initiateConnection()
@@ -727,7 +734,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
         }
 
         if (state.value !is ConnectionState.Disconnected) {
-            _state.update {
+            state.update {
                 ConnectionState.Disconnected(ConnectionState.Disconnected.Reason.TerminateLocalHost)
             }
         }
@@ -1550,13 +1557,13 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
                 is ConnectionState.Connecting -> {
                     // Cancel the connection attempt.
                     logger?.trace(Layer.GAP) { "Cancelling connection to ${this@Peripheral}" }
-                    _state.update { ConnectionState.Disconnecting }
+                    state.update { ConnectionState.Disconnecting }
                 }
 
                 is ConnectionState.Connected -> {
                     // Disconnect from the peripheral.
                     logger?.trace(Layer.GAP) { "Disconnecting from ${this@Peripheral}" }
-                    _state.update { ConnectionState.Disconnecting }
+                    state.update { ConnectionState.Disconnecting }
                 }
             }
 
@@ -1577,7 +1584,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
                 close()
                 // If before calling disconnect() the state was not Connected (i.e. Connecting),
                 // the state at this point will be Disconnecting. Change it to Disconnected manually.
-                _state.compareAndSet(
+                state.compareAndSet(
                     expect = ConnectionState.Disconnecting,
                     update = ConnectionState.Disconnected(reason)
                 )
