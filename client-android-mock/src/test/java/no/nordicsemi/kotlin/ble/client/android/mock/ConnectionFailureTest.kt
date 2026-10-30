@@ -33,6 +33,7 @@ package no.nordicsemi.kotlin.ble.client.android.mock
 
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.test.TestScope
@@ -44,6 +45,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.CentralManager.ConnectionOptions
 import no.nordicsemi.kotlin.ble.client.exception.ConnectionFailedException
+import no.nordicsemi.kotlin.ble.client.internal.OperationMutex
 import no.nordicsemi.kotlin.ble.client.mock.AddressType
 import no.nordicsemi.kotlin.ble.client.mock.ConnectionResult
 import no.nordicsemi.kotlin.ble.client.mock.DisconnectionReason
@@ -55,7 +57,9 @@ import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.ConnectionState.Disconnected.Reason
 import no.nordicsemi.kotlin.ble.core.LegacyAdvertisingSetParameters
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
+import no.nordicsemi.kotlin.ble.core.log.Layer
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
+import no.nordicsemi.kotlin.log.Log
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -753,5 +757,28 @@ class ConnectionFailureTest {
         assertFailsWith<no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException> {
             manager.connect(peripheral)
         }
+    }
+
+    @Test
+    fun `connection is prepared in limited time while another operation holds the operation lock`() = runTest {
+        val manager = newManager(spec())
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        val warnings = mutableListOf<Pair<Layer, String>>()
+        peripheral.logger = Log.Sink<Layer> { layer, level, _, _, message ->
+            if (level == Log.Level.WARN) warnings += layer to message()
+        }
+        // An operation, on this or another peripheral, holds the lock that all operations share.
+        backgroundScope.launch { OperationMutex.withLock { awaitCancellation() } }
+        runCurrent()
+
+        val connected = withTimeoutOrNull(30.seconds) {
+            manager.connect(peripheral, ConnectionOptions.Direct())
+        }
+
+        assertNotNull(connected)
+        assertEquals(ConnectionState.Connected, peripheral.state.value)
+        // The initial MTU request and PHY read gave up after 3 seconds each.
+        assertTrue(testScheduler.currentTime in 6_000 until 7_000, "Connected after ${testScheduler.currentTime} ms")
+        assertEquals(listOf(Layer.GATT to "MTU request timed out", Layer.PHY to "PHY read timed out"), warnings)
     }
 }

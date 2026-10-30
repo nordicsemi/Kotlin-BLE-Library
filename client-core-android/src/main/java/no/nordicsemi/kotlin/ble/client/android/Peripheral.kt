@@ -723,11 +723,11 @@ open class Peripheral(
             // An event will be emitted when they change.
             _connectionParameters.update { ConnectionParameters.Unknown }
             // Request MTU if set in ConnectionOptions.
-            if (automaticallyRequestHighestValueLength && !runCatchingOnConnection { requestHighestValueLength() }) {
+            if (automaticallyRequestHighestValueLength && !runCatchingOnConnection(Layer.GATT, "MTU request") { requestHighestValueLength() }) {
                 return false
             }
             // Read initial PHY to feed the `phy` flow.
-            return runCatchingOnConnection { _phy.update { readPhy() } }
+            return runCatchingOnConnection(Layer.PHY, "PHY read") { _phy.update { readPhy() } }
         } finally {
             isPreparingConnection = false
         }

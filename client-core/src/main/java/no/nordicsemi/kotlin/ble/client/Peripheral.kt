@@ -65,6 +65,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import no.nordicsemi.kotlin.ble.client.exception.InvalidAttributeException
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.client.exception.PeripheralNotConnectedException
@@ -81,6 +82,7 @@ import no.nordicsemi.kotlin.log.Log
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 
 /**
@@ -382,16 +384,24 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
     }
 
     /**
-     * Executes the given [block] when the peripheral is connected.
+     * Executes the given [block] when the peripheral is connected, and gives up on it after
+     * 3 seconds, logging a warning with the given [name].
+     *
+     * The time limit includes waiting for [OperationMutex], which the operations of all
+     * peripherals share, so that an operation on another peripheral cannot delay the connection
+     * indefinitely.
      *
      * This method ignores exceptions thrown by [block], so that connection could finish, except
      * a lost link, reported as `false`, and cancellation of the calling coroutine, also by
      * a timeout of an outer `withTimeout`, which is rethrown.
      *
+     * @param layer The log layer of the request.
+     * @param name The name of the request, used in the log.
      * @return `false` if the link was lost; `true` otherwise.
      */
-    protected suspend fun runCatchingOnConnection(block: suspend () -> Unit): Boolean = try {
-        block()
+    protected suspend fun runCatchingOnConnection(layer: Layer, name: String, block: suspend () -> Unit): Boolean = try {
+        withTimeoutOrNull(3.seconds) { block() }
+            ?: logger?.warn(layer) { "$name timed out" }
         true
     } catch (e: TimeoutCancellationException) {
         // The timeout of a request cancels only the request. If this coroutine was cancelled,
