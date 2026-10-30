@@ -159,8 +159,7 @@ internal class NativeExecutor(
             val status = bluetoothDevice.getEncryptionStatus(BluetoothDevice.TRANSPORT_LE)
             when (val algorithm = status?.algorithm) {
                 // The status is not available, e.g. the device is not connected.
-                null -> EncryptionState.Unknown
-                BluetoothDevice.ENCRYPTION_ALGORITHM_NONE -> EncryptionState.NotEncrypted()
+                null, BluetoothDevice.ENCRYPTION_ALGORITHM_NONE -> EncryptionState.NotEncrypted()
                 else -> EncryptionState.Encrypted(
                     algorithm = algorithm.toEncryptionAlgorithm(),
                     keySize = status.keySize.takeIf { it > 0 },
