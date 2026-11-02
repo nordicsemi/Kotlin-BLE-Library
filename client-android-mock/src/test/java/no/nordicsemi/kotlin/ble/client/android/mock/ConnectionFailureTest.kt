@@ -36,12 +36,16 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import no.nordicsemi.kotlin.ble.client.MtuChanged
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.CentralManager.ConnectionOptions
 import no.nordicsemi.kotlin.ble.client.exception.ConnectionFailedException
@@ -92,6 +96,7 @@ class ConnectionFailureTest {
         eventHandler: PeripheralSpecEventHandler = object : PeripheralSpecEventHandler {},
         isBonded: Boolean = false,
         preferredConnectionInterval: IntRange = 25..40,
+        maxAttMtu: Int = 23,
     ): PeripheralSpec<String> = PeripheralSpec.simulatePeripheral(
         identifier = address,
         addressType = addressType,
@@ -102,6 +107,7 @@ class ConnectionFailureTest {
                 name = "Device",
                 isBonded = true,
                 preferredConnectionInterval = preferredConnectionInterval,
+                maxAttMtu = maxAttMtu,
                 eventHandler = eventHandler,
                 cachedServices = {},
             )
@@ -109,6 +115,7 @@ class ConnectionFailureTest {
             connectable(
                 name = "Device",
                 preferredConnectionInterval = preferredConnectionInterval,
+                maxAttMtu = maxAttMtu,
                 eventHandler = eventHandler,
             ) {}
         }
@@ -780,5 +787,116 @@ class ConnectionFailureTest {
         // The initial MTU request and PHY read gave up after 3 seconds each.
         assertTrue(testScheduler.currentTime in 6_000 until 7_000, "Connected after ${testScheduler.currentTime} ms")
         assertEquals(listOf(Layer.GATT to "MTU request timed out", Layer.PHY to "PHY read timed out"), warnings)
+    }
+
+    @Test
+    fun `link lost while the connection is prepared fails the connection`() = runTest {
+        val events = ConnectionsLost()
+        val spec = spec(eventHandler = events)
+        val manager = newManager(spec)
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        // An operation, on this or another peripheral, holds the lock that all operations share,
+        // so the initial MTU request waits for it. The link is lost meanwhile.
+        backgroundScope.launch { OperationMutex.withLock { awaitCancellation() } }
+        backgroundScope.launch {
+            delay(1.seconds)
+            spec.simulateDisconnection()
+        }
+        runCurrent()
+
+        val exception = assertFailsWith<ConnectionFailedException> {
+            manager.connect(peripheral, ConnectionOptions.Direct())
+        }
+
+        assertEquals(Reason.LinkLoss, exception.reason)
+        assertEquals(ConnectionState.Disconnected(Reason.LinkLoss), peripheral.state.value)
+        // The link was up when it was lost, and the attempt failed at that moment.
+        assertEquals(listOf<DisconnectionReason>(DisconnectionReason.TerminateLocalHost), events.reasons)
+        assertEquals(1_000, testScheduler.currentTime)
+    }
+
+    @Test
+    fun `withTimeout firing as the link is lost while the connection is prepared reports the timeout`() = runTest {
+        val spec = spec()
+        val manager = newManager(spec)
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        backgroundScope.launch { OperationMutex.withLock { awaitCancellation() } }
+        // The link is lost at the moment the timeout fires, just before it: the timeout
+        // cancels the connection attempt before it handles the link loss.
+        backgroundScope.launch {
+            delay(1.seconds)
+            spec.simulateDisconnection()
+        }
+        runCurrent()
+
+        assertFailsWith<TimeoutCancellationException> {
+            withTimeout(1.seconds) {
+                manager.connect(peripheral, ConnectionOptions.Direct())
+            }
+        }
+
+        assertEquals(ConnectionState.Disconnected(Reason.Timeout(1.seconds)), peripheral.state.value)
+    }
+
+    @Test
+    fun `auto connect attempt that fails while the connection is prepared does not reconnect`() = runTest {
+        val spec = spec(isBonded = true)
+        val manager = newManager(spec)
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        // An operation, on this or another peripheral, holds the lock that all operations share,
+        // so the initial MTU request waits for it. The link is lost meanwhile.
+        backgroundScope.launch { OperationMutex.withLock { awaitCancellation() } }
+        backgroundScope.launch {
+            delay(1.seconds)
+            spec.simulateDisconnection()
+        }
+        runCurrent()
+
+        assertFailsWith<ConnectionFailedException> {
+            manager.connect(peripheral, ConnectionOptions.AutoConnect())
+        }
+        advanceTimeBy(10.seconds)
+        runCurrent()
+
+        // The failed attempt was closed, so the link was not established again in the background.
+        assertFalse(spec.isConnected)
+        assertEquals(ConnectionState.Disconnected(Reason.LinkLoss), peripheral.state.value)
+    }
+
+    @Test
+    fun `link lost while a reconnection is prepared is not reported and the next link negotiates the mtu`() = runTest {
+        // With a connection interval of 2 s, the MTU request takes 2 s.
+        val spec = spec(isBonded = true, preferredConnectionInterval = 1600..1600, maxAttMtu = 247)
+        val negotiated = mutableListOf<Int>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            spec.events.filterIsInstance<MtuChanged>().collect { negotiated += it.mtu }
+        }
+        val manager = newManager(spec)
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        manager.connect(peripheral, ConnectionOptions.AutoConnect())
+        val states = mutableListOf<ConnectionState>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            peripheral.state.collect { states += it }
+        }
+
+        // The link is lost, and the system reconnects. Another operation asks for the lock during
+        // the MTU request of the reconnection and gets it next, so the PHY read waits for it.
+        // The link is lost again, after the MTU was negotiated.
+        spec.simulateDisconnection()
+        val operation = backgroundScope.launch {
+            delay(1.seconds)
+            OperationMutex.withLock { awaitCancellation() }
+        }
+        advanceTimeBy(3.seconds)
+        spec.simulateDisconnection()
+        runCurrent()
+        operation.cancel()
+        advanceTimeBy(10.seconds)
+        runCurrent()
+
+        // The second link was never reported as connected, and each of the three links
+        // negotiated the MTU.
+        assertEquals(listOf(ConnectionState.Connected, ConnectionState.Connecting, ConnectionState.Connected), states)
+        assertEquals(listOf(247, 247, 247), negotiated)
     }
 }

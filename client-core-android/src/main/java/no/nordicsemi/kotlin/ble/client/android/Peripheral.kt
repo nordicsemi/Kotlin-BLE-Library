@@ -500,6 +500,9 @@ open class Peripheral(
                             if (!prepareConnection()) {
                                 logger?.warn(Layer.GAP) { "Connection attempt failed (reason: ${Reason.LinkLoss})" }
                                 updateState { ConnectionState.Disconnected(Reason.LinkLoss) }
+                                // Mainly for auto connect: the system would otherwise reconnect in the background,
+                                // while the peripheral is reported as disconnected.
+                                close()
                                 throw ConnectionFailedException(Reason.LinkLoss)
                             }
                             updateState { ConnectionState.Connected }
@@ -579,6 +582,7 @@ open class Peripheral(
                             if (!prepareConnection()) {
                                 logger?.warn(Layer.GAP) { "Connection attempt failed (reason: ${Reason.LinkLoss})" }
                                 updateState { ConnectionState.Disconnected(Reason.LinkLoss) }
+                                close()
                                 throw ConnectionFailedException(Reason.LinkLoss)
                             }
                             updateState { state }
@@ -722,6 +726,12 @@ open class Peripheral(
             // Initial connection parameters are not know.
             // An event will be emitted when they change.
             _connectionParameters.update { ConnectionParameters.Unknown }
+            // A new link starts with the default MTU. If the previous link was lost while it was
+            // prepared, its MTU is still set, and requestHighestValueLength() would skip the request.
+            // A peripheral created connected, like a preview, is prepared on the link it has.
+            if (!isConnected) {
+                _mtu = ATT_MTU_DEFAULT
+            }
             // Request MTU if set in ConnectionOptions.
             if (automaticallyRequestHighestValueLength && !runCatchingOnConnection(Layer.GATT, "MTU request") { requestHighestValueLength() }) {
                 return false

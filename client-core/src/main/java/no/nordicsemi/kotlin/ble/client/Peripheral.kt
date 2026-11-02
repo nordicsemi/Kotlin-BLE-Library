@@ -35,10 +35,12 @@ package no.nordicsemi.kotlin.ble.client
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -393,15 +395,26 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      *
      * This method ignores exceptions thrown by [block], so that connection could finish, except
      * a lost link, reported as `false`, and cancellation of the calling coroutine, also by
-     * a timeout of an outer `withTimeout`, which is rethrown.
+     * a timeout of an outer `withTimeout`, which is rethrown. A link lost while [block] waits for
+     * [OperationMutex] is reported as `false` too.
      *
      * @param layer The log layer of the request.
      * @param name The name of the request, used in the log.
      * @return `false` if the link was lost; `true` otherwise.
      */
     protected suspend fun runCatchingOnConnection(layer: Layer, name: String, block: suspend () -> Unit): Boolean = try {
-        withTimeoutOrNull(3.seconds) { block() }
-            ?: logger?.warn(layer) { "$name timed out" }
+        coroutineScope {
+            // A request watches for a disconnection only once it gets OperationMutex, and events
+            // are not replayed, so watch for it here from the start. Unconfined, the watcher reacts
+            // and ends without a dispatch.
+            val linkLoss = launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+                impl.events.first { it.isDisconnectionEvent }
+                throw PeripheralNotConnectedException()
+            }
+            withTimeoutOrNull(3.seconds) { block() }
+                ?: logger?.warn(layer) { "$name timed out" }
+            linkLoss.cancel()
+        }
         true
     } catch (e: TimeoutCancellationException) {
         // The timeout of a request cancels only the request. If this coroutine was cancelled,
@@ -413,6 +426,8 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
     } catch (e: CancellationException) {
         throw e
     } catch (e: PeripheralNotConnectedException) {
+        // If this coroutine was cancelled at the same time, rethrow its cancellation, as above.
+        currentCoroutineContext().ensureActive()
         false
     } catch (e: Exception) {
         // Ignore. The exception was already logged.
