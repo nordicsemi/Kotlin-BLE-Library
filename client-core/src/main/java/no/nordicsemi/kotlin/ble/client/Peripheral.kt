@@ -61,6 +61,7 @@ import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -383,7 +384,9 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
     /**
      * Executes the given [block] when the peripheral is connected.
      *
-     * This method ignores any exceptions thrown by [block], so that connection could finish.
+     * This method ignores exceptions thrown by [block], so that connection could finish, except
+     * a lost link, reported as `false`, and cancellation of the calling coroutine, also by
+     * a timeout of an outer `withTimeout`, which is rethrown.
      *
      * @return `false` if the link was lost; `true` otherwise.
      */
@@ -391,6 +394,10 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
         block()
         true
     } catch (e: TimeoutCancellationException) {
+        // The timeout of a request cancels only the request. If this coroutine was cancelled,
+        // for example by a timeout of an outer withTimeout, rethrow its own cancellation: it must
+        // end the connection attempt.
+        currentCoroutineContext().ensureActive()
         // Ignore the timeout. Initial request may fail, but that should not stop connection.
         true
     } catch (e: CancellationException) {

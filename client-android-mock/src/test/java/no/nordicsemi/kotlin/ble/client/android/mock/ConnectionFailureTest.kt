@@ -46,6 +46,7 @@ import no.nordicsemi.kotlin.ble.client.android.CentralManager.ConnectionOptions
 import no.nordicsemi.kotlin.ble.client.exception.ConnectionFailedException
 import no.nordicsemi.kotlin.ble.client.mock.AddressType
 import no.nordicsemi.kotlin.ble.client.mock.ConnectionResult
+import no.nordicsemi.kotlin.ble.client.mock.DisconnectionReason
 import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
@@ -86,15 +87,26 @@ class ConnectionFailureTest {
         connectableAdvertising: Boolean = true,
         eventHandler: PeripheralSpecEventHandler = object : PeripheralSpecEventHandler {},
         isBonded: Boolean = false,
+        preferredConnectionInterval: IntRange = 25..40,
     ): PeripheralSpec<String> = PeripheralSpec.simulatePeripheral(
         identifier = address,
         addressType = addressType,
         proximity = proximity,
     ) {
         if (isBonded) {
-            connectable(name = "Device", isBonded = true, eventHandler = eventHandler, cachedServices = {})
+            connectable(
+                name = "Device",
+                isBonded = true,
+                preferredConnectionInterval = preferredConnectionInterval,
+                eventHandler = eventHandler,
+                cachedServices = {},
+            )
         } else {
-            connectable(name = "Device", eventHandler = eventHandler) {}
+            connectable(
+                name = "Device",
+                preferredConnectionInterval = preferredConnectionInterval,
+                eventHandler = eventHandler,
+            ) {}
         }
         if (advertising) {
             advertising(
@@ -211,6 +223,64 @@ class ConnectionFailureTest {
 
         val state = assertIs<ConnectionState.Disconnected>(peripheral.state.value)
         assertEquals(Reason.Timeout(4.seconds), state.reason)
+    }
+
+    /** Records the reasons the peripheral is given when its connections end. */
+    private class ConnectionsLost : PeripheralSpecEventHandler {
+        val reasons = mutableListOf<DisconnectionReason>()
+
+        override fun onConnectionLost(peripheral: MockPeripheral, reason: DisconnectionReason) {
+            reasons += reason
+        }
+    }
+
+    @Test
+    fun `withTimeout firing while a direct connection is prepared closes the connection`() = runTest {
+        val events = ConnectionsLost()
+        // With a connection interval of 2 s, the initial MTU request takes 2 s.
+        val manager = newManager(spec(eventHandler = events, preferredConnectionInterval = 1600..1600))
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+
+        assertFailsWith<TimeoutCancellationException> {
+            withTimeout(1.seconds) {
+                manager.connect(peripheral, ConnectionOptions.Direct())
+            }
+        }
+
+        assertEquals(ConnectionState.Disconnected(Reason.Timeout(1.seconds)), peripheral.state.value)
+        // The link was established, and closing the peripheral released it.
+        assertEquals(listOf<DisconnectionReason>(DisconnectionReason.TerminatePeerUser), events.reasons)
+    }
+
+    @Test
+    fun `withTimeout firing while an auto connect connection is prepared closes the connection`() = runTest {
+        val events = ConnectionsLost()
+        // With a connection interval of 2 s, the initial MTU request takes 2 s.
+        val manager = newManager(spec(eventHandler = events, preferredConnectionInterval = 1600..1600))
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+
+        assertFailsWith<TimeoutCancellationException> {
+            withTimeout(1.seconds) {
+                manager.connect(peripheral, ConnectionOptions.AutoConnect())
+            }
+        }
+
+        assertEquals(ConnectionState.Disconnected(Reason.Timeout(1.seconds)), peripheral.state.value)
+        // The link was established, and closing the peripheral released it.
+        assertEquals(listOf<DisconnectionReason>(DisconnectionReason.TerminatePeerUser), events.reasons)
+    }
+
+    @Test
+    fun `initial MTU request that times out does not fail the connection`() = runTest {
+        // With a connection interval of 4 s, the initial MTU request times out after 3 s.
+        val manager = newManager(spec(preferredConnectionInterval = 3200..3200))
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+
+        manager.connect(peripheral, ConnectionOptions.Direct())
+
+        assertEquals(ConnectionState.Connected, peripheral.state.value)
+        // Connected after the timeout of the request, before the response would have arrived.
+        assertTrue(testScheduler.currentTime in 3_000 until 4_000, "Connected after ${testScheduler.currentTime} ms")
     }
 
     @Test
