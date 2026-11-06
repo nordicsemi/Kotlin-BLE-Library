@@ -879,8 +879,9 @@ class PeripheralSpec<ID: Any> private constructor(
             } catch (_: Exception) {
                 BondResult.Reject()
             }
+            if (result.duration.isPositive()) delay(result.duration)
             when (result) {
-                BondResult.Accept -> {
+                is BondResult.Accept -> {
                     peripheralHasBond = true
                     // The link is encrypted, and then the bond is created.
                     updateEncryptionState(bonded = true)

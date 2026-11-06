@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import no.nordicsemi.kotlin.ble.client.GattEvent
 import no.nordicsemi.kotlin.ble.client.Peripheral
+import no.nordicsemi.kotlin.ble.client.internal.OperationMutex
 import no.nordicsemi.kotlin.ble.client.RemoteService
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.core.ConnectionState
@@ -67,6 +68,7 @@ open class MockExecutor(
     private val advertisements: Flow<MockScanResult<String>>,
     private val scope: CoroutineScope,
 ): Peripheral.Executor<String> {
+    override val operationMutex = OperationMutex()
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
     override val initialState: ConnectionState = ConnectionState.Disconnected()
     override val initialServices: List<RemoteService> = emptyList()

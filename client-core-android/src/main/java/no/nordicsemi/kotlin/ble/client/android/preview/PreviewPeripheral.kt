@@ -59,6 +59,7 @@ import no.nordicsemi.kotlin.ble.client.android.ConnectionPriority
 import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.client.android.EncryptionState
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
+import no.nordicsemi.kotlin.ble.client.internal.OperationMutex
 import no.nordicsemi.kotlin.ble.client.exception.InvalidAttributeException
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.core.Characteristic
@@ -117,6 +118,7 @@ private class StubExecutor(
     private val phy: PhyInUse,
     hasBondInformation: Boolean,
 ): Peripheral.Executor {
+    override val operationMutex = OperationMutex()
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
     override val events: SharedFlow<GattEvent>
         field = MutableSharedFlow<GattEvent>(extraBufferCapacity = 64)

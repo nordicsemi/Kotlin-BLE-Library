@@ -77,7 +77,6 @@ import no.nordicsemi.kotlin.ble.client.exception.ConnectionFailedException
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.client.exception.PeripheralNotConnectedException
 import no.nordicsemi.kotlin.ble.client.exception.ValueDoesNotMatchException
-import no.nordicsemi.kotlin.ble.client.internal.OperationMutex
 import no.nordicsemi.kotlin.ble.core.ATT_MTU_DEFAULT
 import no.nordicsemi.kotlin.ble.core.ATT_MTU_MAX
 import no.nordicsemi.kotlin.ble.core.ConnectionParameters
@@ -792,7 +791,7 @@ open class Peripheral(
      * @throws TimeoutCancellationException If the response has not been received within the specified timeout.
      */
     private suspend fun readPhy(timeout: Duration = 3.seconds): PhyInUse = withCallSite("readPhy") {
-        OperationMutex.withLock {
+        impl.operationMutex.withLock {
             impl.events
                 .onSubscription {
                     logger?.trace(Layer.PHY) { "Reading PHY" }
@@ -847,7 +846,7 @@ open class Peripheral(
         phyOptions: PhyOption = PhyOption.NO_PREFERRED,
         timeout: Duration = 3.seconds,
     ): PhyInUse = withCallSite("setPreferredPhy") {
-        OperationMutex.withLock {
+        impl.operationMutex.withLock {
             impl.events
                 .onSubscription {
                     logger?.trace(Layer.PHY) { "Setting preferred PHY: tx=$txPhy, rx=$rxPhy, options=$phyOptions" }
@@ -941,7 +940,7 @@ open class Peripheral(
             return
         }
         _mtu = withCallSite("requestHighestValueLength") {
-            OperationMutex.withLock {
+            impl.operationMutex.withLock {
                 impl.events
                     .onSubscription {
                         logger?.trace(Layer.GATT) { "Requesting MTU: $ATT_MTU_MAX" }
@@ -995,7 +994,7 @@ open class Peripheral(
         timeout: Duration = 3.seconds,
     ): ConnectionParameters =
         withCallSite("requestConnectionPriority") {
-            OperationMutex.withLock {
+            impl.operationMutex.withLock {
                 impl.events
                     .onSubscription {
                         logger?.trace(Layer.LINK) { "Requesting connection priority: $priority" }
@@ -1075,7 +1074,7 @@ open class Peripheral(
             return
         }
         val _ = withCallSite("executeReliableWrite") {
-            OperationMutex.withLock {
+            impl.operationMutex.withLock {
                 impl.events
                     .onSubscription {
                         logger?.trace(Layer.GATT) { "Executing reliable write" }
@@ -1124,7 +1123,7 @@ open class Peripheral(
             return
         }
         val _ = withCallSite("abortReliableWrite") {
-            OperationMutex.withLock {
+            impl.operationMutex.withLock {
                 impl.events
                     .onSubscription {
                         logger?.trace(Layer.GATT) { "Aborting reliable write" }
@@ -1179,7 +1178,7 @@ open class Peripheral(
      * @throws SecurityException If BLUETOOTH_CONNECT permission is denied.
      */
     suspend fun refreshCache() = withCallSite("refreshCache") {
-        val _ = OperationMutex.withLock {
+        val _ = impl.operationMutex.withLock {
             impl.events
                 .onSubscription {
                     logger?.trace(Layer.GATT) { "Refreshing cache" }
@@ -1212,7 +1211,7 @@ open class Peripheral(
             return
         }
         withCallSite("createBond") {
-           val _ = OperationMutex.withLock {
+           val _ = impl.operationMutex.withLock {
                 impl.bondState
                     .onSubscription {
                         logger?.trace(Layer.SMP) { "Creating bond" }
@@ -1267,7 +1266,7 @@ open class Peripheral(
             throw SecurityException("BLUETOOTH_PRIVILEGED permission is required to remove bond information on Android 17+")
         }
         withCallSite("removeBond") {
-            val _ = OperationMutex.withLock {
+            val _ = impl.operationMutex.withLock {
                 impl.bondState
                     .onSubscription {
                         logger?.trace(Layer.SMP) { "Removing bond information" }

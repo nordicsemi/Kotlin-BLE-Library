@@ -92,7 +92,7 @@ internal class GattHandler : PeripheralSpecEventHandler {
         { _, value -> PrepareWriteResponse.Success(value) }
     var executeHandler: (Boolean) -> WriteResponse = { WriteResponse.Success }
     var discoveryResult: ServiceDiscoveryResult = ServiceDiscoveryResult.Success
-    var bondResult: BondResult = BondResult.Accept
+    var bondResult: BondResult = BondResult.Accept()
 
     val reads = mutableListOf<Uuid>()
     val descriptorReads = mutableListOf<Uuid>()

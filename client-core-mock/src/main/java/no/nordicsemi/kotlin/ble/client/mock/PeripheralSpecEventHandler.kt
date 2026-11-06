@@ -38,6 +38,7 @@ import no.nordicsemi.kotlin.ble.client.mock.internal.MockRemoteDescriptor
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
 import no.nordicsemi.kotlin.ble.core.exception.BluetoothException
+import kotlin.time.Duration
 import kotlin.uuid.Uuid
 
 /**
@@ -75,17 +76,32 @@ sealed class ConnectionResult {
  */
 sealed class BondResult {
     /**
+     * How long the bonding takes, from the request until its result.
+     *
+     * Bonding may take long, for example when the user has to confirm pairing on the phone.
+     * Operations of a peripheral that wait for the bonding to finish are held for that time, which
+     * lets tests check that they do not delay other peripherals. By default, bonding is immediate.
+     */
+    abstract val duration: Duration
+
+    /**
      * The bonding succeeded.
      *
      * This is the default behavior.
+     *
+     * @param duration How long the bonding takes.
      */
-    object Accept : BondResult()
+    data class Accept(override val duration: Duration = Duration.ZERO) : BondResult()
     /**
      * The bonding failed, for example because the user cancelled it or entered a wrong PIN.
      *
      * @param failure What went wrong. The environment decides how it is reported to the client.
+     * @param duration How long the bonding takes before it fails.
      */
-    data class Reject(val failure: BondingFailure = BondingFailure.REJECTED) : BondResult()
+    data class Reject(
+        val failure: BondingFailure = BondingFailure.REJECTED,
+        override val duration: Duration = Duration.ZERO,
+    ) : BondResult()
 }
 
 /**

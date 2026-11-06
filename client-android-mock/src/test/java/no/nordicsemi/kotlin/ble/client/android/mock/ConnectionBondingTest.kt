@@ -78,7 +78,7 @@ class ConnectionBondingTest {
 
     /** The peripheral accepts bonding, which is not the default. */
     private fun acceptingHandler() = object : PeripheralSpecEventHandler {
-        override fun onBondRequest(peripheral: MockPeripheral) = BondResult.Accept
+        override fun onBondRequest(peripheral: MockPeripheral) = BondResult.Accept()
     }
 
     /** A peripheral that was connected before, and so is known by the phone, and may be bonded. */
@@ -314,7 +314,7 @@ class ConnectionBondingTest {
     fun `bond request is passed to the event handler`() = runTest {
         var requests = 0
         val counting = object : PeripheralSpecEventHandler {
-            override fun onBondRequest(peripheral: MockPeripheral): BondResult = BondResult.Accept.also { requests++ }
+            override fun onBondRequest(peripheral: MockPeripheral): BondResult = BondResult.Accept().also { requests++ }
         }
         val manager = manager(spec(isBonded = false, eventHandler = counting))
         val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
@@ -386,7 +386,7 @@ class ConnectionBondingTest {
     fun `peripheral that still has the bond rejects bonding`() = runTest {
         var requests = 0
         val counting = object : PeripheralSpecEventHandler {
-            override fun onBondRequest(peripheral: MockPeripheral): BondResult = BondResult.Accept.also { requests++ }
+            override fun onBondRequest(peripheral: MockPeripheral): BondResult = BondResult.Accept().also { requests++ }
         }
         // The phone forgot the bond, but the peripheral did not.
         val spec = spec(isBonded = false, peripheralHasBond = true, eventHandler = counting)
@@ -545,7 +545,7 @@ class ConnectionBondingTest {
         val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
         assertFailsWith<BondingFailedException> { peripheral.createBond() }
 
-        result = BondResult.Accept
+        result = BondResult.Accept()
         peripheral.createBond()
 
         assertEquals(BondState.Bonded, peripheral.bondState.value)
@@ -802,7 +802,7 @@ class ConnectionBondingTest {
         manager.connect(peripheral)
         assertFailsWith<BondingFailedException> { peripheral.createBond() }
 
-        result = BondResult.Accept
+        result = BondResult.Accept()
         peripheral.createBond()
 
         assertEquals(BondState.Bonded, peripheral.bondState.value)

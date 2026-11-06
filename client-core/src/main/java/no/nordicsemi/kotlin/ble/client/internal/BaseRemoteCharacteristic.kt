@@ -232,7 +232,7 @@ abstract class BaseRemoteCharacteristic(
 
         // Read the characteristic value and await the result.
         owner.executor.repeatingAfterBonding {
-            OperationMutex.withLock {
+            owner.executor.operationMutex.withLock {
                 events
                     .onSubscription {
                         try {
@@ -294,7 +294,7 @@ abstract class BaseRemoteCharacteristic(
 
         // Write the characteristic value and await the result.
         owner.executor.repeatingAfterBonding {
-            OperationMutex.withLock {
+            owner.executor.operationMutex.withLock {
                 events
                     .onSubscription {
                         try {
