@@ -33,6 +33,7 @@ package no.nordicsemi.kotlin.ble.client.android.mock
 
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.test.TestScope
@@ -753,5 +754,29 @@ class ConnectionFailureTest {
         assertFailsWith<no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException> {
             manager.connect(peripheral)
         }
+    }
+
+    @Test
+    fun `auto connect attempt that fails while the connection is prepared does not reconnect`() = runTest {
+        // With a connection interval of 2 s, the MTU request takes 2 s.
+        val spec = spec(isBonded = true, preferredConnectionInterval = 1600..1600)
+        val manager = newManager(spec)
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        // The link is lost while the connection is prepared.
+        backgroundScope.launch {
+            delay(1.seconds)
+            spec.simulateDisconnection()
+        }
+
+        val exception = assertFailsWith<ConnectionFailedException> {
+            manager.connect(peripheral, ConnectionOptions.AutoConnect())
+        }
+        advanceTimeBy(10.seconds)
+        runCurrent()
+
+        assertEquals(Reason.LinkLoss, exception.reason)
+        // The failed attempt was closed, so the link was not established again in the background.
+        assertFalse(spec.isConnected)
+        assertEquals(ConnectionState.Disconnected(Reason.LinkLoss), peripheral.state.value)
     }
 }

@@ -499,6 +499,9 @@ open class Peripheral(
                             if (!prepareConnection()) {
                                 logger?.warn(Layer.GAP) { "Connection attempt failed (reason: ${Reason.LinkLoss})" }
                                 updateState { ConnectionState.Disconnected(Reason.LinkLoss) }
+                                // Mainly for auto connect: the system would otherwise reconnect in the
+                                // background, while the peripheral is reported as disconnected.
+                                close()
                                 throw ConnectionFailedException(Reason.LinkLoss)
                             }
                             updateState { ConnectionState.Connected }
@@ -578,6 +581,9 @@ open class Peripheral(
                             if (!prepareConnection()) {
                                 logger?.warn(Layer.GAP) { "Connection attempt failed (reason: ${Reason.LinkLoss})" }
                                 updateState { ConnectionState.Disconnected(Reason.LinkLoss) }
+                                // Mainly for auto connect: the system would otherwise reconnect in the
+                                // background, while the peripheral is reported as disconnected.
+                                close()
                                 throw ConnectionFailedException(Reason.LinkLoss)
                             }
                             updateState { state }
