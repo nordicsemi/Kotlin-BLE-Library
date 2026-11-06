@@ -172,3 +172,32 @@ jobs:
             ./gradlew publish
             ./gradlew releaseStagingRepositories
           fi
+
+  github-release:
+    name: GitHub release
+    needs: publish
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: write # Create the release, and generate the notes.
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      # Created only after the libraries were published. The release uses the tag pushed by the Tag
+      # stage, and its notes list the pull requests merged since the previous tag.
+      - shell: bash
+        run: |
+          if [[ "$DRY_RUN" == "true" ]]; then
+            echo "Dry run: the release $RELEASE_VERSION is not created. Its notes would be:"
+            gh api --method POST "repos/${{ github.repository }}/releases/generate-notes" \
+              -f tag_name="$RELEASE_VERSION" -f target_commitish="${{ github.sha }}" --jq '.body' \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            # Versions with a suffix, e.g. 2.0.0-beta10, are marked as pre-releases.
+            prerelease=""
+            if [[ "$RELEASE_VERSION" == *-* ]]; then
+              prerelease="--prerelease"
+            fi
+            gh release create "$RELEASE_VERSION" --repo "${{ github.repository }}" \
+              --title "$RELEASE_VERSION" --generate-notes --verify-tag $prerelease
+          fi

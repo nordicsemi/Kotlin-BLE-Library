@@ -1,7 +1,7 @@
 # Releasing Kotlin BLE Library
 
 A release is made by the **Release** GitHub Action. It generates the documentation, creates the tag,
-and starts the deployment to Maven Central. The version of the release is the name of the tag, e.g.
+starts the deployment to Maven Central and creates the GitHub release. The version of the release is the name of the tag, e.g.
 `2.0.0-beta08`.
 
 ## How to release
@@ -13,7 +13,7 @@ and starts the deployment to Maven Central. The version of the release is the na
 4. Enter the **version**, e.g. `2.0.0-beta08`, and run the workflow. To try it first, tick
    **Dry run** (see [Dry run](#dry-run)).
 
-The workflow runs in five stages. Each one is a job that depends on the previous one, so the graph of
+The workflow runs in six stages. Each one is a job that depends on the previous one, so the graph of
 the run shows which stage failed:
 
 1. **Check.** Checks that it runs on a branch, that the version looks like `2.0.0` or
@@ -26,20 +26,23 @@ the run shows which stage failed:
 4. **Tag.** Creates the tag `<version>` on the commit with the documentation, and pushes it.
 5. **Publish.** Builds the tag, publishes all the libraries and releases the
    staging repository.
+6. **GitHub release.** Creates the GitHub release for the tag, with the notes generated from the pull
+   requests merged since the previous tag. Versions with a suffix, e.g. `2.0.0-beta10`, are marked as
+   pre-releases.
 
 Pushing a tag does not start any workflow. Publishing is a stage of the **Release** workflow, so the
 only way to release is to run it. Creating a GitHub Release does not publish anything either.
 
 After the workflow finished:
 
-* check that the last stage, **Publish**, succeeded,
+* check that **Publish** and **GitHub release** succeeded,
 * the artifacts appear on [Maven Central](https://central.sonatype.com/search?q=no.nordicsemi.kotlin.ble)
   within a few minutes to an hour,
-* create a release on GitHub from the existing tag, with the release notes.
+* edit the release notes of the GitHub release, if needed.
 
 ## Dry run
 
-With **Dry run** ticked the workflow goes through all the five stages, but nothing leaves the runner:
+With **Dry run** ticked the workflow goes through all the six stages, but nothing leaves the runner:
 
 1. **Check** passes also for a version that was already released (it only warns that the tag exists).
 2. **Test** runs the unit tests.
@@ -49,6 +52,8 @@ With **Dry run** ticked the workflow goes through all the five stages, but nothi
 5. **Publish** builds and signs the libraries into the local Maven repository of the runner
    (`./gradlew publishToMavenLocal`). This checks the signing key and the secrets, but does not
    upload anything, and the staging repository is not touched.
+6. **GitHub release** does not create the release. It prints the notes it would have, in the summary
+   of the run.
 
 Use it to check a change of the release workflow, or the secrets, before a real release. The default
 is not a dry run.
