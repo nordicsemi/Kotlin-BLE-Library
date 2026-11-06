@@ -206,15 +206,21 @@ class PeripheralSpec<ID: Any> private constructor(
      * Work of a single connection runs in the scope of the manager that created it instead,
      * see [Api].
      */
-    private fun launchShared(block: suspend CoroutineScope.() -> Unit) {
+    private fun launchShared(block: suspend CoroutineScope.() -> Unit): Job {
         val context = synchronized(lock) {
             val newest = simulations.lastOrNull() ?: return@synchronized null
             val job = sharedJob ?: SupervisorJob().also { sharedJob = it }
             newest.coroutineContext.minusKey(Job) + job
         }
-        if (context != null) CoroutineScope(context).launch(block = block)
+        return if (context != null) CoroutineScope(context).launch(block = block)
         else fallbackScope.launch(block = block)
     }
+
+    /**
+     * The last notification that is being delivered to the clients, see [simulateValueUpdate].
+     * Guarded by [lock].
+     */
+    private var lastNotification: Job? = null
 
     /**
      * Starts simulating this peripheral in the scope of a mock central manager.
@@ -1009,19 +1015,30 @@ class PeripheralSpec<ID: Any> private constructor(
         val maxLength = min(checkNotNull(mtu) - 3, 512)
         val notifiedValue = value.take(maxLength).toByteArray()
 
-        // Notify clients that the value has changed.
-        launchShared {
-            val transferDuration = estimateTransferDuration(
-                value = notifiedValue,
-                isWrite = true,
-                withResponse = false,
-                isFromPeripheral = true,
-            )
-            delay(transferDuration)
+        // The time it takes to send the value is estimated now, with the parameters of the
+        // connection at the moment this method is called.
+        val transferDuration = estimateTransferDuration(
+            value = notifiedValue,
+            isWrite = true,
+            withResponse = false,
+            isFromPeripheral = true,
+        )
 
-            // If any client is still connected, emit the event.
-            if (isConnected) {
-                events.emit(CharacteristicChanged(handle, notifiedValue))
+        // Notify clients that the value has changed. A link sends the notifications one by one, in
+        // the order they were queued, so each of them waits for the previous one. Delivering each
+        // in its own coroutine, with nothing keeping them in order, would reorder them on a
+        // dispatcher with more than one thread. The previous notification is taken synchronously,
+        // so the order is the order of the calls, whichever thread the coroutines run on.
+        synchronized(lock) {
+            val previous = lastNotification
+            lastNotification = launchShared {
+                previous?.join()
+                delay(transferDuration)
+
+                // If any client is still connected, emit the event.
+                if (isConnected) {
+                    events.emit(CharacteristicChanged(handle, notifiedValue))
+                }
             }
         }
     }
