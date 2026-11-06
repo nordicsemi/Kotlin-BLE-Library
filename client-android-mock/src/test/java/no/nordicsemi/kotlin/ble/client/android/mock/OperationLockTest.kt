@@ -118,8 +118,8 @@ class OperationLockTest {
             var slowDone = 0L
             var fastDone = 0L
             listOf(
-                async { slow.read(); slowDone = testScheduler.currentTime - start },
-                async { fast.read(); fastDone = testScheduler.currentTime - start },
+                async { val _ = slow.read(); slowDone = testScheduler.currentTime - start },
+                async { val _ = fast.read(); fastDone = testScheduler.currentTime - start },
             ).awaitAll()
 
             assertTrue(slowDone >= 2_000, "The slow read took $slowDone ms")
@@ -147,8 +147,8 @@ class OperationLockTest {
             var securedDone = 0L
             var fastDone = 0L
             listOf(
-                async { secured.read(); securedDone = testScheduler.currentTime - start },
-                async { fast.read(); fastDone = testScheduler.currentTime - start },
+                async { val _ = secured.read(); securedDone = testScheduler.currentTime - start },
+                async { val _ = fast.read(); fastDone = testScheduler.currentTime - start },
             ).awaitAll()
 
             assertTrue(securedDone >= 5_000, "The read waited only $securedDone ms for the bonding")
@@ -165,7 +165,7 @@ class OperationLockTest {
             val start = testScheduler.currentTime
             val done = mutableListOf<Long>()
             List(2) {
-                async { slow.read(); done += testScheduler.currentTime - start }
+                async { val _ = slow.read(); done += testScheduler.currentTime - start }
             }.awaitAll()
 
             // The second read starts when the first one ends.
