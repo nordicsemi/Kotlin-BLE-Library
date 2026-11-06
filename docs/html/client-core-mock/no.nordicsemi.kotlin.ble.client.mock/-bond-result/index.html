@@ -38,7 +38,7 @@
             </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
         </button>
         <div class="navigation-controls--break ui-kit_mobile-only"></div>
-        <div class="library-version" id="library-version">2.0.0-beta09
+        <div class="library-version" id="library-version">2.0.0-beta10
         </div>
         <div class="navigation-controls">
         <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
@@ -110,7 +110,7 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">object </span><a href="-accept/index.html">Accept</a> : <a href="index.html">BondResult</a></div><div class="brief "><p class="paragraph">The bonding succeeded.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">class </span><a href="-accept/index.html">Accept</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>duration<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.time/-duration/index.html">Duration</a><span class="token operator"> = </span>Duration.ZERO</span></span><span class="token punctuation">)</span> : <a href="index.html">BondResult</a></div><div class="brief "><p class="paragraph">The bonding succeeded.</p></div></div></div>
                 </div>
               </div>
             </div>
@@ -125,7 +125,26 @@
                   </span></span></div>
               <div>
                 <div class="title">
-                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">class </span><a href="-reject/index.html">Reject</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>failure<span class="token operator">: </span><a href="../../../core-mock/no.nordicsemi.kotlin.ble.core.mock/-bonding-failure/index.html">BondingFailure</a><span class="token operator"> = </span>BondingFailure.REJECTED</span></span><span class="token punctuation">)</span> : <a href="index.html">BondResult</a></div><div class="brief "><p class="paragraph">The bonding failed, for example because the user cancelled it or entered a wrong PIN.</p></div></div></div>
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">data </span><span class="token keyword">class </span><a href="-reject/index.html">Reject</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>failure<span class="token operator">: </span><a href="../../../core-mock/no.nordicsemi.kotlin.ble.core.mock/-bonding-failure/index.html">BondingFailure</a><span class="token operator"> = </span>BondingFailure.REJECTED<span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>duration<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.time/-duration/index.html">Duration</a><span class="token operator"> = </span>Duration.ZERO</span></span><span class="token punctuation">)</span> : <a href="index.html">BondResult</a></div><div class="brief "><p class="paragraph">The bonding failed, for example because the user cancelled it or entered a wrong PIN.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="-2136962154%2FProperties%2F-1834677258" anchor-label="duration" id="-2136962154%2FProperties%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="duration.html"><span><span>duration</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2136962154%2FProperties%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">val </span><a href="duration.html">duration</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.time/-duration/index.html">Duration</a></div><div class="brief "><p class="paragraph">How long the bonding takes, from the request until its result.</p></div></div></div>
                 </div>
               </div>
             </div>
