@@ -44,6 +44,7 @@ import no.nordicsemi.kotlin.ble.client.RemoteServices
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.CentralManager.ConnectionOptions
 import no.nordicsemi.kotlin.ble.client.mock.AddressType
+import no.nordicsemi.kotlin.ble.client.mock.BondResult
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.ReadResponse
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
@@ -61,7 +62,14 @@ class OperationLockTest {
      * A peripheral with a readable characteristic. Every read takes one connection interval, which
      * is 2 seconds with the given interval of 1600 (in 1.25 ms units).
      */
-    private fun spec(address: String, connectionInterval: Int) = PeripheralSpec.simulatePeripheral(
+    private fun spec(
+        address: String,
+        connectionInterval: Int,
+        handler: GattHandler = GattHandler().apply {
+            readHandler = { ReadResponse.Success(byteArrayOf(1, 2, 3)) }
+        },
+        permissions: Set<Permission> = setOf(Permission.READ),
+    ) = PeripheralSpec.simulatePeripheral(
         identifier = address,
         // Android assumes PUBLIC address type for devices that weren't scanned.
         addressType = AddressType.PUBLIC,
@@ -72,15 +80,13 @@ class OperationLockTest {
         connectable(
             name = "Test",
             preferredConnectionInterval = connectionInterval..connectionInterval,
-            eventHandler = GattHandler().apply {
-                readHandler = { ReadResponse.Success(byteArrayOf(1, 2, 3)) }
-            },
+            eventHandler = handler,
         ) {
             Service(GATT_SERVICE_UUID) {
                 Characteristic(
                     GATT_CHAR_UUID,
                     setOf(CharacteristicProperty.READ),
-                    setOf(Permission.READ),
+                    permissions,
                 )
             }
         }
@@ -118,6 +124,35 @@ class OperationLockTest {
 
             assertTrue(slowDone >= 2_000, "The slow read took $slowDone ms")
             assertTrue(fastDone < 500, "The fast read waited for the slow one, it took $fastDone ms")
+        }
+    }
+
+    @Test
+    fun `bonding of one peripheral does not delay another peripheral`() = runTest {
+        withTimeout(60.seconds) {
+            // Reading the characteristic requires encryption, so the phone starts bonding and the
+            // read is held until the user confirms pairing, which takes 5 seconds.
+            val pairing = GattHandler().apply {
+                readHandler = { ReadResponse.Success(byteArrayOf(1, 2, 3)) }
+                bondResult = BondResult.Accept(5.seconds)
+            }
+            val manager = centralManager(
+                spec(SLOW, 24, pairing, setOf(Permission.READ_ENCRYPTED)),
+                spec(FAST, 24),
+            )
+            val secured = manager.characteristicOf(SLOW)
+            val fast = manager.characteristicOf(FAST)
+
+            val start = testScheduler.currentTime
+            var securedDone = 0L
+            var fastDone = 0L
+            listOf(
+                async { secured.read(); securedDone = testScheduler.currentTime - start },
+                async { fast.read(); fastDone = testScheduler.currentTime - start },
+            ).awaitAll()
+
+            assertTrue(securedDone >= 5_000, "The read waited only $securedDone ms for the bonding")
+            assertTrue(fastDone < 500, "The read waited for the bonding of another peripheral, it took $fastDone ms")
         }
     }
 
