@@ -45,6 +45,7 @@ import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.ConnectionPriority
 import no.nordicsemi.kotlin.ble.client.android.EncryptionState
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
+import no.nordicsemi.kotlin.ble.client.internal.OperationMutex
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.core.ATT_MTU_DEFAULT
 import no.nordicsemi.kotlin.ble.core.ConnectionState
@@ -74,6 +75,7 @@ internal class NativeExecutor(
     private val bluetoothDevice: BluetoothDevice,
     name: String?,
 ): Peripheral.Executor {
+    override val operationMutex = OperationMutex()
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
         set(value) {
             field = value

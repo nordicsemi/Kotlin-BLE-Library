@@ -33,11 +33,18 @@ package no.nordicsemi.kotlin.ble.client.internal
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import no.nordicsemi.kotlin.ble.client.Peripheral.Executor
 
 /**
- * This mutex ensures that only one Bluetooth LE operation can be executed concurrently.
+ * This mutex ensures that only one Bluetooth LE operation of a peripheral can be executed at
+ * a time.
+ *
+ * Each peripheral has its own mutex, see [Executor.operationMutex], as the Bluetooth stack
+ * allows one outstanding GATT operation per connection. An operation that takes long on
+ * one peripheral, like bonding that waits for the user, does not delay the operations
+ * of other peripherals.
  */
-object OperationMutex {
+class OperationMutex {
     private val lock = Mutex(locked = false)
 
     /**

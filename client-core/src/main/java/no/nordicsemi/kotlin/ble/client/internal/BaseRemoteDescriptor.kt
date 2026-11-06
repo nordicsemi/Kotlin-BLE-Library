@@ -130,7 +130,7 @@ abstract class BaseRemoteDescriptor(
         }
 
         owner.executor.repeatingAfterBonding {
-            OperationMutex.withLock {
+            owner.executor.operationMutex.withLock {
                 events
                     .onSubscription {
                         try {
@@ -188,7 +188,7 @@ abstract class BaseRemoteDescriptor(
         }
 
         owner.executor.repeatingAfterBonding {
-            OperationMutex.withLock {
+            owner.executor.operationMutex.withLock {
                 events
                     .onSubscription {
                         try {

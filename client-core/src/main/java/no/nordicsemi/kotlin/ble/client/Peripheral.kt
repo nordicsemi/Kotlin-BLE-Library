@@ -273,6 +273,11 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
          */
         suspend fun <T> repeatingAfterBonding(request: suspend () -> T): T = request()
 
+        /**
+         * Ensures that only one GATT operation of this peripheral is executed at a time.
+         */
+        val operationMutex: OperationMutex
+
         /** A flow of GATT events from the peripheral. */
         val events: SharedFlow<GattEvent>
 
@@ -705,7 +710,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
             return
         }
         serviceDiscoveryJob = scope.launch {
-            OperationMutex.withLock {
+            impl.operationMutex.withLock {
                 try {
                     impl.events
                         .onSubscription {
@@ -1499,7 +1504,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      * @throws SecurityException If BLUETOOTH_CONNECT permission is denied.
      */
     suspend fun readRssi(): Int = withCallSite("readRssi") {
-        OperationMutex.withLock {
+        impl.operationMutex.withLock {
             impl.events
                 .onSubscription {
                     logger?.trace(Layer.LINK) { "Reading RSSI" }
