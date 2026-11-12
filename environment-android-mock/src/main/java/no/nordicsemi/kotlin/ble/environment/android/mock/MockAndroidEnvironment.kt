@@ -139,7 +139,7 @@ sealed class MockAndroidEnvironment(
     override val maxLlMtu: @Range(from = 27, to = 251) Int = LL_MTU_DEFAULT,
     isScanningOnLeCodedPhySupported: Boolean = isLeCodedPhySupported,
     val issueOnlyOneActiveScan: Boolean = false, // Nexus 4 issue
-    val issueIncorrectLlTxMtu: Boolean = false, // Samsung A8 Tab issue
+    override val issueIncorrectLlTxMtu: Boolean = false, // Samsung A8 Tab issue
     // TODO add the issue when Samsung S8 fails PHY update, tested with Memfault.
     // This issue can be workaround by delaying service discovery (?) and waiting
     // until the PHY request completes. It works in nRF Connect when SD is triggered manually.

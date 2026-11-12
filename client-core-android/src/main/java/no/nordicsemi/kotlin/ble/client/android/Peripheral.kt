@@ -408,6 +408,13 @@ open class Peripheral(
     /** Current MTU (Maximum Transmission Unit) value. */
     private var _mtu: Int = ATT_MTU_DEFAULT
 
+    /**
+     * Whether the MTU was requested using `force` on a device with incorrect LL TX MTU.
+     * The limit of the write value length does not apply then.
+     */
+    @Volatile
+    private var isMtuForced = false
+
     override fun currentMtu(): Int = _mtu
 
     /**
@@ -786,6 +793,7 @@ open class Peripheral(
     override fun handleDisconnection() {
         super.handleDisconnection()
         _mtu = ATT_MTU_DEFAULT
+        isMtuForced = false
         _phy.update { null }
         _connectionParameters.update { null }
     }
@@ -897,6 +905,12 @@ open class Peripheral(
      * * *ATT MTU - 3 bytes* for [WriteType.WITHOUT_RESPONSE],
      * * *ATT MTU - 15 bytes* for [WriteType.SIGNED] (additional 12 bytes for the signature).
      *
+     * On devices that cannot transmit packets longer than the default MTU (i.e. Samsung Galaxy
+     * Tab A8, see [requestHighestValueLength]) the MTU is not requested by default. If the MTU
+     * was increased anyway (by the peripheral), the values are calculated for the default
+     * ATT MTU ([23][ATT_MTU_DEFAULT]) regardless of the negotiated MTU: *20 bytes* for
+     * [WriteType.WITH_RESPONSE] and [WriteType.WITHOUT_RESPONSE], and *8 bytes* for [WriteType.SIGNED].
+     *
      * Connect with [CentralManager.ConnectionOptions.automaticallyRequestHighestValueLength] to
      * request maximum supported value length on connection, or use [requestHighestValueLength] to
      * request it during connection.
@@ -908,10 +922,18 @@ open class Peripheral(
         check(isConnected) {
             throw PeripheralNotConnectedException()
         }
+        // Devices with incorrect LL TX MTU (i.e. Samsung Galaxy Tab A8) cannot send packets
+        // longer than 27 bytes on the Link Layer, but try to. The library does not request
+        // a higher MTU on such devices, but the peripheral may do it. The negotiated MTU is then
+        // used only for receiving, so the writes must fit in the default MTU. This applies also
+        // to write with response, as longer values are sent using long write, in packets as long
+        // as the MTU.
+        val limitTxMtu = impl.environment.issueIncorrectLlTxMtu && !isMtuForced && _mtu > ATT_MTU_DEFAULT
+        val txMtu = if (limitTxMtu) ATT_MTU_DEFAULT else _mtu
         return when (type) {
-            WriteType.WITH_RESPONSE -> 512
-            WriteType.WITHOUT_RESPONSE -> min(_mtu - 3, 512)
-            WriteType.SIGNED -> _mtu - 15
+            WriteType.WITH_RESPONSE -> if (limitTxMtu) txMtu - 3 else 512
+            WriteType.WITHOUT_RESPONSE -> min(txMtu - 3, 512)
+            WriteType.SIGNED -> txMtu - 15
         }
     }
 
@@ -933,10 +955,20 @@ open class Peripheral(
      * It is known that some Android devices (i.e. Samsung Galaxy Tab A8) fail to negotiate
      * L2CAP MTU (packet size on the Link Layer) using Data Length Extension (DLE). They mistakenly
      * claim supporting only 27 bytes of TX, but then try to send up to 251 bytes, causing the
-     * connection to terminate. For such devices it is recommended not to request higher MTU
-     * or never sending more than 20 bytes in a single write operation.
+     * connection to terminate. To avoid it, this method does nothing on such devices (also when
+     * the MTU is requested automatically on connection), so the MTU stays at the default
+     * value ([23][ATT_MTU_DEFAULT]) and the long writes are split into short packets. The
+     * peripheral may still request a higher MTU itself, which the system accepts. In that case
+     * [maximumWriteValueLength] is calculated for the default MTU, as the higher MTU would
+     * be used only for receiving.
      *
      * @param timeout The timeout. Defaults to 3 seconds.
+     * @param force Set to `true` to request the MTU also on devices with the issue described above.
+     * Use it only when the peripheral is known to work with such devices, for example if it does
+     * not use Data Length Extension (DLE) or is tolerant to long packets, and the higher MTU is
+     * required. The writes up to the negotiated MTU are then allowed, but may cause the peripheral
+     * to terminate the connection. It affects the current connection only. It has no effect on
+     * other devices.
      * @throws PeripheralNotConnectedException If the device is not connected.
      * @throws OperationFailedException If MTU could not be requested.
      * @throws SecurityException If BLUETOOTH_CONNECT permission is denied.
@@ -945,7 +977,19 @@ open class Peripheral(
      * @see maximumWriteValueLength
      * @see CentralManager.ConnectionOptions.automaticallyRequestHighestValueLength
      */
-    suspend fun requestHighestValueLength(timeout: Duration = 3.seconds) {
+    suspend fun requestHighestValueLength(
+        timeout: Duration = 3.seconds,
+        force: Boolean = false,
+    ) {
+        if (impl.environment.issueIncorrectLlTxMtu) {
+            if (!force) {
+                logger?.warn(Layer.GATT) {
+                    "Not requesting MTU: this device cannot transmit packets longer than 27 bytes (use force = true to override)"
+                }
+                return
+            }
+            isMtuForced = true
+        }
         // If automatic higher value length is requested, this method is called before
         // the state changes to Connected. This is to make the MTU ready when user gets receives
         // Connected state. Don't check for isConnected here.

@@ -98,6 +98,18 @@ class NativeAndroidEnvironment private constructor(
     }
 
     /**
+     * Samsung Galaxy Tab A8 claims it can only transmit 27-byte long PDUs on the Link Layer in
+     * the *LLCP Data Length Update* procedure, but it sends 251. Long packets get rejected by
+     * the peripheral, which terminates the connection.
+     *
+     * It is not known which other devices have the issue, so it is assumed for all devices with
+     * the same hardware (Unisoc UMS512).
+     *
+     * See: https://github.com/NordicSemiconductor/Android-DFU-Library/issues/339
+     */
+    override val issueIncorrectLlTxMtu: Boolean = Build.HARDWARE == "ums512_25c10"
+
+    /**
      * Application context.
      */
     val applicationContext: Context = context.applicationContext
