@@ -154,6 +154,8 @@ interface CentralManager:
      *
      * @property automaticallyRequestHighestValueLength If true, the manager will automatically request
      * the highest MTU supported by the remote device immediately after establishing the connection.
+     * The MTU is not requested on devices that cannot transmit packets longer than the default
+     * MTU (i.e. Samsung Galaxy Tab A8), see [Peripheral.requestHighestValueLength].
      * @property opportunistic Opportunistic connection is available from Android 17 onwards.
      * An opportunistic GATT client does not hold a GATT connection. It automatically disconnects
      * when no other GATT connections are active for the remote device.

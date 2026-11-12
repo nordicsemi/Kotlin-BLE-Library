@@ -318,4 +318,74 @@ class ConnectionMtuTest {
 
         assertEquals(247, peripheral.mtu.value)
     }
+
+    @Test
+    fun `mtu is not requested on devices with incorrect LL TX MTU`() = runTest {
+        val peripheral = connect(spec(maxAttMtu = 247), environment = MockAndroidEnvironment.SamsungA8())
+
+        assertEquals(23, peripheral.mtu.value)
+        assertEquals(512, peripheral.maximumWriteValueLength(WriteType.WITH_RESPONSE))
+        assertEquals(20, peripheral.maximumWriteValueLength(WriteType.WITHOUT_RESPONSE))
+        assertEquals(8, peripheral.maximumWriteValueLength(WriteType.SIGNED))
+    }
+
+    @Test
+    fun `manual mtu request is ignored on devices with incorrect LL TX MTU`() = runTest {
+        val peripheral = connect(spec(maxAttMtu = 247), withoutAutoMtu, MockAndroidEnvironment.SamsungA8())
+
+        peripheral.requestHighestValueLength()
+        advanceTimeBy(1.seconds)
+        runCurrent()
+
+        assertEquals(23, peripheral.mtu.value)
+    }
+
+    @Test
+    fun `forced mtu request is executed on devices with incorrect LL TX MTU`() = runTest {
+        val peripheral = connect(spec(maxAttMtu = 247), withoutAutoMtu, MockAndroidEnvironment.SamsungA8())
+
+        peripheral.requestHighestValueLength(force = true)
+        runCurrent()
+
+        assertEquals(247, peripheral.mtu.value)
+        assertEquals(244, peripheral.maximumWriteValueLength(WriteType.WITHOUT_RESPONSE))
+    }
+
+    @Test
+    fun `force is not remembered after reconnecting on devices with incorrect LL TX MTU`() = runTest {
+        val spec = spec(maxAttMtu = 247)
+        val manager = CentralManager.mock(environment = MockAndroidEnvironment.SamsungA8(), scope = backgroundScope)
+            .apply { simulatePeripherals(listOf(spec)) }
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        manager.connect(peripheral, withoutAutoMtu)
+        peripheral.requestHighestValueLength(force = true)
+        peripheral.disconnect()
+
+        manager.connect(peripheral)
+        runCurrent()
+
+        assertEquals(23, peripheral.mtu.value)
+    }
+
+    @Test
+    fun `mtu requested by the peripheral is used only for receiving on devices with incorrect LL TX MTU`() = runTest {
+        val spec = spec(maxAttMtu = 247)
+        val peripheral = connect(spec, environment = MockAndroidEnvironment.SamsungA8())
+
+        spec.simulateMtuRequest(185)
+        advanceTimeBy(1.seconds)
+        runCurrent()
+
+        assertEquals(185, peripheral.mtu.value)
+        assertEquals(20, peripheral.maximumWriteValueLength(WriteType.WITH_RESPONSE))
+        assertEquals(20, peripheral.maximumWriteValueLength(WriteType.WITHOUT_RESPONSE))
+        assertEquals(8, peripheral.maximumWriteValueLength(WriteType.SIGNED))
+    }
+
+    @Test
+    fun `devices without the issue use the negotiated mtu for writes`() = runTest {
+        val peripheral = connect(spec(maxAttMtu = 247), environment = MockAndroidEnvironment.Api31())
+
+        assertEquals(244, peripheral.maximumWriteValueLength(WriteType.WITHOUT_RESPONSE))
+    }
 }

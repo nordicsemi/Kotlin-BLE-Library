@@ -57,6 +57,11 @@ package no.nordicsemi.kotlin.ble.core
  * asked to connect in the background (auto connect) to a device that is not bonded and uses
  * a Resolvable Private Address. When `false`, the request is accepted, but the connection
  * is never established.
+ * @property issueIncorrectLlTxMtu Whether the device claims in the *LLCP Data Length Update*
+ * procedure that it can transmit only 27-byte long PDUs on the Link Layer, but then sends up to 251
+ * bytes, which makes the peripheral terminate the connection (e.g. Samsung Galaxy Tab A8). Such
+ * a device can safely transmit only packets that fit the default ATT MTU (23 bytes), even if a higher
+ * MTU was negotiated (the higher MTU can still be used to receive data).
  */
 interface Environment {
     val deviceName: String
@@ -70,4 +75,6 @@ interface Environment {
     val isSystem: Boolean
     val repeatsRequestsAfterBonding: Boolean
     val rejectsAutoConnectToUnbondedPrivateAddress: Boolean
+    val issueIncorrectLlTxMtu: Boolean
+        get() = false
 }
