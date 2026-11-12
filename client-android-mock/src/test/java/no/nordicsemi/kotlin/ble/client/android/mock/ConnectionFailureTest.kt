@@ -55,6 +55,7 @@ import no.nordicsemi.kotlin.ble.client.mock.Proximity
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.ConnectionState.Disconnected.Reason
 import no.nordicsemi.kotlin.ble.core.LegacyAdvertisingSetParameters
+import no.nordicsemi.kotlin.ble.core.WriteType
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import kotlin.test.Test
@@ -89,6 +90,7 @@ class ConnectionFailureTest {
         eventHandler: PeripheralSpecEventHandler = object : PeripheralSpecEventHandler {},
         isBonded: Boolean = false,
         preferredConnectionInterval: IntRange = 25..40,
+        maxAttMtu: Int = 23,
     ): PeripheralSpec<String> = PeripheralSpec.simulatePeripheral(
         identifier = address,
         addressType = addressType,
@@ -105,6 +107,7 @@ class ConnectionFailureTest {
         } else {
             connectable(
                 name = "Device",
+                maxAttMtu = maxAttMtu,
                 preferredConnectionInterval = preferredConnectionInterval,
                 eventHandler = eventHandler,
             ) {}
@@ -272,16 +275,17 @@ class ConnectionFailureTest {
     }
 
     @Test
-    fun `initial MTU request that times out does not fail the connection`() = runTest {
-        // With a connection interval of 4 s, the initial MTU request times out after 3 s.
-        val manager = newManager(spec(preferredConnectionInterval = 3200..3200))
+    fun `initial MTU response slower than 3 seconds is awaited before connecting`() = runTest {
+        // With a connection interval of 4 s, the MTU response comes after 4 s. Connecting must
+        // not continue (read PHY, discover services) while the MTU request is still pending.
+        val manager = newManager(spec(preferredConnectionInterval = 3200..3200, maxAttMtu = 247))
         val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
 
         manager.connect(peripheral, ConnectionOptions.Direct())
 
         assertEquals(ConnectionState.Connected, peripheral.state.value)
-        // Connected after the timeout of the request, before the response would have arrived.
-        assertTrue(testScheduler.currentTime in 3_000 until 4_000, "Connected after ${testScheduler.currentTime} ms")
+        assertTrue(testScheduler.currentTime >= 4_000, "Connected after ${testScheduler.currentTime} ms")
+        assertEquals(244, peripheral.maximumWriteValueLength(WriteType.WITHOUT_RESPONSE))
     }
 
     @Test

@@ -106,6 +106,13 @@ private sealed class Outcome<out T> {
     data object Unanswered : Outcome<Nothing>()
 }
 
+/**
+ * How long to wait for the MTU response when it is requested automatically on connection.
+ *
+ * It must be shorter than the default connection timeout (10 seconds), which also covers it.
+ */
+private val AUTOMATIC_MTU_REQUEST_TIMEOUT = 6.seconds
+
 /** How long to wait for a request to complete after the bond was created, before it is repeated. */
 private val BONDED_REQUEST_GRACE_PERIOD = 1.seconds
 
@@ -728,7 +735,8 @@ open class Peripheral(
             // An event will be emitted when they change.
             _connectionParameters.update { ConnectionParameters.Unknown }
             // Request MTU if set in ConnectionOptions.
-            if (automaticallyRequestHighestValueLength && !runCatchingOnConnection { requestHighestValueLength() }) {
+            if (automaticallyRequestHighestValueLength &&
+                !runCatchingOnConnection { requestHighestValueLength(AUTOMATIC_MTU_REQUEST_TIMEOUT) }) {
                 return false
             }
             // Read initial PHY to feed the `phy` flow.
