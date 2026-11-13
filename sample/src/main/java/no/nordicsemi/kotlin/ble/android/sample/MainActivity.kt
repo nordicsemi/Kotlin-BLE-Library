@@ -32,6 +32,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import no.nordicsemi.kotlin.ble.android.sample.advertiser.AdvertiserScreen
 import no.nordicsemi.kotlin.ble.android.sample.graph.GraphScreen
 import no.nordicsemi.kotlin.ble.android.sample.menu.MenuScreen
+import no.nordicsemi.kotlin.ble.android.sample.proximity.ProximityScreen
 import no.nordicsemi.kotlin.ble.android.sample.scanner.ScannerScreen
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
 import no.nordicsemi.kotlin.ble.android.sample.view.AppBarState
@@ -43,6 +44,7 @@ import javax.inject.Inject
 const val NAV_MENU = "Menu"
 const val NAV_ADVERTISER = "Advertiser"
 const val NAV_SCANNER = "Connection"
+const val NAV_PROXIMITY = "Proximity"
 const val NAV_GRAPH = "RSSI graph"
 
 @AndroidEntryPoint
@@ -123,6 +125,9 @@ class MainActivity : ComponentActivity() {
                             }
                             composable(NAV_SCANNER) {
                                 ScannerScreen()
+                            }
+                            composable(NAV_PROXIMITY) {
+                                ProximityScreen()
                             }
                             composable(NAV_GRAPH) {
                                 GraphScreen()

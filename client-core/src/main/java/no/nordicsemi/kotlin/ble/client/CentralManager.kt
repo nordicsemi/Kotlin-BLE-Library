@@ -118,6 +118,14 @@ interface CentralManager<
      * This method will emit events when the monitoring device enters or leaves the range of a
      * peripheral advertising packets matching given filter.
      *
+     * A [PeripheralEnteredRange] event is emitted when the first matching advertising packet from
+     * a peripheral is received. A [PeripheralLeftRange] event is emitted when no packets have been
+     * received from that peripheral for 10 seconds. If it returns, [PeripheralEnteredRange]
+     * is emitted again. Each peripheral is tracked independently.
+     *
+     * Monitoring is based on scanning, so it consumes as much power as a scan with the same
+     * filter, and the same limitations apply.
+     *
      * The scan will be stopped after the given period of time or when the flow is canceled.
      *
      * @param timeout The scan duration. By default, the scan will run until the flow is closed.
@@ -135,7 +143,14 @@ interface CentralManager<
      * This method can be started when [monitor] reports [PeripheralEnteredRange] event for given
      * peripheral.
      *
-     * The flow is closed automatically when the peripheral leaves range of the monitoring device.
+     * The flow emits [ProximityChanged] event when the first advertising packet from the peripheral
+     * is received, and then every time the estimated proximity changes. The proximity is estimated
+     * from the average of the last 5 RSSI values, with some hysteresis to avoid flapping at
+     * thresholds, and is only approximate.
+     *
+     * The flow is closed automatically when the peripheral leaves range of the monitoring device,
+     * that is when no packets have been received for 10 seconds. If the proximity was known,
+     * the last event reports the change to [UNKNOWN][ProximityChanged.Proximity.UNKNOWN].
      * @param peripheral The peripheral to range.
      * @param timeout The scan duration. By default, the scan will run until the flow is closed.
      * @throws ManagerClosedException If the central manager has been closed.

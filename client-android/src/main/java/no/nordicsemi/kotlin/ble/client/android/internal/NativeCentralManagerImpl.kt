@@ -58,8 +58,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import no.nordicsemi.kotlin.ble.client.MonitoringEvent
-import no.nordicsemi.kotlin.ble.client.RangeEvent
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.CentralManager.ScanOptions
 import no.nordicsemi.kotlin.ble.client.android.BondState
@@ -320,17 +318,6 @@ internal class NativeCentralManagerImpl(
             // If the collector falls behind, keep the newest 64 results rather than the oldest.
             // Not Channel.BUFFERED: with DROP_OLDEST, it means a buffer of 1 instead of 64.
             .buffer(64, BufferOverflow.DROP_OLDEST)
-    }
-
-    override fun monitor(
-        timeout: Duration,
-        filter: ConjunctionFilterScope.() -> Unit
-    ): Flow<MonitoringEvent<Peripheral>> {
-        TODO("Not yet implemented")
-    }
-
-    override fun range(peripheral: Peripheral, timeout: Duration): Flow<RangeEvent<Peripheral>> {
-        TODO("Not yet implemented")
     }
 
     override fun close() {

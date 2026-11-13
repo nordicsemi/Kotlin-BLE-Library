@@ -31,7 +31,32 @@
 
 package no.nordicsemi.kotlin.ble.client.android.internal
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.flow.transformWhile
+import no.nordicsemi.kotlin.ble.client.MonitoringEvent
+import no.nordicsemi.kotlin.ble.client.PeripheralEnteredRange
+import no.nordicsemi.kotlin.ble.client.PeripheralLeftRange
+import no.nordicsemi.kotlin.ble.client.ProximityChanged
+import no.nordicsemi.kotlin.ble.client.ProximityChanged.Proximity
+import no.nordicsemi.kotlin.ble.client.RangeEvent
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.CentralManager.ConnectionOptions
 import no.nordicsemi.kotlin.ble.client.android.ConjunctionFilterScope
@@ -41,6 +66,8 @@ import no.nordicsemi.kotlin.ble.client.internal.CentralManagerImpl
 import no.nordicsemi.kotlin.ble.core.Manager
 import no.nordicsemi.kotlin.ble.core.android.AndroidEnvironment
 import no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Android-specific implementation of a central manager interface.
@@ -98,4 +125,222 @@ abstract class CentralManagerImpl(
         peripheral.connect(options)
     }
 
+    // Monitoring and ranging.
+    //
+    // Both are implemented on top of scanning, so they work the same on the native and mock
+    // implementation, and on all Android versions. The scan result is the only source of
+    // information whether a peripheral is around.
+
+    override fun monitor(
+        timeout: Duration,
+        filter: ConjunctionFilterScope.() -> Unit,
+    ): Flow<MonitoringEvent<Peripheral>> = flow {
+        // The number of ticks (seconds) since a packet from the peripheral was last received.
+        val inRange = mutableMapOf<String, Pair<Peripheral, Int>>()
+        var tick = 0
+        val items = merge(
+            scan(timeout, filter)
+                .map { Item.Result(it.peripheral, it.rssi) }
+                .endWhenComplete(),
+            ticks(),
+        )
+        items.takeWhile { it !is Item.End }.collect { item ->
+            when (item) {
+                is Item.Result -> {
+                    val previous = inRange.put(item.peripheral.identifier, item.peripheral to tick)
+                    if (previous == null) {
+                        emit(PeripheralEnteredRange(item.peripheral))
+                    }
+                }
+                is Item.Tick -> {
+                    tick++
+                    val lost = inRange.values.filter { (_, lastSeen) -> tick - lastSeen >= LEFT_RANGE_TIMEOUT_TICKS }
+                    lost.forEach { (peripheral, _) ->
+                        inRange.remove(peripheral.identifier)
+                        emit(PeripheralLeftRange(peripheral))
+                    }
+                }
+                is Item.End -> {}
+            }
+        }
+    }
+
+    override fun range(
+        peripheral: Peripheral,
+        timeout: Duration,
+    ): Flow<RangeEvent<Peripheral>> = flow {
+        // Ensure the peripheral was acquired from this Central Manager.
+        checkPeripheral(peripheral)
+
+        var tick = 0
+        var lastSeen = 0
+        var proximity = Proximity.UNKNOWN
+        val rssiSamples = ArrayDeque<Int>()
+        val items = merge(
+            rangingScan(peripheral.address)
+                .map { Item.Result(it.peripheral, it.rssi) }
+                .endWhenComplete(),
+            ticks(),
+            timeoutItem(timeout),
+        )
+        emitAll(
+            items.transformWhile { item ->
+                when (item) {
+                    is Item.Result -> {
+                        lastSeen = tick
+                        rssiSamples.addLast(item.rssi)
+                        if (rssiSamples.size > RSSI_SAMPLES) rssiSamples.removeFirst()
+                        val newProximity = rssiSamples.average().toProximity(proximity)
+                        if (newProximity != proximity) {
+                            emit(ProximityChanged(peripheral, proximity, newProximity))
+                            proximity = newProximity
+                        }
+                        true
+                    }
+                    is Item.Tick -> {
+                        tick++
+                        if (tick - lastSeen >= LEFT_RANGE_TIMEOUT_TICKS) {
+                            // The peripheral left the range. The flow is closed, as documented.
+                            if (proximity != Proximity.UNKNOWN) {
+                                emit(ProximityChanged(peripheral, proximity, Proximity.UNKNOWN))
+                            }
+                            false
+                        } else {
+                            true
+                        }
+                    }
+                    is Item.End -> false
+                }
+            }
+        )
+    }
+
+    // A single scan is shared by all ranging requests. Ranging checks the address of the
+    // peripheral locally (it cannot be offloaded to the controller, see ScanFilter.toNative()),
+    // so a scan per ranged peripheral would be an unfiltered scan each, delivering all the
+    // advertisements to the app N times. Android also limits how often scans can be started
+    // ("scanning too frequently").
+
+    private val rangingLock = Any()
+
+    /** Collectors of the shared ranging scan, by the address of the ranged peripheral. */
+    private val rangingSubscribers = mutableMapOf<String, MutableSet<SendChannel<ScanResult>>>()
+    private var rangingScanJob: Job? = null
+
+    /**
+     * Returns scan results of the peripheral with the given [address].
+     *
+     * The scan is started when the first flow is collected and stopped when the last one is
+     * cancelled. It fails all the collectors if the scan fails.
+     */
+    private fun rangingScan(address: String): Flow<ScanResult> = callbackFlow {
+        val subscriber = channel
+        synchronized(rangingLock) {
+            rangingSubscribers.getOrPut(address) { mutableSetOf() } += subscriber
+            if (rangingScanJob == null) {
+                rangingScanJob = internalScope.launch { runRangingScan() }
+            }
+        }
+        awaitClose {
+            synchronized(rangingLock) {
+                rangingSubscribers[address]?.let { subscribers ->
+                    subscribers -= subscriber
+                    if (subscribers.isEmpty()) rangingSubscribers.remove(address)
+                }
+                if (rangingSubscribers.isEmpty()) {
+                    rangingScanJob?.cancel()
+                    rangingScanJob = null
+                }
+            }
+        }
+    }.buffer(RANGING_BUFFER_SIZE, BufferOverflow.DROP_OLDEST)
+
+    private suspend fun runRangingScan() {
+        val job = currentCoroutineContext()[Job]
+        var failure: Throwable? = null
+        try {
+            scan(Duration.INFINITE) {}.collect { result ->
+                synchronized(rangingLock) {
+                    rangingSubscribers[result.peripheral.identifier]?.forEach { it.trySend(result) }
+                }
+            }
+        } catch (e: CancellationException) {
+            // Cancelled when the last collector left, or when the manager was closed.
+            throw e
+        } catch (t: Throwable) {
+            failure = t
+        }
+        // The scan failed or completed. End all the collectors; the next one will start a new scan.
+        val subscribers = synchronized(rangingLock) {
+            if (rangingScanJob === job) rangingScanJob = null
+            rangingSubscribers.values.flatten().also { rangingSubscribers.clear() }
+        }
+        subscribers.forEach { it.close(failure) }
+    }
+
+    /** Items processed sequentially by [monitor] and [range]. */
+    private sealed class Item {
+        class Result(val peripheral: Peripheral, val rssi: Int): Item()
+        data object Tick: Item()
+        data object End: Item()
+    }
+
+    /** Emits [Item.End] when the scan completes, so that the merged flow can be completed. */
+    private fun Flow<Item>.endWhenComplete(): Flow<Item> = onCompletion { cause ->
+        if (cause == null) emit(Item.End)
+    }
+
+    /** Emits [Item.End] after the [timeout]. Never emits if the timeout is infinite. */
+    private fun timeoutItem(timeout: Duration): Flow<Item> = flow {
+        if (timeout.isInfinite()) awaitCancellation()
+        delay(timeout)
+        emit(Item.End)
+    }
+
+    /** Emits [Item.Tick] every second. Never completes. */
+    private fun ticks(): Flow<Item> = flow {
+        while (true) {
+            delay(1.seconds)
+            emit(Item.Tick)
+        }
+    }
+
+    /**
+     * Estimates the proximity from the average RSSI, with some hysteresis, so that the proximity
+     * does not flip back and forth around the thresholds.
+     */
+    private fun Double.toProximity(current: Proximity): Proximity {
+        val hysteresis = if (current == Proximity.UNKNOWN) 0 else PROXIMITY_HYSTERESIS_DBM
+        val immediate = if (current == Proximity.IMMEDIATE) IMMEDIATE_RSSI - hysteresis else IMMEDIATE_RSSI + hysteresis
+        val near = if (current == Proximity.IMMEDIATE || current == Proximity.NEAR) NEAR_RSSI - hysteresis else NEAR_RSSI + hysteresis
+        return when {
+            this >= immediate -> Proximity.IMMEDIATE
+            this >= near -> Proximity.NEAR
+            else -> Proximity.FAR
+        }
+    }
+
+    private companion object {
+        /**
+         * The peripheral is considered to have left the range when no advertising packet was
+         * received for this number of seconds. Peripherals advertise every 20 ms - 10 s, and
+         * some packets may be lost.
+         */
+        const val LEFT_RANGE_TIMEOUT_TICKS = 10
+
+        /** The number of ranging results queued for a slow collector. */
+        const val RANGING_BUFFER_SIZE = 64
+
+        /** The number of recent RSSI samples averaged to estimate the proximity. */
+        const val RSSI_SAMPLES = 5
+
+        /** The RSSI, in dBm, above which the peripheral is IMMEDIATE (approx. up to 0.5 m). */
+        const val IMMEDIATE_RSSI = -50
+
+        /** The RSSI, in dBm, above which the peripheral is NEAR (up to a few meters). */
+        const val NEAR_RSSI = -75
+
+        /** The margin, in dB, needed to change the proximity back to the previous value. */
+        const val PROXIMITY_HYSTERESIS_DBM = 3
+    }
 }
