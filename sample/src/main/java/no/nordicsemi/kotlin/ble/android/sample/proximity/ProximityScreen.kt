@@ -53,6 +53,7 @@ fun ProximityScreen() {
     val state by vm.state.collectAsStateWithLifecycle()
     val isMonitoring by vm.isMonitoring.collectAsStateWithLifecycle()
     val devices by vm.devices.collectAsStateWithLifecycle()
+    val selected by vm.selected.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -80,7 +81,10 @@ fun ProximityScreen() {
 
             ProximityView(
                 devices = devices,
+                selected = selected,
                 isMonitoring = isMonitoring,
+                onDeviceClicked = vm::onDeviceClicked,
+                onClearSelectionRequested = vm::onClearSelectionRequested,
             )
         }
     }

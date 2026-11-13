@@ -45,6 +45,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -68,6 +69,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -128,7 +130,10 @@ private fun Proximity.color(): Color = when (this) {
 @Composable
 fun ProximityView(
     devices: List<ProximityDevice>,
+    selected: Set<String>,
     isMonitoring: Boolean,
+    onDeviceClicked: (String) -> Unit,
+    onClearSelectionRequested: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
@@ -138,10 +143,17 @@ fun ProximityView(
             .padding(top = 8.dp, bottom = 16.dp),
     ) {
         val radar = @Composable { radarModifier: Modifier ->
-            RadarCard(devices = devices, isMonitoring = isMonitoring, modifier = radarModifier)
+            RadarCard(devices = devices, selected = selected, isMonitoring = isMonitoring, modifier = radarModifier)
         }
         val list = @Composable { listModifier: Modifier ->
-            DevicesCard(devices = devices, isMonitoring = isMonitoring, modifier = listModifier)
+            DevicesCard(
+                devices = devices,
+                selected = selected,
+                isMonitoring = isMonitoring,
+                onDeviceClicked = onDeviceClicked,
+                onClearSelectionRequested = onClearSelectionRequested,
+                modifier = listModifier,
+            )
         }
 
         val radarMaxHeight = min(maxWidth, maxHeight * 0.55f)
@@ -163,6 +175,7 @@ fun ProximityView(
 @Composable
 private fun RadarCard(
     devices: List<ProximityDevice>,
+    selected: Set<String>,
     isMonitoring: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -174,6 +187,7 @@ private fun RadarCard(
     ) {
         Radar(
             devices = devices,
+            selected = selected,
             isMonitoring = isMonitoring,
             modifier = Modifier.fillMaxSize().padding(8.dp),
         )
@@ -188,6 +202,7 @@ private fun RadarCard(
 @Composable
 private fun Radar(
     devices: List<ProximityDevice>,
+    selected: Set<String>,
     isMonitoring: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -199,6 +214,8 @@ private fun Radar(
     val zoneColor = MaterialTheme.colorScheme.onSurface
     val lineColor = MaterialTheme.colorScheme.outlineVariant
     val pulseColor = MaterialTheme.colorScheme.primary
+    // When some devices are selected, the others are grey, like in the RSSI graph.
+    val greyedOutColor = MaterialTheme.colorScheme.outline
     val labelStyle = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
     val nameStyle = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp)
 
@@ -292,16 +309,18 @@ private fun Radar(
                 x = center.x + (maxRadius * radius * cos(angle)).toFloat(),
                 y = center.y + (maxRadius * radius * sin(angle)).toFloat(),
             )
+            val isGreyedOut = selected.isNotEmpty() && device.address !in selected
+            val color = if (isGreyedOut) greyedOutColor else device.color
             val alpha = appear.value * if (device.proximity == Proximity.UNKNOWN) 0.4f else 1f
-            drawCircle(color = device.color.copy(alpha = 0.25f * alpha), radius = 14.dp.toPx(), center = position)
-            drawCircle(color = device.color.copy(alpha = alpha), radius = 7.dp.toPx(), center = position)
-            drawCircle(color = Color.White.copy(alpha = alpha), radius = 7.dp.toPx(), center = position, style = Stroke(width = 1.5.dp.toPx()))
+            drawCircle(color = color.copy(alpha = 0.25f * alpha), radius = 14.dp.toPx(), center = position)
+            drawCircle(color = color.copy(alpha = alpha), radius = 7.dp.toPx(), center = position)
+            drawCircle(color = Color.White.copy(alpha = if (isGreyedOut) alpha * 0.3f else alpha), radius = 7.dp.toPx(), center = position, style = Stroke(width = 1.5.dp.toPx()))
 
             animatedDevice.nameLayout?.let { name ->
                 // Keep the name inside the card.
                 val x = (position.x - name.size.width / 2f).coerceIn(0f, size.width - name.size.width)
                 val y = (position.y + 10.dp.toPx()).coerceAtMost(size.height - name.size.height)
-                drawText(textLayoutResult = name, topLeft = Offset(x, y), alpha = alpha)
+                drawText(textLayoutResult = name, topLeft = Offset(x, y), alpha = if (isGreyedOut) alpha * 0.5f else alpha)
             }
         }
     }
@@ -317,7 +336,10 @@ private data class AnimatedDevice(
 @Composable
 private fun DevicesCard(
     devices: List<ProximityDevice>,
+    selected: Set<String>,
     isMonitoring: Boolean,
+    onDeviceClicked: (String) -> Unit,
+    onClearSelectionRequested: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     ElevatedCard(
@@ -330,14 +352,20 @@ private fun DevicesCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
-                .padding(horizontal = 16.dp),
+                .padding(start = 16.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            val selectedCount = devices.count { it.address in selected }
             Text(
-                text = "Devices in range: ${devices.size}",
+                text = if (selectedCount == 0) "Devices in range: ${devices.size}" else "Selected: $selectedCount of ${devices.size}",
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f),
             )
+            if (selectedCount > 0) {
+                TextButton(onClick = onClearSelectionRequested) {
+                    Text(text = "Clear")
+                }
+            }
         }
 
         if (devices.isEmpty()) {
@@ -359,17 +387,29 @@ private fun DevicesCard(
             contentPadding = PaddingValues(bottom = 8.dp),
         ) {
             items(items = devices, key = { it.address }) { device ->
-                DeviceItem(device)
+                DeviceItem(
+                    device = device,
+                    isSelected = device.address in selected,
+                    isGreyedOut = selected.isNotEmpty() && device.address !in selected,
+                    onClick = { onDeviceClicked(device.address) },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun DeviceItem(device: ProximityDevice) {
+private fun DeviceItem(
+    device: ProximityDevice,
+    isSelected: Boolean,
+    isGreyedOut: Boolean,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -377,7 +417,10 @@ private fun DeviceItem(device: ProximityDevice) {
         Box(
             modifier = Modifier
                 .size(12.dp)
-                .background(color = device.color, shape = CircleShape),
+                .background(
+                    color = if (isGreyedOut) MaterialTheme.colorScheme.outlineVariant else device.color,
+                    shape = CircleShape,
+                ),
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -422,7 +465,10 @@ private fun ProximityViewPreview() {
                 ProximityDevice("AA:BB:CC:DD:EE:02", "Nordic_Beacon", Proximity.NEAR, Nordic.Color.Fall, 157.5f),
                 ProximityDevice("AA:BB:CC:DD:EE:03", "Nordic_LBS", Proximity.FAR, Nordic.Color.Green, 295f),
             ),
+            selected = setOf("AA:BB:CC:DD:EE:02"),
             isMonitoring = true,
+            onDeviceClicked = {},
+            onClearSelectionRequested = {},
         )
     }
 }

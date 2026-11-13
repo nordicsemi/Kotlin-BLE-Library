@@ -90,6 +90,10 @@ class ProximityViewModel @Inject constructor(
     val devices: StateFlow<List<ProximityDevice>>
         field = MutableStateFlow<List<ProximityDevice>>(emptyList())
 
+    /** Addresses of the devices selected in the list. Devices that left the range are removed. */
+    val selected: StateFlow<Set<String>>
+        field = MutableStateFlow<Set<String>>(emptySet())
+
     private var monitoringJob: Job? = null
 
     /** Ranging jobs, by address. Access only when holding the lock. */
@@ -121,6 +125,14 @@ class ProximityViewModel @Inject constructor(
         monitoringJob?.cancel()
     }
 
+    fun onDeviceClicked(address: String) {
+        selected.update { if (address in it) it - address else it + address }
+    }
+
+    fun onClearSelectionRequested() {
+        selected.update { emptySet() }
+    }
+
     private fun startRanging(peripheral: Peripheral) {
         val address = peripheral.address
         val job = scope.launch(start = CoroutineStart.LAZY) {
@@ -138,6 +150,7 @@ class ProximityViewModel @Inject constructor(
             } finally {
                 synchronized(rangingJobs) { rangingJobs.remove(address, coroutineContext[Job]) }
                 devices.update { list -> list.filterNot { it.address == address } }
+                selected.update { it - address }
             }
         }
         synchronized(rangingJobs) {
