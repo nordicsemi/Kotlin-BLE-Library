@@ -148,7 +148,13 @@ class ProximityViewModel @Inject constructor(
                 // The flow is closed when the peripheral leaves the range.
                 Timber.i("$address left the range")
             } finally {
-                synchronized(rangingJobs) { rangingJobs.remove(address, coroutineContext[Job]) }
+                // Remove only this job: the device may have entered the range again already.
+                // Map.remove(key, value) requires API 24.
+                synchronized(rangingJobs) {
+                    if (rangingJobs[address] === coroutineContext[Job]) {
+                        rangingJobs.remove(address)
+                    }
+                }
                 devices.update { list -> list.filterNot { it.address == address } }
                 selected.update { it - address }
             }
