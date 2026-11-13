@@ -113,6 +113,22 @@ interface CentralManager:
      *
      * The scan will be stopped after the given period of time or when the flow is canceled.
      *
+     * #### Unfiltered scans
+     *
+     * Avoid long scans without a [filter]. Android may silently degrade a long-running unfiltered
+     * scan without notifying the app: for example, on a Pixel 7 with Android 17 such a scan is
+     * moved to *opportunistic* mode after 5 minutes, after which the results are delivered only
+     * when another app scans. Unfiltered scans may also not work at all when the app is in the
+     * background. Use a filter, or stop and restart the scan periodically.
+     *
+     * Note, that only some criteria can be offloaded to the Bluetooth controller and count as
+     * a filter for the system: the device name (exact), service UUID, service data, manufacturer
+     * data and, depending on the Android version, service solicitation UUID (Android 10+) and
+     * custom advertising data (Android 13+). Other criteria, such as the device address or name
+     * regex, are checked by the library on the results reported by the system. A scan that uses
+     * only those is still an unfiltered scan for Android, so the limitations above apply, and
+     * the filtering costs power, as every advertising packet is delivered to the app.
+     *
      * @param timeout The scan duration. By default, the scan will run until the flow is closed.
      * @param filter The filter to apply. By default, no filter is applied.
      * @throws ManagerClosedException If the central manager has been closed.
@@ -130,6 +146,22 @@ interface CentralManager:
      * Scans for Bluetooth LE devices.
      *
      * The scan will be stopped after the given period of time or when the flow is canceled.
+     *
+     * #### Unfiltered scans
+     *
+     * Avoid long scans without a [filter]. Android may silently degrade a long-running unfiltered
+     * scan without notifying the app: for example, on a Pixel 7 with Android 17 such a scan is
+     * moved to *opportunistic* mode after 5 minutes, after which the results are delivered only
+     * when another app scans. Unfiltered scans may also not work at all when the app is in the
+     * background. Use a filter, or stop and restart the scan periodically.
+     *
+     * Note, that only some criteria can be offloaded to the Bluetooth controller and count as
+     * a filter for the system: the device name (exact), service UUID, service data, manufacturer
+     * data and, depending on the Android version, service solicitation UUID (Android 10+) and
+     * custom advertising data (Android 13+). Other criteria, such as the device address or name
+     * regex, are checked by the library on the results reported by the system. A scan that uses
+     * only those is still an unfiltered scan for Android, so the limitations above apply, and
+     * the filtering costs power, as every advertising packet is delivered to the app.
      *
      * @param timeout The scan duration. By default, the scan will run until the flow is closed.
      * @param options Scan options, e.g. the scan mode.
