@@ -34,11 +34,14 @@ package no.nordicsemi.kotlin.ble.client.android.mock.internal
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeoutOrNull
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.CentralManager.ScanOptions
@@ -78,6 +81,9 @@ open class MockCentralManagerImpl(
     clock: Clock = Clock.System,
 ): MockCentralManager, CentralManagerImpl(scope, environment) {
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
+
+    /** The number of scans (flows returned by [scan]) that are currently collected. */
+    internal val activeScans = MutableStateFlow(0)
 
     // Simulation methods
     private var peripheralSpecs = mutableListOf<PeripheralSpec<String>>()
@@ -359,7 +365,9 @@ open class MockCentralManagerImpl(
                 // Pass the error to the collector, like the native scanner does.
                 throw throwable
             }
+            .onStart { activeScans.update { it + 1 } }
             .onCompletion {
+                activeScans.update { it - 1 }
                 logger?.trace(Layer.GAP) { "Scanning stopped" }
             }
     }

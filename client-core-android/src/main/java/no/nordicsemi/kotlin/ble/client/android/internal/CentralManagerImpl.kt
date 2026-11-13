@@ -31,7 +31,17 @@
 
 package no.nordicsemi.kotlin.ble.client.android.internal
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
@@ -167,12 +177,11 @@ abstract class CentralManagerImpl(
         var proximity = Proximity.UNKNOWN
         val rssiSamples = ArrayDeque<Int>()
         val items = merge(
-            // Address is not offloaded to the controller (see ScanFilter.toNative()), but checked
-            // by the library.
-            scan(timeout) { Address(peripheral.address) }
+            rangingScan(peripheral.address)
                 .map { Item.Result(it.peripheral, it.rssi) }
                 .endWhenComplete(),
             ticks(),
+            timeoutItem(timeout),
         )
         emitAll(
             items.transformWhile { item ->
@@ -206,6 +215,69 @@ abstract class CentralManagerImpl(
         )
     }
 
+    // A single scan is shared by all ranging requests. Ranging checks the address of the
+    // peripheral locally (it cannot be offloaded to the controller, see ScanFilter.toNative()),
+    // so a scan per ranged peripheral would be an unfiltered scan each, delivering all the
+    // advertisements to the app N times. Android also limits how often scans can be started
+    // ("scanning too frequently").
+
+    private val rangingLock = Any()
+
+    /** Collectors of the shared ranging scan, by the address of the ranged peripheral. */
+    private val rangingSubscribers = mutableMapOf<String, MutableSet<SendChannel<ScanResult>>>()
+    private var rangingScanJob: Job? = null
+
+    /**
+     * Returns scan results of the peripheral with the given [address].
+     *
+     * The scan is started when the first flow is collected and stopped when the last one is
+     * cancelled. It fails all the collectors if the scan fails.
+     */
+    private fun rangingScan(address: String): Flow<ScanResult> = callbackFlow {
+        val subscriber = channel
+        synchronized(rangingLock) {
+            rangingSubscribers.getOrPut(address) { mutableSetOf() } += subscriber
+            if (rangingScanJob == null) {
+                rangingScanJob = internalScope.launch { runRangingScan() }
+            }
+        }
+        awaitClose {
+            synchronized(rangingLock) {
+                rangingSubscribers[address]?.let { subscribers ->
+                    subscribers -= subscriber
+                    if (subscribers.isEmpty()) rangingSubscribers.remove(address)
+                }
+                if (rangingSubscribers.isEmpty()) {
+                    rangingScanJob?.cancel()
+                    rangingScanJob = null
+                }
+            }
+        }
+    }.buffer(RANGING_BUFFER_SIZE, BufferOverflow.DROP_OLDEST)
+
+    private suspend fun runRangingScan() {
+        val job = currentCoroutineContext()[Job]
+        var failure: Throwable? = null
+        try {
+            scan(Duration.INFINITE) {}.collect { result ->
+                synchronized(rangingLock) {
+                    rangingSubscribers[result.peripheral.identifier]?.forEach { it.trySend(result) }
+                }
+            }
+        } catch (e: CancellationException) {
+            // Cancelled when the last collector left, or when the manager was closed.
+            throw e
+        } catch (t: Throwable) {
+            failure = t
+        }
+        // The scan failed or completed. End all the collectors; the next one will start a new scan.
+        val subscribers = synchronized(rangingLock) {
+            if (rangingScanJob === job) rangingScanJob = null
+            rangingSubscribers.values.flatten().also { rangingSubscribers.clear() }
+        }
+        subscribers.forEach { it.close(failure) }
+    }
+
     /** Items processed sequentially by [monitor] and [range]. */
     private sealed class Item {
         class Result(val peripheral: Peripheral, val rssi: Int): Item()
@@ -216,6 +288,13 @@ abstract class CentralManagerImpl(
     /** Emits [Item.End] when the scan completes, so that the merged flow can be completed. */
     private fun Flow<Item>.endWhenComplete(): Flow<Item> = onCompletion { cause ->
         if (cause == null) emit(Item.End)
+    }
+
+    /** Emits [Item.End] after the [timeout]. Never emits if the timeout is infinite. */
+    private fun timeoutItem(timeout: Duration): Flow<Item> = flow {
+        if (timeout.isInfinite()) awaitCancellation()
+        delay(timeout)
+        emit(Item.End)
     }
 
     /** Emits [Item.Tick] every second. Never completes. */
@@ -248,6 +327,9 @@ abstract class CentralManagerImpl(
          * some packets may be lost.
          */
         const val LEFT_RANGE_TIMEOUT_TICKS = 10
+
+        /** The number of ranging results queued for a slow collector. */
+        const val RANGING_BUFFER_SIZE = 64
 
         /** The number of recent RSSI samples averaged to estimate the proximity. */
         const val RSSI_SAMPLES = 5

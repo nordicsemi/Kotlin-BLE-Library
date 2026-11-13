@@ -46,6 +46,8 @@ import no.nordicsemi.kotlin.ble.client.ProximityChanged.Proximity.UNKNOWN
 import no.nordicsemi.kotlin.ble.client.RangeEvent
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
+import no.nordicsemi.kotlin.ble.client.android.mock.internal.MockCentralManagerImpl
+import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import no.nordicsemi.kotlin.ble.client.mock.AddressType
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.Proximity
@@ -294,5 +296,89 @@ class MonitoringTest {
         val peripheral = checkNotNull(first.getPeripheralById(ADDRESS))
 
         assertFailsWith<IllegalArgumentException> { second.range(peripheral).toList() }
+    }
+
+    // Shared ranging scan
+
+    private val CentralManager.activeScans: Int
+        get() = (this as MockCentralManagerImpl).activeScans.value
+
+    private fun addresses(count: Int) = (1..count).map { "CA:FE:00:00:01:%02X".format(it) }
+
+    @Test
+    fun `ranging many peripherals uses a single scan`() = runTest {
+        val manager = CentralManager.mock(scope = backgroundScope)
+        val addresses = addresses(10)
+        manager.simulatePeripherals(addresses.map { spec(it) })
+        val events = addresses.associateWith { address ->
+            range(manager, checkNotNull(manager.getPeripheralById(address)))
+        }
+
+        advanceTimeBy(5.seconds)
+
+        assertEquals(1, manager.activeScans)
+        events.forEach { (address, list) ->
+            assertEquals(listOf(UNKNOWN to IMMEDIATE), list.transitions(), address)
+        }
+    }
+
+    @Test
+    fun `monitoring and ranging use two scans`() = runTest {
+        val manager = CentralManager.mock(scope = backgroundScope)
+        val addresses = addresses(5)
+        manager.simulatePeripherals(addresses.map { spec(it) })
+        monitor(manager)
+        addresses.forEach { range(manager, checkNotNull(manager.getPeripheralById(it))) }
+
+        advanceTimeBy(3.seconds)
+
+        assertEquals(2, manager.activeScans)
+    }
+
+    @Test
+    fun `ranging scan stops when the last range is cancelled`() = runTest {
+        val manager = CentralManager.mock(scope = backgroundScope)
+        manager.simulatePeripherals(listOf(spec(ADDRESS), spec(OTHER_ADDRESS)))
+        val jobs = listOf(ADDRESS, OTHER_ADDRESS).map { address ->
+            val peripheral = checkNotNull(manager.getPeripheralById(address))
+            backgroundScope.launch { manager.range(peripheral).collect { } }
+        }
+        advanceTimeBy(3.seconds)
+        assertEquals(1, manager.activeScans)
+
+        jobs[0].cancel()
+        advanceTimeBy(1.seconds)
+        assertEquals(1, manager.activeScans)
+
+        jobs[1].cancel()
+        advanceTimeBy(1.seconds)
+        assertEquals(0, manager.activeScans)
+    }
+
+    @Test
+    fun `ranging started after the previous ones finished starts a new scan`() = runTest {
+        val spec = spec()
+        val manager = CentralManager.mock(scope = backgroundScope)
+        manager.simulatePeripherals(listOf(spec))
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+        assertEquals(listOf(UNKNOWN to IMMEDIATE), manager.range(peripheral, timeout = 3.seconds).toList().transitions())
+        assertEquals(0, manager.activeScans)
+
+        val events = range(manager, peripheral)
+        advanceTimeBy(3.seconds)
+
+        assertEquals(1, manager.activeScans)
+        assertEquals(listOf(UNKNOWN to IMMEDIATE), events.transitions())
+    }
+
+    @Test
+    fun `ranging fails when the scan cannot be started`() = runTest {
+        val environment = MockAndroidEnvironment.Api31(isBluetoothScanPermissionGranted = false)
+        val manager = CentralManager.mock(environment = environment, scope = backgroundScope)
+        manager.simulatePeripherals(listOf(spec()))
+        val peripheral = checkNotNull(manager.getPeripheralById(ADDRESS))
+
+        assertFailsWith<SecurityException> { manager.range(peripheral).toList() }
+        assertEquals(0, manager.activeScans)
     }
 }

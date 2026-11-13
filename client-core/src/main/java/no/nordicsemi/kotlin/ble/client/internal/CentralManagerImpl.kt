@@ -76,7 +76,7 @@ abstract class CentralManagerImpl<
      * It is a child of [scope], so that it is cancelled when [scope] is canceled, but it can be
      * cancelled on its own, without cancelling [scope], when the manager is closed.
      */
-    private val internalScope = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]))
+    protected val internalScope = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]))
 
     init {
         // Make sure the Central Manager gets closed when its scope gets canceled.
