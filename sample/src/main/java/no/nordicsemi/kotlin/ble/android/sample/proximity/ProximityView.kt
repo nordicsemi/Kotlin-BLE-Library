@@ -70,6 +70,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -78,11 +79,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
@@ -188,7 +191,11 @@ private fun Radar(
     isMonitoring: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    // Text is measured once, not on every frame: the radar is redrawn all the time (the sonar pulse),
+    // and measuring text of many devices on each frame blocks the UI thread. The default cache
+    // of the measurer is too small for that, too.
     val textMeasurer = rememberTextMeasurer()
+    val maxNameWidth = with(LocalDensity.current) { 96.dp.roundToPx() }
     val zoneColor = MaterialTheme.colorScheme.onSurface
     val lineColor = MaterialTheme.colorScheme.outlineVariant
     val pulseColor = MaterialTheme.colorScheme.primary
@@ -206,16 +213,32 @@ private fun Radar(
 
     // Animated position of each device. The animations are kept per device (key), so a device
     // glides to its new zone, and fades in when it enters.
+    val zoneLabels = remember(labelStyle) {
+        listOf(Proximity.IMMEDIATE, Proximity.NEAR, Proximity.FAR).associateWith { textMeasurer.measure(it.label(), labelStyle) }
+    }
     val animated = devices.map { device ->
         key(device.address) {
-            val radius by animateFloatAsState(
+            // The state is read when drawing, not here, so an animation does not recompose the radar.
+            val radius = animateFloatAsState(
                 targetValue = device.proximity.radius(),
                 animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
                 label = "radius",
             )
             val appear = remember { Animatable(0f) }
             LaunchedEffect(Unit) { appear.animateTo(1f, tween(600)) }
-            AnimatedDevice(device, radius, appear)
+            // Devices without a name are shown without a label, instead of their addresses.
+            val name = remember(device.name, nameStyle) {
+                device.name?.let {
+                    textMeasurer.measure(
+                        text = it,
+                        style = nameStyle,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 1,
+                        constraints = Constraints(maxWidth = maxNameWidth),
+                    )
+                }
+            }
+            AnimatedDevice(device, radius, appear, name)
         }
     }
 
@@ -235,7 +258,7 @@ private fun Radar(
 
         // Zone labels, on the top of each zone.
         listOf(Proximity.IMMEDIATE to IMMEDIATE_EDGE, Proximity.NEAR to NEAR_EDGE, Proximity.FAR to FAR_EDGE).forEach { (proximity, edge) ->
-            val layout = textMeasurer.measure(proximity.label(), labelStyle)
+            val layout = zoneLabels.getValue(proximity)
             drawText(
                 textLayoutResult = layout,
                 topLeft = Offset(center.x - layout.size.width / 2f, center.y - maxRadius * edge + 2.dp.toPx()),
@@ -260,7 +283,10 @@ private fun Radar(
         drawCircle(color = pulseColor, radius = 5.dp.toPx(), center = center)
 
         // Devices in range.
-        animated.forEach { (device, radius, appear) ->
+        animated.forEach { animatedDevice ->
+            val device = animatedDevice.device
+            val radius = animatedDevice.radius.value
+            val appear = animatedDevice.appear
             val angle = Math.toRadians(device.angle.toDouble())
             val position = Offset(
                 x = center.x + (maxRadius * radius * cos(angle)).toFloat(),
@@ -271,25 +297,21 @@ private fun Radar(
             drawCircle(color = device.color.copy(alpha = alpha), radius = 7.dp.toPx(), center = position)
             drawCircle(color = Color.White.copy(alpha = alpha), radius = 7.dp.toPx(), center = position, style = Stroke(width = 1.5.dp.toPx()))
 
-            val name = textMeasurer.measure(
-                text = device.name ?: device.address,
-                style = nameStyle.copy(color = nameStyle.color.copy(alpha = alpha)),
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 1,
-                constraints = Constraints(maxWidth = 96.dp.toPx().toInt()),
-            )
-            // Keep the name inside the card.
-            val x = (position.x - name.size.width / 2f).coerceIn(0f, size.width - name.size.width)
-            val y = (position.y + 10.dp.toPx()).coerceAtMost(size.height - name.size.height)
-            drawText(textLayoutResult = name, topLeft = Offset(x, y))
+            animatedDevice.nameLayout?.let { name ->
+                // Keep the name inside the card.
+                val x = (position.x - name.size.width / 2f).coerceIn(0f, size.width - name.size.width)
+                val y = (position.y + 10.dp.toPx()).coerceAtMost(size.height - name.size.height)
+                drawText(textLayoutResult = name, topLeft = Offset(x, y), alpha = alpha)
+            }
         }
     }
 }
 
 private data class AnimatedDevice(
     val device: ProximityDevice,
-    val radius: Float,
+    val radius: State<Float>,
     val appear: Animatable<Float, *>,
+    val nameLayout: TextLayoutResult?,
 )
 
 @Composable
