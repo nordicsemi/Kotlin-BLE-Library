@@ -373,7 +373,29 @@ object ViewModelModule {
     ): CentralManager = CentralManager.mock(environment, scope)
         .apply {
             logger = Log.Sink.Timber { _, _ -> true }
-            simulatePeripherals(listOf(blinky, beacon) + sensors)
+            // A device walking around, to show monitoring and ranging: it moves between the zones
+            // and, once in a while, leaves the range and comes back. The spec is created for each
+            // manager, so the simulation does not affect other screens.
+            val tracker = PeripheralSpec.simulatePeripheral(
+                identifier = "11:22:33:44:55:77",
+                proximity = Proximity.NEAR,
+            ) {
+                advertising(
+                    parameters = LegacyAdvertisingSetParameters(connectable = false, interval = 500.milliseconds),
+                ) {
+                    CompleteLocalName("Nordic_Tracker")
+                }
+            }
+            simulatePeripherals(listOf(blinky, beacon, tracker) + sensors)
+            scope.launch {
+                val route = listOf(Proximity.NEAR, Proximity.IMMEDIATE, Proximity.NEAR, Proximity.FAR, Proximity.OUT_OF_RANGE)
+                var i = 0
+                while (true) {
+                    val proximity = route[i++ % route.size]
+                    tracker.simulateProximityChange(proximity)
+                    delay(if (proximity == Proximity.OUT_OF_RANGE) 15.seconds else 8.seconds)
+                }
+            }
         }
 
 }

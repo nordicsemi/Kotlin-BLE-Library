@@ -51,6 +51,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import no.nordicsemi.kotlin.ble.android.sample.NAV_ADVERTISER
 import no.nordicsemi.kotlin.ble.android.sample.NAV_GRAPH
+import no.nordicsemi.kotlin.ble.android.sample.NAV_PROXIMITY
 import no.nordicsemi.kotlin.ble.android.sample.NAV_SCANNER
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
 import no.nordicsemi.kotlin.ble.android.sample.theme.Nordic
@@ -75,6 +76,11 @@ fun MenuScreen(
             title = NAV_SCANNER,
             icon = Nordic.Icons.BluetoothConnected,
             onClick = { onMenuClicked(NAV_SCANNER) },
+        )
+        MenuItem(
+            title = NAV_PROXIMITY,
+            icon = Nordic.Icons.Radar,
+            onClick = { onMenuClicked(NAV_PROXIMITY) },
         )
         MenuItem(
             title = NAV_GRAPH,

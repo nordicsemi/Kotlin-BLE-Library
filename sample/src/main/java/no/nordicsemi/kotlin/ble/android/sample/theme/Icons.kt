@@ -301,6 +301,38 @@ object Nordic {
             )
         }
 
+        /** A radar: three circles and a dot in the center. */
+        val Radar: ImageVector by lazy {
+            ImageVector.Builder(
+                name = "radar",
+                defaultWidth = 24.dp,
+                defaultHeight = 24.dp,
+                viewportWidth = 24f,
+                viewportHeight = 24f,
+            )
+                .apply {
+                    listOf(10f, 6.5f, 3f).forEach { radius ->
+                        path(
+                            fill = null,
+                            stroke = SolidColor(Color.Black),
+                            strokeLineWidth = 1.8f,
+                        ) {
+                            moveTo(12f - radius, 12f)
+                            arcTo(radius, radius, 0f, isMoreThanHalf = true, isPositiveArc = false, x1 = 12f + radius, y1 = 12f)
+                            arcTo(radius, radius, 0f, isMoreThanHalf = true, isPositiveArc = false, x1 = 12f - radius, y1 = 12f)
+                            close()
+                        }
+                    }
+                    path(fill = SolidColor(Color.Black)) {
+                        moveTo(12f, 10.4f)
+                        arcTo(1.6f, 1.6f, 0f, isMoreThanHalf = true, isPositiveArc = true, x1 = 12f, y1 = 13.6f)
+                        arcTo(1.6f, 1.6f, 0f, isMoreThanHalf = true, isPositiveArc = true, x1 = 12f, y1 = 10.4f)
+                        close()
+                    }
+                }
+                .build()
+        }
+
         private fun materialIcon(name: String, pathData: String): ImageVector =
             ImageVector.Builder(
                 name = name,
