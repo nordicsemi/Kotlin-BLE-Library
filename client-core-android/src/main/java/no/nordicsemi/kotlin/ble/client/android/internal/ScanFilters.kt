@@ -46,7 +46,7 @@ import kotlin.uuid.Uuid
 class ConjunctionFilter: ConjunctionFilterScope {
 
     /**
-     * A list of [DisjunctionFilter]s that will be cross merged with the
+~     * A list of [DisjunctionFilter]s that will be cross merged with
      * each other and criteria set in this filter.
      */
     private var disjunctionFilters = mutableListOf<DisjunctionFilter>()
