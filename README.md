@@ -20,7 +20,7 @@ Current status:
     - [ ] Scanning
        - [x] Scanning for nearby Bluetooth LE devices
        - [ ] Scan settings / background scan
-       - [ ] Ranging and monitoring device
+       - [x] Ranging and monitoring device
        - [ ] Obtaining list of connected devices
     - [x] Establishing connection
        - [x] Direct (`autoConnect = false`)

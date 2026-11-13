@@ -40,8 +40,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.withTimeoutOrNull
-import no.nordicsemi.kotlin.ble.client.MonitoringEvent
-import no.nordicsemi.kotlin.ble.client.RangeEvent
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.CentralManager.ScanOptions
 import no.nordicsemi.kotlin.ble.client.android.ConjunctionFilterScope
@@ -364,17 +362,6 @@ open class MockCentralManagerImpl(
             .onCompletion {
                 logger?.trace(Layer.GAP) { "Scanning stopped" }
             }
-    }
-
-    override fun monitor(
-        timeout: Duration,
-        filter: ConjunctionFilterScope.() -> Unit
-    ): Flow<MonitoringEvent<Peripheral>> {
-        TODO("Not yet implemented")
-    }
-
-    override fun range(peripheral: Peripheral, timeout: Duration): Flow<RangeEvent<Peripheral>> {
-        TODO("Not yet implemented")
     }
 
     override fun close() {
