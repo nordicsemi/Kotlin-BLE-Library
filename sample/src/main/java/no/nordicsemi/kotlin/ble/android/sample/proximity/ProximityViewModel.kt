@@ -73,8 +73,8 @@ data class ProximityDevice(
 )
 
 /**
- * Monitors devices with names matching [DEVICE_NAME_FILTER]. Ranging is started for each
- * device that enters the range, and stopped when it leaves the range.
+ * Monitors all devices. Ranging is started for each device that enters the range, and stopped
+ * when it leaves the range.
  */
 @HiltViewModel
 class ProximityViewModel @Inject constructor(
@@ -105,7 +105,7 @@ class ProximityViewModel @Inject constructor(
         monitoringJob = scope.launch {
             isMonitoring.update { true }
             try {
-                centralManager.monitor { Name(DEVICE_NAME_FILTER) }
+                centralManager.monitor {}
                     .catch { t -> Timber.e("Monitoring failed: $t") }
                     .collect { event ->
                         when (event) {
@@ -183,9 +183,6 @@ class ProximityViewModel @Inject constructor(
     }
 
     private companion object {
-        /** Matches names starting with "Nordic". */
-        val DEVICE_NAME_FILTER = Regex("Nordic.*")
-
         const val GOLDEN_ANGLE = 137.5f
 
         val COLORS = listOf(

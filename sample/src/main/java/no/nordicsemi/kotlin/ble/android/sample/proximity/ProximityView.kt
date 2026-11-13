@@ -374,7 +374,7 @@ private fun DevicesCard(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = if (isMonitoring) "Looking for devices named \"Nordic*\"..." else "Press Start to monitor devices named \"Nordic*\"",
+                    text = if (isMonitoring) "Looking for devices..." else "Press Start to monitor devices",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
