@@ -40,12 +40,12 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.annotation.RequiresExtension
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
@@ -86,6 +86,16 @@ private const val UNBOND_REASON_UNKNOWN = 0
 
 /** The number of bond and encryption state broadcasts that can wait to be processed. */
 private const val BROADCAST_BUFFER_CAPACITY = 32
+
+/**
+ * The number of scan results delivered on the main thread that wait to be converted.
+ *
+ * Measured on a Pixel 5 in a crowded environment (~260 results per second), the queue
+ * peaked at 16 results. When the converter was stalled for 1 second, it peaked at ~280,
+ * so 512 gives about 2x headroom for such a stall, and uses less than 0.5 MB. If the
+ * converter falls behind by more than that, the oldest results are dropped.
+ */
+private const val NATIVE_SCAN_RESULTS_BUFFER_SIZE = 512
 
 /**
  * A native implementation of [CentralManager] for Android.
@@ -402,9 +412,16 @@ internal class NativeCentralManagerImpl(
             }
             .build()
 
-        // Define the callback that will emit scan results.
-        val callback = object : NativeScanCallback() {
-            override fun onScanResult(callbackType: Int, result: NativeScanResult) {
+        // Scan callbacks are always delivered on the main thread. In a crowded environment there
+        // can be hundreds of them per second, so they only hand the results over to a background
+        // coroutine, which converts and filters them. Otherwise the UI would be starved.
+        // The results are lossy by nature, so the oldest are dropped if the converter falls behind.
+        val nativeResults = Channel<NativeScanResult>(
+            capacity = NATIVE_SCAN_RESULTS_BUFFER_SIZE,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST
+        )
+        launch(Dispatchers.Default) {
+            for (result in nativeResults) {
                 // A result matching the offloaded filter was found, convert it to ScanResult.
                 val scanResult = result.toScanResult(
                     peripheral = { device, name ->
@@ -416,12 +433,19 @@ internal class NativeCentralManagerImpl(
                             ).also { p -> p.logger = logger }
                         }
                     }
-                ) ?: return
+                ) ?: continue
 
                 // Check other filters that cannot be checked by the controller.
-                if (filters?.match(scanResult) == false) return
+                if (filters?.match(scanResult) == false) continue
 
                 trySend(scanResult)
+            }
+        }
+
+        // Define the callback that will emit scan results.
+        val callback = object : NativeScanCallback() {
+            override fun onScanResult(callbackType: Int, result: NativeScanResult) {
+                nativeResults.trySend(result)
             }
 
             override fun onBatchScanResults(results: List<NativeScanResult>) {
@@ -466,6 +490,7 @@ internal class NativeCentralManagerImpl(
         }
         awaitClose {
             scanner.stopScan(callback)
+            nativeResults.close()
             logger?.trace(Layer.GAP) { "Scanning stopped" }
         }
     }
