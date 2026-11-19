@@ -141,24 +141,36 @@ class AdvertisingData(
                     }
                 }
                 AdvertisingDataType.SERVICE_DATA_16_BIT -> {
-                    val uuid = Uuid.fromBytes(raw, i, 2)
-                    val data = raw.copyOfRange(i + 2, i + length)
-                    serviceData = (serviceData ?: mutableMapOf()).apply {
-                        put(uuid, data)
+                    // The structure must contain at least the 2-byte UUID.
+                    // Shorter structures are malformed and are skipped.
+                    if (length >= 2) {
+                        val uuid = Uuid.fromBytes(raw, i, 2)
+                        val data = raw.copyOfRange(i + 2, i + length)
+                        serviceData = (serviceData ?: mutableMapOf()).apply {
+                            put(uuid, data)
+                        }
                     }
                 }
                 AdvertisingDataType.SERVICE_DATA_32_BIT -> {
-                    val uuid = Uuid.fromBytes(raw, i, 4)
-                    val data = raw.copyOfRange(i + 4, i + length)
-                    serviceData = (serviceData ?: mutableMapOf()).apply {
-                        put(uuid, data)
+                    // The structure must contain at least the 4-byte UUID.
+                    // Shorter structures are malformed and are skipped.
+                    if (length >= 4) {
+                        val uuid = Uuid.fromBytes(raw, i, 4)
+                        val data = raw.copyOfRange(i + 4, i + length)
+                        serviceData = (serviceData ?: mutableMapOf()).apply {
+                            put(uuid, data)
+                        }
                     }
                 }
                 AdvertisingDataType.SERVICE_DATA_128_BIT -> {
-                    val uuid = Uuid.fromBytes(raw, i, 16)
-                    val data = raw.copyOfRange(i + 16, i + length)
-                    serviceData = (serviceData ?: mutableMapOf()).apply {
-                        put(uuid, data)
+                    // The structure must contain at least the 16-byte UUID.
+                    // Shorter structures are malformed and are skipped.
+                    if (length >= 16) {
+                        val uuid = Uuid.fromBytes(raw, i, 16)
+                        val data = raw.copyOfRange(i + 16, i + length)
+                        serviceData = (serviceData ?: mutableMapOf()).apply {
+                            put(uuid, data)
+                        }
                     }
                 }
                 AdvertisingDataType.TX_POWER_LEVEL -> {
