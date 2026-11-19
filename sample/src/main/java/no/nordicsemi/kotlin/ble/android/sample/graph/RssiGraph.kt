@@ -417,7 +417,7 @@ private class DrawBuffers {
 /**
  * Counts frames drawn per second, updated twice a second.
  */
-private class FpsCounter {
+internal class FpsCounter {
     private var frames = 0
     private var start = 0L
 

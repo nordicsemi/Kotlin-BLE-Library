@@ -78,7 +78,9 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextLayoutResult
@@ -93,6 +95,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
+import no.nordicsemi.kotlin.ble.android.sample.graph.FpsCounter
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
 import no.nordicsemi.kotlin.ble.android.sample.theme.Nordic
 import no.nordicsemi.kotlin.ble.client.ProximityChanged.Proximity
@@ -259,6 +262,11 @@ private fun Radar(
         }
     }
 
+    // The number of frames drawn per second, like in the RSSI graph.
+    val fpsCounter = remember { FpsCounter() }
+    val fpsLabels = remember(labelStyle) { HashMap<Int, TextLayoutResult>() }
+    val fpsBackground = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f)
+
     Canvas(modifier = modifier) {
         val center = Offset(size.width / 2, size.height / 2)
         // Leave some room for the names of the devices on the rim.
@@ -323,6 +331,19 @@ private fun Radar(
                 drawText(textLayoutResult = name, topLeft = Offset(x, y), alpha = if (isGreyedOut) alpha * 0.5f else alpha)
             }
         }
+
+        fpsCounter.onFrame(System.nanoTime())
+        val fps = fpsLabels.getOrPut(fpsCounter.fps) { textMeasurer.measure("${fpsCounter.fps} FPS", labelStyle) }
+        val padding = 2.dp.toPx()
+        val labelPadding = 4.dp.toPx()
+        val topLeft = Offset(size.width - fps.size.width - labelPadding, labelPadding)
+        drawRoundRect(
+            color = fpsBackground,
+            topLeft = topLeft - Offset(padding * 2, padding),
+            size = Size(fps.size.width + padding * 4, fps.size.height + padding * 2),
+            cornerRadius = CornerRadius(padding * 2),
+        )
+        drawText(fps, topLeft = topLeft)
     }
 }
 
