@@ -255,6 +255,68 @@ class AdvertisingDataTest {
     }
 
     @Test
+    fun `test malformed Service Data 16-bit - too short`() {
+        val rawData = byteArrayOf(
+            // Service Data (16-bit UUID): length = 2, type = 0x16, but only 1 byte for the UUID
+            0x02.toByte(), 0x16.toByte(), 0x0F.toByte(),
+            // Complete Local Name: length = 3, type = 0x09, "AB"
+            0x03.toByte(), 0x09.toByte(), 0x41.toByte(), 0x42.toByte()
+        )
+
+        val ad = AdvertisingData(rawData)
+
+        // The malformed structure is skipped, the rest of the data is parsed.
+        Truth.assertThat(ad.serviceData).isEmpty()
+        Truth.assertThat(ad.name).isEqualTo("AB")
+    }
+
+    @Test
+    fun `test malformed Service Data 32-bit - too short`() {
+        val rawData = byteArrayOf(
+            // Service Data (32-bit UUID): length = 4, type = 0x20, but only 3 bytes for the UUID
+            0x04.toByte(), 0x20.toByte(), 0x01.toByte(), 0x02.toByte(), 0x03.toByte(),
+            // Complete Local Name: length = 3, type = 0x09, "AB"
+            0x03.toByte(), 0x09.toByte(), 0x41.toByte(), 0x42.toByte()
+        )
+
+        val ad = AdvertisingData(rawData)
+
+        Truth.assertThat(ad.serviceData).isEmpty()
+        Truth.assertThat(ad.name).isEqualTo("AB")
+    }
+
+    @Test
+    fun `test malformed Service Data 128-bit - too short`() {
+        // 15 bytes instead of 16 for the UUID.
+        val rawData = byteArrayOf(
+            0x10.toByte(), 0x21.toByte(),
+            *ByteArray(15) { it.toByte() },
+            // Complete Local Name: length = 3, type = 0x09, "AB"
+            0x03.toByte(), 0x09.toByte(), 0x41.toByte(), 0x42.toByte()
+        )
+
+        val ad = AdvertisingData(rawData)
+
+        Truth.assertThat(ad.serviceData).isEmpty()
+        Truth.assertThat(ad.name).isEqualTo("AB")
+    }
+
+    @Test
+    fun `test Service Data - UUID only, no data`() {
+        val rawData = byteArrayOf(
+            // Service Data (16-bit UUID): length = 3, type = 0x16, UUID = 0x180F, no data
+            0x03.toByte(), 0x16.toByte(), 0x0F.toByte(), 0x18.toByte(),
+            // Complete Local Name: length = 3, type = 0x09, "AB"
+            0x03.toByte(), 0x09.toByte(), 0x41.toByte(), 0x42.toByte()
+        )
+
+        val ad = AdvertisingData(rawData)
+
+        Truth.assertThat(ad.serviceData).hasSize(1)
+        Truth.assertThat(ad.serviceData.values.single()).isEmpty()
+    }
+
+    @Test
     fun `test TX Power Level`() {
         val txPower = -20 // -20 dBm
         val rawData = byteArrayOf(
