@@ -414,7 +414,7 @@ internal class NativeCentralManagerImpl(
 
         // Scan callbacks are always delivered on the main thread. In a crowded environment there
         // can be hundreds of them per second, so they only hand the results over to a background
-        // coroutine, which converts and filters them. Otherwise the UI would be starved.
+        // coroutine, which converts and filters them. Otherwise, the UI would be starved.
         // The results are lossy by nature, so the oldest are dropped if the converter falls behind.
         val nativeResults = Channel<NativeScanResult>(
             capacity = NATIVE_SCAN_RESULTS_BUFFER_SIZE,
