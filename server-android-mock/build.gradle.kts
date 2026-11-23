@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -38,15 +38,25 @@ group = "no.nordicsemi.kotlin.ble"
 
 nordicPublishing {
     POM_ARTIFACT_ID = "server-android-mock"
-    POM_NAME = "Nordic Kotlin BLE library"
-    POM_DESCRIPTION = "Nordic Android Kotlin BLE library"
-    POM_URL = "https://github.com/nordicsemi/Kotlin-BLE-Library"
-    POM_SCM_URL = "https://github.com/nordicsemi/Kotlin-BLE-Library"
+    POM_NAME = "Mock Bluetooth LE Server Module for Android"
+    POM_DESCRIPTION = "A main module of Kotlin BLE Library providing Android-specific functionality for testing the Bluetooth LE peripheral role with a mock GATT server."
+    POM_URL = "https://github.com/nordicsemi/Kotlin-BLE-Library/"
+    POM_SCM_URL = "https://github.com/nordicsemi/Kotlin-BLE-Library/"
     POM_SCM_CONNECTION = "scm:git@github.com:nordicsemi/Kotlin-BLE-Library.git"
     POM_SCM_DEV_CONNECTION = "scm:git@github.com:nordicsemi/Kotlin-BLE-Library.git"
 }
 
 dependencies {
+    api(project(":server-core-mock"))
     api(project(":server-core-android"))
-    api(project(":core-android-mock"))
+    api(project(":environment-android-mock"))
+
+    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlinx.coroutines.test)
+}
+
+dokka {
+    dokkaSourceSets.configureEach {
+        includes.from("Module.md")
+    }
 }
