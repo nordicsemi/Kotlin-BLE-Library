@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -29,27 +29,22 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-@file:Suppress("unused")
-
 package no.nordicsemi.kotlin.ble.server.android
 
-/**
- * An event indicating a connection event.
- */
-sealed class ConnectionEvent (
-    val device: Central
-)
+/** A primary service of the local GATT server, for Android centrals. */
+typealias LocalService = no.nordicsemi.kotlin.ble.server.LocalService<Central>
 
-/**
- * An event indicating that a device has connected to the local GATT server.
- *
- * @param device The central device that has connected.
- */
-class ConnectionEstablished(device: Central): ConnectionEvent(device)
+/** A service included in another service of the local GATT server, for Android centrals. */
+typealias LocalIncludedService = no.nordicsemi.kotlin.ble.server.LocalIncludedService<Central>
 
-/**
- * An event indicating that a device has disconnected from the local GATT server.
- *
- * @param device The central device that has disconnected.
- */
-class ConnectionLost(device: Central): ConnectionEvent(device)
+/** A characteristic of the local GATT server, for Android centrals. */
+typealias LocalCharacteristic = no.nordicsemi.kotlin.ble.server.LocalCharacteristic<Central>
+
+/** A descriptor of the local GATT server, for Android centrals. */
+typealias LocalDescriptor = no.nordicsemi.kotlin.ble.server.LocalDescriptor<Central>
+
+/** A request to read an attribute of the local GATT server, sent by an Android central. */
+typealias ReadRequest = no.nordicsemi.kotlin.ble.server.ReadRequest<Central>
+
+/** A request to write an attribute of the local GATT server, sent by an Android central. */
+typealias WriteRequest = no.nordicsemi.kotlin.ble.server.WriteRequest<Central>

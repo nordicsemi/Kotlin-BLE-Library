@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -29,23 +29,28 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-@file:Suppress("MemberVisibilityCanBePrivate", "unused")
-
 package no.nordicsemi.kotlin.ble.server.android
 
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import no.nordicsemi.kotlin.ble.server.LocalServer
 
 /**
- * A Android Peripheral Manager extends the [LocalServer] interface with additional
- * Android-specific features.
+ * Android-specific interface of the Peripheral Manager.
+ *
+ * It uses MAC addresses as central identifiers, and reports connection state, MTU, PHY and
+ * connection parameters of centrals.
+ *
+ * To make the device discoverable, use the advertiser.
  */
 interface LocalServer: LocalServer<String, Central> {
 
     /**
-     * Returns a cold flow of connection events.
+     * Centrals currently connected to the local GATT server.
      *
-     * Every time a device connects or disconnects, a new event will be emitted.
+     * Centrals that disconnected are removed from the list. Their [Central.state] changes to
+     * disconnected first.
      */
-    val connectionEvents: Flow<ConnectionEvent>
+    val connectedCentrals: StateFlow<List<Central>>
+
+    companion object Factory
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -29,27 +29,69 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-@file:Suppress("unused")
-
 package no.nordicsemi.kotlin.ble.server.android
 
 import kotlinx.coroutines.flow.StateFlow
+import no.nordicsemi.kotlin.ble.core.ConnectionParameters
 import no.nordicsemi.kotlin.ble.core.ConnectionState
+import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PhyInUse
+import no.nordicsemi.kotlin.ble.core.PhyOption
 import no.nordicsemi.kotlin.ble.server.Central
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /**
- * Android-specific Central interface.
+ * A central device connected to the local GATT server on Android.
  *
- * @property state The connection state of the central device.
+ * The identifier of the central is its MAC address.
  */
 interface Central: Central<String> {
+
+    /** The MAC address of the central. */
+    val address: String
+        get() = identifier
+
+    /**
+     * The connection state of the central.
+     *
+     * Android reports connections of every central that connects to this device, even if
+     * the connection was not initiated by the app's advertising.
+     */
     val state: StateFlow<ConnectionState>
 
     /**
-     * Read the current transmitter PHY and receiver PHY of the connection.
-     *
-     * @return The PHY in use for transmitting and receiving data.
+     * The current ATT MTU, or `null` when the central is not connected. The value is 23 until
+     * the central requests a larger MTU.
      */
-    suspend fun readPhy(): PhyInUse
+    val mtu: StateFlow<Int?>
+
+    /**
+     * The current PHY in use, or `null` when the central is not connected or the PHY is not known
+     * (Android 8+).
+     */
+    val phy: StateFlow<PhyInUse?>
+
+    /**
+     * The current connection parameters, or `null` when the central is not connected.
+     * They are [ConnectionParameters.Unknown] until they change (Android 8+).
+     */
+    val connectionParameters: StateFlow<ConnectionParameters?>
+
+    /**
+     * Requests changing the PHY of the connection (Android 8+).
+     *
+     * @return The PHYs in use after the change.
+     */
+    suspend fun setPreferredPhy(
+        txPhy: Phy,
+        rxPhy: Phy = txPhy,
+        phyOptions: PhyOption = PhyOption.NO_PREFERRED,
+        timeout: Duration = 3.seconds,
+    ): PhyInUse
+
+    /**
+     * Disconnects the central, if it is connected. Does nothing otherwise.
+     */
+    suspend fun disconnect()
 }
