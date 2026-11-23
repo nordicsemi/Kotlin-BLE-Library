@@ -49,6 +49,7 @@ nordicPublishing {
 dependencies {
     api(project(":core-mock"))
     api(project(":client-core"))
+    api(project(":server-core-mock"))
 
     // Adds @hide annotation to exclude internal classes from the documentation.
     dokkaPlugin(libs.dokka.android.gradlePlugin)

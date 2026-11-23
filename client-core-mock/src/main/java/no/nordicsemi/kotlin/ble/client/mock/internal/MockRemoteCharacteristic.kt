@@ -43,6 +43,7 @@ import no.nordicsemi.kotlin.ble.client.internal.CharacteristicWrite
 import no.nordicsemi.kotlin.ble.client.internal.OperationEvent
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec.Authentication
+import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.client.mock.PrepareWriteResponse
 import no.nordicsemi.kotlin.ble.client.mock.ReadResponse
 import no.nordicsemi.kotlin.ble.client.mock.WriteResponse
@@ -134,9 +135,9 @@ class MockRemoteCharacteristic(
                         supervisionTimeout.toByteArray()
                     )
                 }
-                else -> eventHandler.onReadRequest(peripheralSpec, this@MockRemoteCharacteristic)
+                else -> readValue(eventHandler)
             }
-            else -> eventHandler.onReadRequest(peripheralSpec, this@MockRemoteCharacteristic)
+            else -> readValue(eventHandler)
         }
         when (result) {
             is ReadResponse.Success -> {
@@ -228,11 +229,13 @@ class MockRemoteCharacteristic(
                 // so only one connection interval delay is added below in case of failure.
                 when (useLongWrite || useReliableWrite) {
                     true -> {
-                        val response = eventHandler.onPrepareWriteRequest(
-                            peripheralSpec,
-                            this@MockRemoteCharacteristic,
-                            truncatedData
-                        )
+                        val response = peripheralSpec.server
+                            ?.prepareWrite(instanceId, truncatedData, reliable = useReliableWrite)
+                            ?: eventHandler.onPrepareWriteRequest(
+                                peripheralSpec,
+                                this@MockRemoteCharacteristic,
+                                truncatedData
+                            )
                         when (response) {
                             is PrepareWriteResponse.Success -> {
                                 // Writing characteristic value takes time depending on the size of the value
@@ -244,7 +247,9 @@ class MockRemoteCharacteristic(
                                 // aborts all prepared writes.
                                 var status: OperationStatus = OperationStatus.Success
                                 if (!useReliableWrite) {
-                                    when (val response = eventHandler.onExecuteWriteRequest(peripheralSpec, match)) {
+                                    val executed = peripheralSpec.server?.executeWrite(match)
+                                        ?: eventHandler.onExecuteWriteRequest(peripheralSpec, match)
+                                    when (val response = executed) {
                                         is WriteResponse.Success -> { /* no-op */ }
                                         is WriteResponse.Failure -> status = response.status
                                     }
@@ -271,11 +276,13 @@ class MockRemoteCharacteristic(
                     }
 
                     false -> {
-                        val result = eventHandler.onWriteRequest(
-                            peripheralSpec,
-                            this@MockRemoteCharacteristic,
-                            truncatedData
-                        )
+                        val result = peripheralSpec.server
+                            ?.write(instanceId, truncatedData)
+                            ?: eventHandler.onWriteRequest(
+                                peripheralSpec,
+                                this@MockRemoteCharacteristic,
+                                truncatedData
+                            )
                         when (result) {
                             is WriteResponse.Success -> {
                                 // Writing characteristic value takes time depending on the size of the value
@@ -311,11 +318,15 @@ class MockRemoteCharacteristic(
                 val truncatedData = data.take(mtu - extra).toByteArray()
                 // Notify the event handler about the write command.
                 // There is no response for this operation.
-                eventHandler.onWriteCommand(
-                    peripheralSpec,
-                    this@MockRemoteCharacteristic,
-                    truncatedData
-                )
+                val server = peripheralSpec.server
+                when (server) {
+                    null -> eventHandler.onWriteCommand(
+                        peripheralSpec,
+                        this@MockRemoteCharacteristic,
+                        truncatedData
+                    )
+                    else -> server.writeCommand(instanceId, truncatedData)
+                }
                 // Writing characteristic value takes time depending on the size of the value.
                 // Multiple packets may be sent in one connection interval.
                 peripheralSpec.emulateTransferDuration(truncatedData, isWrite = true, withResponse = false)
@@ -330,6 +341,13 @@ class MockRemoteCharacteristic(
             }
         }
     }
+
+    /**
+     * Reads the value from the GATT server hosted by the peripheral, or from the event handler.
+     */
+    private suspend fun readValue(eventHandler: PeripheralSpecEventHandler): ReadResponse =
+        peripheralSpec.server?.read(instanceId)
+            ?: eventHandler.onReadRequest(peripheralSpec, this@MockRemoteCharacteristic)
 
     override fun OperationEvent.matches(): Boolean = when (subject) {
         // When handling read or write events, the subject is the characteristic itself.

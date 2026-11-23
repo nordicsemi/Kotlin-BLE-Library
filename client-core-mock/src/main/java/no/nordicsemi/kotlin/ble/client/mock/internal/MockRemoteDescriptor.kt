@@ -108,7 +108,9 @@ class MockRemoteDescriptor(
             return
         }
 
-        val result = when (descriptor) {
+        // With a hosted GATT server, all the descriptors are read from the server, which keeps
+        // the state of the Client Characteristic Configuration descriptor of the central.
+        val result = peripheralSpec.server?.read(instanceId) ?: when (descriptor) {
             is CCCD -> ReadResponse.Success(descriptor.value)
             is CUD -> ReadResponse.Success(descriptor.value)
             is CEPD -> ReadResponse.Success(descriptor.value)
@@ -205,7 +207,9 @@ class MockRemoteDescriptor(
         // so only one connection interval delay is added below in case of failure.
         when (useLongWrite) {
             true -> {
-                val result = eventHandler.onPrepareWriteRequest(peripheralSpec, this@MockRemoteDescriptor, truncatedData)
+                val result = peripheralSpec.server
+                    ?.prepareWrite(instanceId, truncatedData, reliable = false)
+                    ?: eventHandler.onPrepareWriteRequest(peripheralSpec, this@MockRemoteDescriptor, truncatedData)
                 when (result) {
                     is PrepareWriteResponse.Success -> {
                         // Writing descriptor value takes time depending on the size of the value
@@ -214,7 +218,8 @@ class MockRemoteDescriptor(
                         // Validate received data. In case of an incorrect data, throw an exception.
                         val match = truncatedData.contentEquals(result.value)
                         // Long Write automatically executes or aborts all prepared writes.
-                        val result = eventHandler.onExecuteWriteRequest(peripheralSpec, match)
+                        val result = peripheralSpec.server?.executeWrite(match)
+                            ?: eventHandler.onExecuteWriteRequest(peripheralSpec, match)
                         peripheralSpec.emulateDelay()
                         if (!match) {
                             throw ValueDoesNotMatchException()
@@ -246,11 +251,14 @@ class MockRemoteDescriptor(
                 }
             }
             false -> {
-                val result = eventHandler.onWriteRequest(peripheralSpec, this@MockRemoteDescriptor, truncatedData)
+                val result = peripheralSpec.server
+                    ?.write(instanceId, truncatedData)
+                    ?: eventHandler.onWriteRequest(peripheralSpec, this@MockRemoteDescriptor, truncatedData)
                 // Values 0x01-00 and 0x02-00 are used to enable notifications and indications, respectively.
                 // Value 0x00-00 is used to disable both.
                 // Any other value is RFU and ignored.
-                if (descriptor is CCCD && result is WriteResponse.Success &&
+                // With a hosted GATT server, the state of the CCCD is kept by the server.
+                if (peripheralSpec.server == null && descriptor is CCCD && result is WriteResponse.Success &&
                     data.size == 2 && data[0] in 0..2 && data[1] == 0.toByte()) {
                     descriptor.enabled = data[0] > 0
                 }
