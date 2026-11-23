@@ -63,7 +63,7 @@ package no.nordicsemi.kotlin.ble.core
  * The HDT PHY (Higher Data Throughput Physical Layer) in Bluetooth Low Energy increases maximum
  * data rates from 2 Mbps up to 7.5 Mbps, delivering nearly 4x higher capacity through advanced
  * QAM/PSK modulations and forward error correction. Comparing to LE 2M PHY, even with the slowest
- * speed of 2 Mbps it delivers 5 dB higher link bugdet, resulting in 70% increased range.
+ * speed of 2 Mbps it delivers 5 dB higher link budget, resulting in 70% increased range.
  */
 enum class Phy {
 

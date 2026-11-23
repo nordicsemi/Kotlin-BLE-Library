@@ -327,8 +327,8 @@ internal class NativeExecutor(
     override suspend fun requestPhy(txPhy: Phy, rxPhy: Phy, phyOptions: PhyOption): Boolean {
         gatt?.let { gatt ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                logger?.d(Layer.PHY) { "gatt.setPreferredPhy(tx=${txPhy.toPhy()}, rx=${rxPhy.toPhy()}, options=${phyOptions.toOption()})" }
-                gatt.setPreferredPhy(txPhy.toPhy(), rxPhy.toPhy(), phyOptions.toOption())
+                logger?.d(Layer.PHY) { "gatt.setPreferredPhy(tx=${txPhy.toPhyMask()}, rx=${rxPhy.toPhyMask()}, options=${phyOptions.toOption()})" }
+                gatt.setPreferredPhy(txPhy.toPhyMask(), rxPhy.toPhyMask(), phyOptions.toOption())
             } else {
                 @SuppressLint("WrongConstant")
                 gattCallback.onPhyUpdate(gatt,
