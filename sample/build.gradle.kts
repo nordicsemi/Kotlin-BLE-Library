@@ -60,9 +60,11 @@ dependencies {
     // Add dependencies to native implementations in "native" flavor.
     "nativeImplementation"(project(":advertiser-android"))
     "nativeImplementation"(project(":client-android"))
+    "nativeImplementation"(project(":server-android"))
     // For "mock" flavor, use the mock implementations.
     "mockImplementation"(project(":advertiser-android-mock"))
     "mockImplementation"(project(":client-android-mock"))
+    "mockImplementation"(project(":server-android-mock"))
     // For debug, let's use mock (for Previews).
     "debugImplementation"(project(":environment-android-mock"))
     // This is to provide the Environment for Composables.

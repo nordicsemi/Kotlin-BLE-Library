@@ -72,6 +72,8 @@ import no.nordicsemi.kotlin.ble.core.and
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import no.nordicsemi.kotlin.log.Log
 import no.nordicsemi.kotlin.log.timber.Timber
+import no.nordicsemi.kotlin.ble.server.android.LocalServer
+import no.nordicsemi.kotlin.ble.server.android.mock.mock
 import timber.log.Timber
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -398,4 +400,12 @@ object ViewModelModule {
             }
         }
 
+    @ViewModelScoped
+    @Provides
+    fun provideLocalServer(
+        environment: MockAndroidEnvironment,
+        scope: CoroutineScope,
+    ): LocalServer = LocalServer.mock(environment, scope)
+        // A simulated central that connects, toggles the LED and receives button notifications.
+        .also { it.simulateLedButtonCentral(scope) }
 }

@@ -34,6 +34,7 @@ import no.nordicsemi.kotlin.ble.android.sample.graph.GraphScreen
 import no.nordicsemi.kotlin.ble.android.sample.menu.MenuScreen
 import no.nordicsemi.kotlin.ble.android.sample.proximity.ProximityScreen
 import no.nordicsemi.kotlin.ble.android.sample.scanner.ScannerScreen
+import no.nordicsemi.kotlin.ble.android.sample.server.ServerScreen
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
 import no.nordicsemi.kotlin.ble.android.sample.view.AppBarState
 import no.nordicsemi.kotlin.ble.android.sample.view.LocalAppBarState
@@ -45,6 +46,7 @@ const val NAV_MENU = "Menu"
 const val NAV_ADVERTISER = "Advertiser"
 const val NAV_SCANNER = "Connection"
 const val NAV_PROXIMITY = "Proximity"
+const val NAV_SERVER = "Server"
 const val NAV_GRAPH = "RSSI graph"
 
 @AndroidEntryPoint
@@ -128,6 +130,9 @@ class MainActivity : ComponentActivity() {
                             }
                             composable(NAV_PROXIMITY) {
                                 ProximityScreen()
+                            }
+                            composable(NAV_SERVER) {
+                                ServerScreen()
                             }
                             composable(NAV_GRAPH) {
                                 GraphScreen()
