@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -29,31 +29,18 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-@file:Suppress("unused")
+package no.nordicsemi.kotlin.ble.server.exception
 
-package no.nordicsemi.kotlin.ble.server.internal
+import no.nordicsemi.kotlin.ble.core.OperationStatus
+import no.nordicsemi.kotlin.ble.core.exception.GattException
 
-import kotlinx.coroutines.flow.StateFlow
-import no.nordicsemi.kotlin.ble.core.Manager
-import no.nordicsemi.kotlin.ble.core.ServerScope
-import no.nordicsemi.kotlin.ble.server.Central
-import no.nordicsemi.kotlin.ble.server.LocalService
-import no.nordicsemi.kotlin.ble.server.PeripheralManager
-
-class PeripheralManagerImpl<ID: Any, C: Central<ID>>: PeripheralManager<ID, C> {
-
-    override val state: StateFlow<Manager.State>
-        get() = TODO("Not yet implemented")
-
-    override suspend fun setup(builder: ServerScope.() -> Unit) {
-        TODO("Not yet implemented")
-    }
-
-    override fun services(central: C): StateFlow<List<LocalService>> {
-        TODO("Not yet implemented")
-    }
-
-    override fun close() {
-        TODO("Not yet implemented")
-    }
-}
+/**
+ * Thrown when a GATT server operation, like adding services or sending a notification, failed.
+ *
+ * @property reason The reason of the failure.
+ * @property cause The underlying cause of the failure.
+ */
+class OperationFailedException(
+    val reason: OperationStatus,
+    cause: Throwable? = null,
+): GattException(reason.toString(), cause)

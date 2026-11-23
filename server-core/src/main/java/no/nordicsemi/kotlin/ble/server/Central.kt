@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -29,17 +29,18 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-@file:Suppress("unused")
-
 package no.nordicsemi.kotlin.ble.server
 
 import no.nordicsemi.kotlin.ble.core.Peer
 
 /**
- * A remote device connected to a local app, which is acting as a peripheral.
+ * A remote central device that is using the local GATT server.
  *
- * The [Central] class represents remote central devices (or centrals) that have connected to
- * an app implementing the peripheral role on a local device.
+ * A central is known to the [LocalServer] when it sends a request or subscribes to
+ * a characteristic. Platform-specific modules may provide more information, like the connection
+ * state, MTU or PHY.
+ *
+ * @param ID The type of the central identifier.
  */
 interface Central<ID: Any>: Peer<ID> {
 
@@ -47,8 +48,8 @@ interface Central<ID: Any>: Peer<ID> {
      * The maximum amount of data, in bytes, that the central can receive in a single
      * notification or indication.
      *
-     * This is equal to Maximum Transmission Unit (ATT MTU) minus 3 bytes, which are used for the
-     * ATT opcode and the attribute handle by the GATT layer.
+     * This is equal to the ATT MTU minus 3 bytes, which are used for the ATT opcode and
+     * the attribute handle by the GATT layer.
      */
     val maximumUpdateValueLength: Int
 }

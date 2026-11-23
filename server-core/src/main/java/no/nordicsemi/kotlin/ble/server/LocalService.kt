@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -35,29 +35,49 @@ package no.nordicsemi.kotlin.ble.server
 
 import no.nordicsemi.kotlin.ble.core.AnyService
 import no.nordicsemi.kotlin.ble.core.IncludedService
+import no.nordicsemi.kotlin.ble.core.Peer
 import no.nordicsemi.kotlin.ble.core.PrimaryService
 
 /**
- * Interface representing a Bluetooth GATT service on the local GATT server.
+ * A GATT service hosted by the local GATT server.
+ *
+ * There is a single instance of each service, shared by all centrals. Requests carry the central
+ * that sent them.
+ *
+ * @param C The type of the central.
  */
-sealed interface AnyLocalService: AnyService<LocalCharacteristic> {
-    override val includedServices: List<LocalIncludedService>
-    override val owner: Central<*>?
+sealed interface AnyLocalService<C: Central<*>>: AnyService<LocalCharacteristic<C>> {
+    override val includedServices: List<LocalIncludedService<C>>
+
+    /**
+     * Local services are not owned by a remote peer, so this is always `null`.
+     *
+     * Use [manager] to get the manager hosting the service.
+     */
+    override val owner: Peer<*>?
+        get() = null
+
+    /**
+     * The manager hosting this service, or `null` if the service was removed, because the services
+     * were replaced using [LocalServer.setup] or the manager was closed.
+     */
+    val manager: LocalServer<*, C>?
 }
 
 /**
- * A local service that can be added to the GATT server.
+ * A primary service of the local GATT server.
  */
-interface LocalService: PrimaryService<LocalCharacteristic>, AnyLocalService
+interface LocalService<C: Central<*>>: PrimaryService<LocalCharacteristic<C>>, AnyLocalService<C>
 
 /**
- * A local service that is included in another service on the GATT server.
+ * A service that is included in another service of the local GATT server.
  *
- * There are no limits to the number of include definitions or
- * the depth of nested includes in a service definition.
+ * There are no limits to the number of include definitions or the depth of nested includes.
  */
-interface LocalIncludedService: IncludedService<LocalCharacteristic>, AnyLocalService {
-    override val service: LocalService
-    override val owner: Central<*>?
-        get() = service.owner
+interface LocalIncludedService<C: Central<*>>: IncludedService<LocalCharacteristic<C>>, AnyLocalService<C> {
+    override val service: AnyLocalService<C>
+    override val owner: Peer<*>?
+        get() = null
+    override val manager: LocalServer<*, C>?
+        get() = service.manager
 }

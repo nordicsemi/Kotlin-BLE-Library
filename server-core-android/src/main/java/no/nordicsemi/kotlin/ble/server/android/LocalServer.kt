@@ -34,13 +34,13 @@
 package no.nordicsemi.kotlin.ble.server.android
 
 import kotlinx.coroutines.flow.Flow
-import no.nordicsemi.kotlin.ble.server.PeripheralManager
+import no.nordicsemi.kotlin.ble.server.LocalServer
 
 /**
- * A Android Peripheral Manager extends the [PeripheralManager] interface with additional
+ * A Android Peripheral Manager extends the [LocalServer] interface with additional
  * Android-specific features.
  */
-interface PeripheralManager: PeripheralManager<String, Central> {
+interface LocalServer: LocalServer<String, Central> {
 
     /**
      * Returns a cold flow of connection events.

@@ -103,7 +103,7 @@ include(":client-android")
 include(":client-android-mock")
 
 // These are not implemented yet. Hiding them to make an alpha release of what is currently working.
-//include(":server-core")
+include(":server-core")
 //include(":server-core-android")
 //include(":server-android")
 //include(":server-android-mock")
