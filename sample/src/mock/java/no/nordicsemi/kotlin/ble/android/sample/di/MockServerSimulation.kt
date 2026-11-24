@@ -67,7 +67,7 @@ fun MockLocalServer.simulateLedButtonCentral(scope: CoroutineScope) {
                 try {
                     delay(1.seconds)
                     central.connect()
-                    central.simulateMtuChange(247)
+                    val _ = central.simulateMtuChange(247)
 
                     val led = central.findCharacteristic(
                         LedButtonProfile.SERVICE_UUID,
@@ -77,7 +77,7 @@ fun MockLocalServer.simulateLedButtonCentral(scope: CoroutineScope) {
                         LedButtonProfile.SERVICE_UUID,
                         LedButtonProfile.BUTTON_CHARACTERISTIC_UUID,
                     ) ?: return@collectLatest
-                    central.subscribe(button)
+                    val _ = central.subscribe(button)
 
                     // The characteristic of the local GATT server, to simulate button presses.
                     val buttonCharacteristic = services.value
@@ -91,7 +91,7 @@ fun MockLocalServer.simulateLedButtonCentral(scope: CoroutineScope) {
                             while (true) {
                                 delay(4.seconds)
                                 on = !on
-                                central.write(led, byteArrayOf(if (on) 1 else 0))
+                                val _ = central.write(led, byteArrayOf(if (on) 1 else 0))
                             }
                         }
                         launch {
