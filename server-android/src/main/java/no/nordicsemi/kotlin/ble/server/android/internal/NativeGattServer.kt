@@ -234,6 +234,7 @@ internal class NativeGattServer(
      *
      * @return The native service that was added.
      */
+    @IgnorableReturnValue
     private suspend fun BluetoothGattServer.addService(
         definition: ServiceDefinition,
         type: Int,
@@ -437,6 +438,7 @@ internal class NativeGattServer(
      * Android reports connections of all centrals, but a request may also come from a central
      * that was connected before the server was opened.
      */
+    @IgnorableReturnValue
     private fun centralFor(device: BluetoothDevice): NativeCentral {
         var isNew = false
         val central = synchronized(centrals) {
