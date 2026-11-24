@@ -130,7 +130,7 @@ class HostedServerSpecTest {
     @Test
     fun `server can not be used by two peripherals`() = runTest {
         val (server, _) = hostedServer()
-        hostedSpec(server)
+        val _ = hostedSpec(server)
 
         assertFailsWith<IllegalArgumentException> { hostedSpec(server) }
     }
@@ -186,7 +186,7 @@ class HostedServerSpecTest {
     @Test
     fun `central is not connected until the peripheral is`() = runTest {
         val (server, _) = hostedServer()
-        hostedSpec(server)
+        val _ = hostedSpec(server)
 
         assertFalse(server.central.state.value.isConnected)
         assertTrue(server.connectedCentrals.value.isEmpty())

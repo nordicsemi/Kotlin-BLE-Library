@@ -455,7 +455,7 @@ class HostedNotificationsTest {
                 }
             }
             fixture.local().setValue(byteArrayOf(0x09))
-            fixture.discover()
+            val _ = fixture.discover()
             fixture.peripheral.disconnect()
             hostedSettle()
 
@@ -548,7 +548,7 @@ class HostedNotificationsTest {
     fun `client discovers new services after service change`() = runTest {
         withTimeout(10.seconds) {
             val fixture = serviceChangedFixture()
-            fixture.discover()
+            val _ = fixture.discover()
             hostedSettle()
 
             fixture.spec.simulateServiceChange {
@@ -567,7 +567,7 @@ class HostedNotificationsTest {
     fun `characteristics of new services use the new handlers`() = runTest {
         withTimeout(10.seconds) {
             val fixture = serviceChangedFixture()
-            fixture.discover()
+            val _ = fixture.discover()
             hostedSettle()
 
             fixture.spec.simulateServiceChange {
@@ -594,7 +594,7 @@ class HostedNotificationsTest {
     fun `second service change is notified too`() = runTest {
         withTimeout(10.seconds) {
             val fixture = serviceChangedFixture()
-            fixture.discover()
+            val _ = fixture.discover()
             hostedSettle()
             fixture.spec.simulateServiceChange {
                 GenericAttributeService()
@@ -619,7 +619,7 @@ class HostedNotificationsTest {
     fun `service change is not notified when the peripheral has no Service Changed characteristic`() = runTest {
         withTimeout(10.seconds) {
             val fixture = hostedFixture { Service(HOSTED_SERVICE_UUID) }
-            fixture.discover()
+            val _ = fixture.discover()
             hostedSettle()
 
             fixture.spec.simulateServiceChange {
@@ -638,7 +638,7 @@ class HostedNotificationsTest {
     fun `client enables indications of Service Changed when it was not enabled by default`() = runTest {
         withTimeout(10.seconds) {
             val fixture = serviceChangedFixture(initiallyEnabled = false)
-            fixture.discover()
+            val _ = fixture.discover()
             hostedSettle()
 
             val serviceChanged = fixture.services
@@ -672,7 +672,7 @@ class HostedNotificationsTest {
             }
             val fixture = hostedFixture(eventHandler = eventHandler) { Service(HOSTED_SERVICE_UUID) }
 
-            fixture.discover()
+            val _ = fixture.discover()
 
             assertEquals(1, discoveries)
         }

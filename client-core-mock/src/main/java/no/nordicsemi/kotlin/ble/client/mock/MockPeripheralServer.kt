@@ -201,7 +201,7 @@ class MockPeripheralServer private constructor(
 
     /** Sends a Write Command. The value must fit in a single command. */
     internal suspend fun writeCommand(attribute: Int, value: ByteArray) {
-        simulatedCentral.write(attribute, value, withResponse = false)
+        val _ = simulatedCentral.write(attribute, value, withResponse = false)
     }
 
     /**
@@ -267,7 +267,7 @@ class MockPeripheralServer private constructor(
     /** Called when the ATT MTU of the connection changed. */
     internal fun onMtuChanged(mtu: Int) {
         if (simulatedCentral.isConnected) {
-            simulatedCentral.exchangeMtu(mtu)
+            val _ = simulatedCentral.exchangeMtu(mtu)
         }
     }
 
@@ -299,7 +299,7 @@ class MockPeripheralServer private constructor(
         val characteristic = serviceChangedCharacteristic()?.instanceId ?: return
         internalScope.launch {
             if (simulatedCentral.isConnected) {
-                simulatedCentral.subscribe(characteristic, indications = true)
+                val _ = simulatedCentral.subscribe(characteristic, indications = true)
             }
         }
     }
@@ -314,7 +314,7 @@ class MockPeripheralServer private constructor(
     internal fun replaceServices(newServices: MockServerScope.() -> Unit): Boolean {
         val enabled = isServiceChangedEnabled()
         runImmediately {
-            setup { MockServerScopeView(this).newServices() }
+            val _ = setup { MockServerScopeView(this).newServices() }
         }
         if (enabled) {
             subscribeToServiceChanged()

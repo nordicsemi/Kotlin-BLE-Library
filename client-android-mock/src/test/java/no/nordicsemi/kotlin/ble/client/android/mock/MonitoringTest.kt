@@ -327,8 +327,8 @@ class MonitoringTest {
         val manager = CentralManager.mock(scope = backgroundScope)
         val addresses = addresses(5)
         manager.simulatePeripherals(addresses.map { spec(it) })
-        monitor(manager)
-        addresses.forEach { range(manager, checkNotNull(manager.getPeripheralById(it))) }
+        val _ = monitor(manager)
+        addresses.forEach { val _ = range(manager, checkNotNull(manager.getPeripheralById(it))) }
 
         advanceTimeBy(3.seconds)
 

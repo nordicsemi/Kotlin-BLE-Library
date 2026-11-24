@@ -251,7 +251,7 @@ class HostedGattTest {
             }
 
             val start = testScheduler.currentTime
-            characteristic.read()
+            val _ = characteristic.read()
 
             assertTrue(testScheduler.currentTime - start >= 2.seconds.inWholeMilliseconds)
         }
@@ -682,7 +682,7 @@ class HostedGattTest {
             val hostedCharacteristic = hosted.remote()
             val handlerBased = handlerBasedCharacteristic(value)
 
-            assertEquals(measure { handlerBased.read() }, measure { hostedCharacteristic.read() })
+            assertEquals(measure { val _ = handlerBased.read() }, measure { val _ = hostedCharacteristic.read() })
         }
     }
 
@@ -695,9 +695,9 @@ class HostedGattTest {
             val hostedCharacteristic = hosted.remote()
             val handlerBased = handlerBasedCharacteristic(value)
 
-            val expected = measure { handlerBased.read() }
+            val expected = measure { val _ = handlerBased.read() }
             assertTrue(expected > 31, "A long read should take more than a connection interval")
-            assertEquals(expected, measure { hostedCharacteristic.read() })
+            assertEquals(expected, measure { val _ = hostedCharacteristic.read() })
         }
     }
 
@@ -742,8 +742,8 @@ class HostedGattTest {
                 permissions = readWritePermissions,
             ).characteristic()
 
-            val expected = measure { runCatching { handlerBased.write(byteArrayOf(0x01)) } }
-            assertEquals(expected, measure { runCatching { hostedCharacteristic.write(byteArrayOf(0x01)) } })
+            val expected = measure { val _ = runCatching { handlerBased.write(byteArrayOf(0x01)) } }
+            assertEquals(expected, measure { val _ = runCatching { hostedCharacteristic.write(byteArrayOf(0x01)) } })
             assertTrue(expected in 1..100)
         }
     }

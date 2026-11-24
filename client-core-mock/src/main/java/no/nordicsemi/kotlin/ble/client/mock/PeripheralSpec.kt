@@ -215,6 +215,7 @@ class PeripheralSpec<ID: Any> private constructor(
      * Work of a single connection runs in the scope of the manager that created it instead,
      * see [Api].
      */
+    @IgnorableReturnValue
     private fun launchShared(block: suspend CoroutineScope.() -> Unit): Job {
         val context = synchronized(lock) {
             val newest = simulations.lastOrNull() ?: return@synchronized null
