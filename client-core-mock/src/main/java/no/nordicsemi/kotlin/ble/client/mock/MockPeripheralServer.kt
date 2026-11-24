@@ -157,7 +157,7 @@ class MockPeripheralServer private constructor(
      * an internal server.
      */
     internal fun setupBlocking(block: MockServerScope.() -> Unit) {
-        runImmediately { setup { MockServerScopeView(this).block() } }
+        runImmediately { val _ = setup { MockServerScopeView(this).block() } }
     }
 
     /**
