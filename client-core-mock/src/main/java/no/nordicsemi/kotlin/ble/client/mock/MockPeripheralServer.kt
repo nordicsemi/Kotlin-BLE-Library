@@ -296,7 +296,7 @@ class MockPeripheralServer private constructor(
 
     // ---- Service Changed ----
 
-    private fun serviceChangedCharacteristic(): LocalCharacteristic<SimulatedCentral>? = services.value
+    private fun serviceChangedCharacteristic(): LocalCharacteristic? = services.value
         .firstOrNull { it.uuid == Service.GENERIC_ATTRIBUTE_UUID }
         ?.characteristics
         ?.firstOrNull { it.uuid == Characteristic.SERVICE_CHANGED }

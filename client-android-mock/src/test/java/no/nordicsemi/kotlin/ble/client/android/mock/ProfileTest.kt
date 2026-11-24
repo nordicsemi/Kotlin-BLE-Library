@@ -35,14 +35,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
+import no.nordicsemi.kotlin.ble.client.Profile
 import no.nordicsemi.kotlin.ble.client.RemoteService
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
 import no.nordicsemi.kotlin.ble.client.mock.MockPeripheralServer
-import no.nordicsemi.kotlin.ble.client.mock.SimulatedCentral
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.Permission
-import no.nordicsemi.kotlin.ble.core.Profile
 import no.nordicsemi.kotlin.ble.core.and
 import no.nordicsemi.kotlin.ble.environment.android.mock.LatestApi
 import no.nordicsemi.kotlin.ble.server.LocalService
@@ -58,13 +57,13 @@ private val LOCAL_SERVICE_UUID = Uuid.parse("00001802-0000-1000-8000-00805f9b34f
 private val LOCAL_CHARACTERISTIC_UUID = Uuid.parse("00002a06-0000-1000-8000-00805f9b34fb")
 
 /** A profile with a remote service and a local one. */
-private class RemoteAndLocalProfile : Profile<no.nordicsemi.kotlin.ble.client.Peripheral<*, *>, RemoteService, LocalService<SimulatedCentral>>(
+private class RemoteAndLocalProfile : Profile.WithLocalServices(
     requiredServiceUuids = listOf(GATT_SERVICE_UUID),
     localServiceUuids = listOf(LOCAL_SERVICE_UUID),
     name = "Test",
 ) {
     var remote: List<RemoteService>? = null
-    var local: List<LocalService<SimulatedCentral>>? = null
+    var local: List<LocalService>? = null
     var initialized = false
     var unsupported = false
     var reject = false
@@ -72,7 +71,7 @@ private class RemoteAndLocalProfile : Profile<no.nordicsemi.kotlin.ble.client.Pe
     override fun prepare(
         target: no.nordicsemi.kotlin.ble.client.Peripheral<*, *>,
         remoteServices: List<RemoteService>,
-        localServices: List<LocalService<SimulatedCentral>>,
+        localServices: List<LocalService>,
     ) {
         require(!reject) { "Rejected" }
         remote = remoteServices

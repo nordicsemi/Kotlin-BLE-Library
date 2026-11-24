@@ -81,7 +81,7 @@ class PreparedWriteTest {
     @Test
     fun execute_deliversOneWriteRequest() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        val requests = mutableListOf<WriteRequest<FakeCentral>>()
+        val requests = mutableListOf<WriteRequest>()
         fixture.rw.onWrite { requests += this; WriteResponse.Success }
         val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, offset = 0)
         val _ = fixture.write(fixture.rw.instanceId, bytes(3), prepared = true, offset = 2)

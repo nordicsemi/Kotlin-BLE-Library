@@ -65,7 +65,7 @@ class HostedServerSpecTest {
 
     private suspend fun TestScope.hostedServer(
         initiallyEnabled: Boolean = true,
-    ): Pair<MockPeripheralServer, List<LocalService<SimulatedCentral>>> {
+    ): Pair<MockPeripheralServer, List<LocalService>> {
         val server = MockPeripheralServer(backgroundScope)
         val services = server.setup {
             GenericAccessService()
@@ -89,7 +89,7 @@ class HostedServerSpecTest {
         },
     ) = PeripheralSpec.simulatePeripheral("AA:BB:CC:DD:EE:01", builder = block)
 
-    private fun List<LocalService<SimulatedCentral>>.serviceChanged(): LocalCharacteristic<SimulatedCentral> =
+    private fun List<LocalService>.serviceChanged(): LocalCharacteristic =
         first { it.uuid == Service.GENERIC_ATTRIBUTE_UUID }
             .characteristics
             .first { it.uuid == Characteristic.SERVICE_CHANGED }

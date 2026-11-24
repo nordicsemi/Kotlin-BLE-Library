@@ -90,7 +90,7 @@ class CentralServicesTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
         val view = fixture.manager.services(fixture.central).value.single().characteristics.first { it.uuid == RW_UUID }
-        val received = mutableListOf<WriteRequest<FakeCentral>>()
+        val received = mutableListOf<WriteRequest>()
         backgroundScope.launch { view.writes.collect { received += it } }
         runCurrent()
 
@@ -108,7 +108,7 @@ class CentralServicesTest {
         val _ = fixture.setup()
         val view = fixture.manager.services(fixture.central2).value.single().characteristics
             .first { it.uuid == RW_UUID }.descriptors.first { it.uuid == CUSTOM_DESCRIPTOR_UUID }
-        val received = mutableListOf<WriteRequest<FakeCentral>>()
+        val received = mutableListOf<WriteRequest>()
         backgroundScope.launch { view.writes.collect { received += it } }
         runCurrent()
         val descriptor = fixture.rw.descriptors.first { it.uuid == CUSTOM_DESCRIPTOR_UUID }

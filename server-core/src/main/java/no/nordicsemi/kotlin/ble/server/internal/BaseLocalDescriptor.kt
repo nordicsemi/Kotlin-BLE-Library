@@ -57,10 +57,10 @@ import kotlin.uuid.Uuid
 internal class BaseLocalDescriptor<C: Central<*>>(
     definition: DescriptorDefinition,
     override val characteristic: BaseLocalCharacteristic<C>,
-): LocalDescriptor<C>, LocalAttribute<C> {
+): LocalDescriptor, LocalAttribute<C> {
     override val uuid: Uuid = definition.uuid
     override val instanceId: Int = definition.instanceId
-    override val state = AttributeState<C>(initialValue(definition))
+    override val state = AttributeState(initialValue(definition))
 
     /** `true` if the descriptor can be read by a central. */
     val isReadPermitted = definition.permissions.any {
@@ -76,12 +76,12 @@ internal class BaseLocalDescriptor<C: Central<*>>(
     override val value get() = state.value
     override val writes get() = state.writes
 
-    override fun onRead(handler: (suspend ReadRequest<C>.() -> ReadResponse)?) {
+    override fun onRead(handler: (suspend ReadRequest.() -> ReadResponse)?) {
         checkNotCccd()
         state.onRead(handler)
     }
 
-    override fun onWrite(handler: (suspend WriteRequest<C>.() -> WriteResponse)?) {
+    override fun onWrite(handler: (suspend WriteRequest.() -> WriteResponse)?) {
         checkNotCccd()
         state.onWrite(handler)
     }

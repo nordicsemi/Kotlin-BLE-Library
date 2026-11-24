@@ -74,7 +74,7 @@ internal class HostedFixture(
     val spec: PeripheralSpec<String>,
     val manager: MockCentralManager,
     val server: MockPeripheralServer,
-    val services: List<LocalService<SimulatedCentral>>,
+    val services: List<LocalService>,
 ) {
     lateinit var peripheral: Peripheral
 
@@ -116,7 +116,7 @@ internal class HostedFixture(
     fun local(
         uuid: Uuid = HOSTED_CHAR_UUID,
         serviceUuid: Uuid = HOSTED_SERVICE_UUID,
-    ): LocalCharacteristic<SimulatedCentral> = services
+    ): LocalCharacteristic = services
         .first { it.uuid == serviceUuid }
         .characteristics
         .first { it.uuid == uuid }
@@ -125,7 +125,7 @@ internal class HostedFixture(
     fun localDescriptor(
         uuid: Uuid = HOSTED_DESCRIPTOR_UUID,
         characteristicUuid: Uuid = HOSTED_CHAR_UUID,
-    ): LocalDescriptor<SimulatedCentral> = local(characteristicUuid)
+    ): LocalDescriptor = local(characteristicUuid)
         .descriptors
         .first { it.uuid == uuid }
 }

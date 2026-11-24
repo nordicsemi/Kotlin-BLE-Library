@@ -54,7 +54,7 @@ internal class BaseLocalService<C: Central<*>>(
     definition: ServiceDefinition,
     manager: LocalServer<*, C>,
     host: LocalServerHost<C>,
-): LocalService<C> {
+): LocalService {
     @Volatile
     private var _manager: LocalServer<*, C>? = manager
 
@@ -84,9 +84,9 @@ internal class BaseLocalService<C: Central<*>>(
  */
 internal class BaseLocalIncludedService<C: Central<*>>(
     definition: ServiceDefinition,
-    override val service: AnyLocalService<C>,
+    override val service: AnyLocalService,
     host: LocalServerHost<C>,
-): LocalIncludedService<C> {
+): LocalIncludedService {
     override val uuid: Uuid = definition.uuid
     override val instanceId: Int = definition.instanceId
     override val characteristics: List<BaseLocalCharacteristic<C>> =

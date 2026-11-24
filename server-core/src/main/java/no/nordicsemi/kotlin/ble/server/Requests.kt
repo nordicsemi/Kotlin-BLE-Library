@@ -38,10 +38,9 @@ import no.nordicsemi.kotlin.ble.core.OperationStatus
  *
  * Long reads are handled by the library: the handler provides the whole value.
  *
- * @param C The type of the central.
  * @property central The central that sent the request.
  */
-class ReadRequest<C: Central<*>>(val central: C)
+class ReadRequest(val central: Central<*>)
 
 /**
  * A request from a central to write the value of a characteristic or a descriptor.
@@ -49,14 +48,13 @@ class ReadRequest<C: Central<*>>(val central: C)
  * Long writes and reliable writes are handled by the library: the whole value is delivered
  * once, after the write has been executed.
  *
- * @param C The type of the central.
  * @property central The central that sent the request.
  * @property value The written value.
  * @property withResponse `true` if the central expects a response, `false` for a write command
  * (write without response). A response from the handler is ignored for commands.
  */
-class WriteRequest<C: Central<*>>(
-    val central: C,
+class WriteRequest(
+    val central: Central<*>,
     val value: ByteArray,
     val withResponse: Boolean,
 ) {

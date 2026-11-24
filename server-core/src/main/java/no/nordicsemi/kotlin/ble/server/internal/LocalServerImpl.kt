@@ -96,7 +96,7 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
 
     private val closed = MutableStateFlow(false)
     private val setupMutex = Mutex()
-    private val _services = MutableStateFlow<List<LocalService<C>>>(emptyList())
+    private val _services = MutableStateFlow<List<LocalService>>(emptyList())
 
     /** The characteristics and descriptors of the current services, by their instance ID. */
     private val attributes = MutableStateFlow<Map<Int, LocalAttribute<C>>>(emptyMap())
@@ -116,12 +116,12 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
     }
 
     override val state get() = server.state
-    override val services: StateFlow<List<LocalService<C>>> get() = _services
+    override val services: StateFlow<List<LocalService>> get() = _services
 
     /** The views of the services for each central. */
-    private val centralServices = MutableStateFlow<Map<ID, StateFlow<List<LocalService<C>>>>>(emptyMap())
+    private val centralServices = MutableStateFlow<Map<ID, StateFlow<List<LocalService>>>>(emptyMap())
 
-    override fun services(identifier: ID): StateFlow<List<LocalService<C>>> =
+    override fun services(identifier: ID): StateFlow<List<LocalService>> =
         centralServices.value[identifier] ?: centralServices
             .updateAndGet { map -> if (identifier in map) map else map + (identifier to CentralServices(_services, identifier)) }
             .getValue(identifier)
@@ -148,7 +148,7 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
         }
     }
 
-    override suspend fun setup(builder: ServerScope.() -> Unit): List<LocalService<C>> {
+    override suspend fun setup(builder: ServerScope.() -> Unit): List<LocalService> {
         if (closed.value) throw ManagerClosedException()
         val definitions = ServerScopeImpl().apply(builder).build()
 
@@ -163,7 +163,7 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
 
             val newServices = definitions.map { BaseLocalService(it, this, host) }
             val newAttributes = mutableMapOf<Int, LocalAttribute<C>>()
-            fun addAttributes(service: AnyLocalService<C>) {
+            fun addAttributes(service: AnyLocalService) {
                 service.characteristics.forEach { characteristic ->
                     characteristic as BaseLocalCharacteristic<C>
                     newAttributes[characteristic.instanceId] = characteristic

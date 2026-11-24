@@ -63,7 +63,7 @@ import no.nordicsemi.kotlin.ble.core.Profile
 @IgnorableReturnValue
 fun <ID: Any, C: Central<ID>> LocalServer<ID, C>.profile(
     scope: CoroutineScope,
-    profile: Profile<LocalServer<ID, C>, Nothing, LocalService<C>>,
+    profile: Profile<LocalServer<ID, C>, Nothing, LocalService>,
 ): Job {
     val manager = this
     return scope.launch {
@@ -98,5 +98,5 @@ fun <ID: Any, C: Central<ID>> LocalServer<ID, C>.profile(
  */
 @IgnorableReturnValue
 suspend fun <ID: Any, C: Central<ID>> LocalServer<ID, C>.profile(
-    profile: Profile<LocalServer<ID, C>, Nothing, LocalService<C>>,
+    profile: Profile<LocalServer<ID, C>, Nothing, LocalService>,
 ): Job = profile(CoroutineScope(currentCoroutineContext()), profile)

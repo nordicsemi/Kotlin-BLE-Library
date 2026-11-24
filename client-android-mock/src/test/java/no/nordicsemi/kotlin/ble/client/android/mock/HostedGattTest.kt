@@ -160,7 +160,7 @@ class HostedGattTest {
     fun `read handler provides the value and receives the central`() = runTest {
         withTimeout(10.seconds) {
             val fixture = readWriteFixture()
-            var requester: SimulatedCentral? = null
+            var requester: no.nordicsemi.kotlin.ble.server.Central<*>? = null
             fixture.local().onRead {
                 requester = central
                 ReadResponse.Success(byteArrayOf(0x42))
@@ -307,7 +307,7 @@ class HostedGattTest {
         withTimeout(10.seconds) {
             val fixture = readWriteFixture()
             val characteristic = fixture.remote()
-            val writes = mutableListOf<WriteRequest<SimulatedCentral>>()
+            val writes = mutableListOf<WriteRequest>()
             fixture.local().writes.onEach { writes += it }.launchIn(backgroundScope)
             hostedSettle()
 
@@ -355,7 +355,7 @@ class HostedGattTest {
             val fixture = readWriteFixture()
             fixture.local().setValue(byteArrayOf(0x01))
             fixture.local().onWrite { WriteResponse.Failure(OperationStatus.ValueNotAllowed) }
-            val writes = mutableListOf<WriteRequest<SimulatedCentral>>()
+            val writes = mutableListOf<WriteRequest>()
             fixture.local().writes.onEach { writes += it }.launchIn(backgroundScope)
             hostedSettle()
 
@@ -396,7 +396,7 @@ class HostedGattTest {
                     )
                 }
             }
-            val requests = mutableListOf<WriteRequest<SimulatedCentral>>()
+            val requests = mutableListOf<WriteRequest>()
             fixture.local().onWrite {
                 requests += this
                 WriteResponse.Success
@@ -488,7 +488,7 @@ class HostedGattTest {
     fun `long write is emitted in writes once`() = runTest {
         withTimeout(10.seconds) {
             val fixture = readWriteFixture()
-            val writes = mutableListOf<WriteRequest<SimulatedCentral>>()
+            val writes = mutableListOf<WriteRequest>()
             fixture.local().writes.onEach { writes += it }.launchIn(backgroundScope)
             hostedSettle()
 

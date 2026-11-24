@@ -38,7 +38,7 @@ import no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException
 import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import no.nordicsemi.kotlin.ble.server.ReadResponse
-import no.nordicsemi.kotlin.ble.server.android.WriteRequest
+import no.nordicsemi.kotlin.ble.server.WriteRequest
 import no.nordicsemi.kotlin.ble.server.WriteResponse
 import no.nordicsemi.kotlin.ble.server.android.Central
 import no.nordicsemi.kotlin.ble.server.mock.ReadResult
@@ -145,7 +145,7 @@ class MockLocalServerTest {
     fun `read handler receives the central and provides the value`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
-        var requester: Central? = null
+        var requester: no.nordicsemi.kotlin.ble.server.Central<*>? = null
         service.characteristic(RW_UUID).onRead {
             requester = central
             ReadResponse.Success(byteArrayOf(42))

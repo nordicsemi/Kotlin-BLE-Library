@@ -44,10 +44,9 @@ import no.nordicsemi.kotlin.ble.core.PrimaryService
  * There is a single instance of each service, shared by all centrals. Requests carry the central
  * that sent them.
  *
- * @param C The type of the central.
  */
-sealed interface AnyLocalService<C: Central<*>>: AnyService<LocalCharacteristic<C>> {
-    override val includedServices: List<LocalIncludedService<C>>
+sealed interface AnyLocalService: AnyService<LocalCharacteristic> {
+    override val includedServices: List<LocalIncludedService>
 
     /**
      * Local services are not owned by a remote peer, so this is always `null`.
@@ -61,23 +60,23 @@ sealed interface AnyLocalService<C: Central<*>>: AnyService<LocalCharacteristic<
      * The manager hosting this service, or `null` if the service was removed, because the services
      * were replaced using [LocalServer.setup] or the manager was closed.
      */
-    val manager: LocalServer<*, C>?
+    val manager: LocalServer<*, *>?
 }
 
 /**
  * A primary service of the local GATT server.
  */
-interface LocalService<C: Central<*>>: PrimaryService<LocalCharacteristic<C>>, AnyLocalService<C>
+interface LocalService: PrimaryService<LocalCharacteristic>, AnyLocalService
 
 /**
  * A service that is included in another service of the local GATT server.
  *
  * There are no limits to the number of include definitions or the depth of nested includes.
  */
-interface LocalIncludedService<C: Central<*>>: IncludedService<LocalCharacteristic<C>>, AnyLocalService<C> {
-    override val service: AnyLocalService<C>
+interface LocalIncludedService: IncludedService<LocalCharacteristic>, AnyLocalService {
+    override val service: AnyLocalService
     override val owner: Peer<*>?
         get() = null
-    override val manager: LocalServer<*, C>?
+    override val manager: LocalServer<*, *>?
         get() = service.manager
 }

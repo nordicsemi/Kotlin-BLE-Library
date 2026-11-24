@@ -38,8 +38,8 @@ import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.Permission
 import no.nordicsemi.kotlin.ble.core.and
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
-import no.nordicsemi.kotlin.ble.server.android.LocalCharacteristic
-import no.nordicsemi.kotlin.ble.server.android.LocalService
+import no.nordicsemi.kotlin.ble.server.LocalCharacteristic
+import no.nordicsemi.kotlin.ble.server.LocalService
 import no.nordicsemi.kotlin.ble.server.android.LocalServer
 import no.nordicsemi.kotlin.ble.server.mock.MockUpdate
 import kotlin.uuid.Uuid

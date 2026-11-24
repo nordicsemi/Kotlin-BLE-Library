@@ -47,10 +47,9 @@ import no.nordicsemi.kotlin.ble.core.Peer
  * and [onWrite] to handle requests dynamically, for example to validate data or to return
  * a different value for each central.
  *
- * @param C The type of the central.
  */
-interface LocalCharacteristic<C: Central<*>>: Characteristic<LocalDescriptor<C>> {
-    override val service: AnyLocalService<C>
+interface LocalCharacteristic: Characteristic<LocalDescriptor> {
+    override val service: AnyLocalService
 
     /** Local attributes are not owned by a remote peer, so this is always `null`. */
     override val owner: Peer<*>?
@@ -71,7 +70,7 @@ interface LocalCharacteristic<C: Central<*>>: Characteristic<LocalDescriptor<C>>
      * [CharacteristicProperty.INDICATE] property. The Client Characteristic Configuration
      * descriptor is handled by the library.
      */
-    val subscribers: StateFlow<Set<C>>
+    val subscribers: StateFlow<Set<Central<*>>>
 
     /**
      * Writes accepted by the characteristic, that is writes for which the handler set with
@@ -79,7 +78,7 @@ interface LocalCharacteristic<C: Central<*>>: Characteristic<LocalDescriptor<C>>
      *
      * It is a hot flow with no replay. Rejected writes are not emitted.
      */
-    val writes: SharedFlow<WriteRequest<C>>
+    val writes: SharedFlow<WriteRequest>
 
     /**
      * Sets a handler for read requests, or removes it when `null`.
@@ -88,7 +87,21 @@ interface LocalCharacteristic<C: Central<*>>: Characteristic<LocalDescriptor<C>>
      * what fits in a single response, the library serves it using long read procedure.
      * Only one handler can be set; a new one replaces the previous.
      */
-    fun onRead(handler: (suspend ReadRequest<C>.() -> ReadResponse)?)
+    fun onRead(handler: (suspend ReadRequest.() -> ReadResponse)?)
+
+    /**
+     * Sets a provider of the value returned for each read request, or removes it when `null`.
+     *
+     * The provider is called for every read request, so the value does not have to be set before
+     * each read. It is a shorthand for [onRead] which always succeeds. Only one handler can be
+     * set, so it replaces the one set with [onRead].
+     *
+     * ```kotlin
+     * characteristic.provideValue { batteryLevel().toByteArray() }
+     * ```
+     */
+    fun provideValue(provider: (suspend ReadRequest.() -> ByteArray)?) =
+        onRead(provider?.let { p -> { ReadResponse.Success(p()) } })
 
     /**
      * Sets a handler for write requests, or removes it when `null`.
@@ -97,7 +110,7 @@ interface LocalCharacteristic<C: Central<*>>: Characteristic<LocalDescriptor<C>>
      * the value is stored and emitted in [writes]. Only one handler can be set; a new one
      * replaces the previous.
      */
-    fun onWrite(handler: (suspend WriteRequest<C>.() -> WriteResponse)?)
+    fun onWrite(handler: (suspend WriteRequest.() -> WriteResponse)?)
 
     /**
      * Sets the value of the characteristic without notifying anyone.
@@ -122,5 +135,5 @@ interface LocalCharacteristic<C: Central<*>>: Characteristic<LocalDescriptor<C>>
      * @throws IllegalStateException if the characteristic does not support notifications or
      * indications, or [to] is not subscribed.
      */
-    suspend fun update(value: ByteArray, to: C? = null)
+    suspend fun update(value: ByteArray, to: Central<*>? = null)
 }

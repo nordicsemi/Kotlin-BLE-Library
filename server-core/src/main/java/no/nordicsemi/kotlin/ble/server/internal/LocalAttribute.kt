@@ -71,7 +71,7 @@ internal interface LocalAttribute<C: Central<*>> {
     val instanceId: Int
 
     /** The value, handlers and writes of the attribute. */
-    val state: AttributeState<C>
+    val state: AttributeState
 }
 
 /**
@@ -80,29 +80,29 @@ internal interface LocalAttribute<C: Central<*>> {
  * @param C The type of the central.
  * @param initialValue The initial value.
  */
-internal class AttributeState<C: Central<*>>(initialValue: ByteArray = byteArrayOf()) {
+internal class AttributeState(initialValue: ByteArray = byteArrayOf()) {
     private val _value = MutableStateFlow(initialValue)
-    private val _writes = MutableSharedFlow<WriteRequest<C>>(extraBufferCapacity = 64)
+    private val _writes = MutableSharedFlow<WriteRequest>(extraBufferCapacity = 64)
 
     @Volatile
-    private var readHandler: (suspend ReadRequest<C>.() -> ReadResponse)? = null
+    private var readHandler: (suspend ReadRequest.() -> ReadResponse)? = null
 
     @Volatile
-    private var writeHandler: (suspend WriteRequest<C>.() -> WriteResponse)? = null
+    private var writeHandler: (suspend WriteRequest.() -> WriteResponse)? = null
 
     /** The current value. */
     val value: StateFlow<ByteArray> = _value
 
     /** The accepted writes. */
-    val writes: SharedFlow<WriteRequest<C>> = _writes
+    val writes: SharedFlow<WriteRequest> = _writes
 
     /** Sets the read handler, or removes it when `null`. */
-    fun onRead(handler: (suspend ReadRequest<C>.() -> ReadResponse)?) {
+    fun onRead(handler: (suspend ReadRequest.() -> ReadResponse)?) {
         readHandler = handler
     }
 
     /** Sets the write handler, or removes it when `null`. */
-    fun onWrite(handler: (suspend WriteRequest<C>.() -> WriteResponse)?) {
+    fun onWrite(handler: (suspend WriteRequest.() -> WriteResponse)?) {
         writeHandler = handler
     }
 
@@ -119,7 +119,7 @@ internal class AttributeState<C: Central<*>>(initialValue: ByteArray = byteArray
     }
 
     /** Returns the response to a read request: from the handler, if set, or the current value. */
-    suspend fun read(request: ReadRequest<C>): ReadResponse {
+    suspend fun read(request: ReadRequest): ReadResponse {
         val handler = readHandler
         return if (handler != null) {
             handler(request)
@@ -134,7 +134,7 @@ internal class AttributeState<C: Central<*>>(initialValue: ByteArray = byteArray
      *
      * The emit suspends when a collector of [writes] is slow and the buffer is full.
      */
-    suspend fun write(request: WriteRequest<C>): WriteResponse {
+    suspend fun write(request: WriteRequest): WriteResponse {
         val handler = writeHandler
         val response = if (handler != null) handler(request) else WriteResponse.Success
         if (response is WriteResponse.Success) {

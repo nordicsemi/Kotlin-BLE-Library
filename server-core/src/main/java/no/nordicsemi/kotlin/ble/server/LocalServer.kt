@@ -66,7 +66,7 @@ interface LocalServer<ID: Any, C: Central<ID>>: Manager {
     /**
      * The services currently hosted by the local GATT server.
      */
-    val services: StateFlow<List<LocalService<C>>>
+    val services: StateFlow<List<LocalService>>
 
     /**
      * Defines the services of the local GATT server using the [ServerScope] DSL and makes them
@@ -85,7 +85,7 @@ interface LocalServer<ID: Any, C: Central<ID>>: Manager {
      * @throws no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException if Bluetooth is
      * not available.
      */
-    suspend fun setup(builder: ServerScope.() -> Unit): List<LocalService<C>>
+    suspend fun setup(builder: ServerScope.() -> Unit): List<LocalService>
 
     /**
      * The local services, as seen by the central with the given identifier.
@@ -99,7 +99,7 @@ interface LocalServer<ID: Any, C: Central<ID>>: Manager {
      *
      * @param identifier The identifier of the central.
      */
-    fun services(identifier: ID): StateFlow<List<LocalService<C>>>
+    fun services(identifier: ID): StateFlow<List<LocalService>>
 
     /**
      * The local services, as seen by the given central.
@@ -107,7 +107,7 @@ interface LocalServer<ID: Any, C: Central<ID>>: Manager {
      * @param central The central.
      * @see services
      */
-    fun services(central: C): StateFlow<List<LocalService<C>>> = services(central.identifier)
+    fun services(central: C): StateFlow<List<LocalService>> = services(central.identifier)
 
     companion object Factory
 }

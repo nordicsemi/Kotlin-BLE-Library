@@ -62,13 +62,13 @@ import kotlin.uuid.Uuid
  */
 internal class BaseLocalCharacteristic<C: Central<*>>(
     definition: CharacteristicDefinition,
-    override val service: AnyLocalService<C>,
+    override val service: AnyLocalService,
     private val host: LocalServerHost<C>,
-): LocalCharacteristic<C>, LocalAttribute<C> {
+): LocalCharacteristic, LocalAttribute<C> {
     override val uuid: Uuid = definition.uuid
     override val instanceId: Int = definition.instanceId
     override val properties: Set<CharacteristicProperty> = definition.properties
-    override val state = AttributeState<C>()
+    override val state = AttributeState()
 
     /** The descriptors, including the auto-added Client Characteristic Configuration. */
     val localDescriptors: List<BaseLocalDescriptor<C>> =
@@ -87,19 +87,20 @@ internal class BaseLocalCharacteristic<C: Central<*>>(
     override val writes get() = state.writes
     override val subscribers: StateFlow<Set<C>> get() = _subscribers
 
-    override fun onRead(handler: (suspend ReadRequest<C>.() -> ReadResponse)?) = state.onRead(handler)
-    override fun onWrite(handler: (suspend WriteRequest<C>.() -> WriteResponse)?) = state.onWrite(handler)
+    override fun onRead(handler: (suspend ReadRequest.() -> ReadResponse)?) = state.onRead(handler)
+    override fun onWrite(handler: (suspend WriteRequest.() -> WriteResponse)?) = state.onWrite(handler)
     override fun setValue(value: ByteArray) = state.setValue(value)
 
-    override suspend fun update(value: ByteArray, to: C?) {
+    override suspend fun update(value: ByteArray, to: Central<*>?) {
         check(canUpdate) { "Characteristic does not support notifications nor indications" }
         check(service.manager != null) { "The service has been removed" }
         require(value.size <= MAX_ATTRIBUTE_LENGTH) {
             "Value too long: ${value.size} bytes, maximum is $MAX_ATTRIBUTE_LENGTH"
         }
         val targets = if (to != null) {
-            check(to in _subscribers.value) { "$to has not subscribed to this characteristic" }
-            listOf(to)
+            val subscriber = _subscribers.value.firstOrNull { it == to }
+            checkNotNull(subscriber) { "$to has not subscribed to this characteristic" }
+            listOf(subscriber)
         } else {
             _subscribers.value.toList()
         }

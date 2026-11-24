@@ -36,6 +36,7 @@ package no.nordicsemi.kotlin.ble.client
 import kotlinx.coroutines.CoroutineScope
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.Profile as CoreProfile
+import no.nordicsemi.kotlin.ble.server.LocalService
 import kotlin.uuid.Uuid
 
 /**
@@ -209,56 +210,14 @@ import kotlin.uuid.Uuid
 sealed class Profile(
     requiredServiceUuids: List<Uuid>,
     optionalServiceUuids: List<Uuid> = emptyList(),
+    localServiceUuids: List<Uuid> = emptyList(),
     name: String? = null,
-) : CoreProfile<Peripheral<*, *>, RemoteService, Nothing>(
+) : CoreProfile<Peripheral<*, *>, RemoteService, LocalService>(
     requiredServiceUuids = requiredServiceUuids,
     optionalServiceUuids = optionalServiceUuids,
+    localServiceUuids = localServiceUuids,
     name = name,
 ) {
-    final override fun prepare(
-        target: Peripheral<*, *>,
-        remoteServices: List<RemoteService>,
-        localServices: List<Nothing>,
-    ) = prepare(target, remoteServices)
-
-    /**
-     * Validates and prepares the services to be used in [initialize].
-     *
-     * This method should validate if the services contain the required characteristics,
-     * validate if the characteristics have expected properties, and store the references
-     * to the characteristics for later use.
-     *
-     * This method is called before [initialize]. It should use [kotlin.require] and
-     * [kotlin.collections.List.first] to validate the service and throw
-     * [IllegalArgumentException] or [NoSuchElementException] if validation fails. In that case,
-     * the outcome is downgraded to [unsupported] - exactly as if the services had not been found
-     * in the first place - and a required profile will still cause a disconnection with
-     * [RequiredServiceNotFound][ConnectionState.Disconnected.Reason.RequiredServiceNotFound].
-     *
-     * #### Example
-     *
-     * See [Profile] for a full worked example (`ProximityProfile`); the relevant part of its
-     * `prepare` is:
-     *
-     * ```kotlin
-     * override fun prepare(peripheral: Peripheral<*, *>, services: List<RemoteService>) {
-     *     // Link Loss Service is required.
-     *     val linkLossService = services.first { it.uuid == LINK_LOSS_SERVICE_UUID }
-     *     linkLossAlertLevel = linkLossService.characteristics.first { it.uuid == ALERT_LEVEL_UUID }
-     *     require(linkLossAlertLevel.isWritable()) { "Alert Level characteristic must be writable." }
-     *
-     *     // Immediate Alert Service is optional - only present if the peripheral supports it.
-     *     immediateAlertLevel = services.firstOrNull { it.uuid == IMMEDIATE_ALERT_SERVICE_UUID }
-     *         ?.characteristics?.first { it.uuid == ALERT_LEVEL_UUID }
-     * }
-     * ```
-     *
-     * @param peripheral The peripheral the profile is being resolved on.
-     * @param services The discovered services.
-     * @see initialize
-     */
-    protected abstract fun prepare(peripheral: Peripheral<*, *>, services: List<RemoteService>)
-
     /**
      * This method should initialize the profile.
      *
@@ -420,6 +379,115 @@ sealed class Profile(
         requiredServiceUuids = requiredServiceUuids,
         optionalServiceUuids = optionalServiceUuids,
         name = name,
+    ) {
+        /**
+         * @hide
+         */
+        final override fun prepare(
+            target: Peripheral<*, *>,
+            remoteServices: List<RemoteService>,
+            localServices: List<LocalService>,
+        ) = prepare(target, remoteServices)
+
+        /**
+         * Validates and prepares the services to be used in [initialize].
+         *
+         * This method should validate if the services contain the required characteristics,
+         * validate if the characteristics have expected properties, and store the references
+         * to the characteristics for later use.
+         *
+         * This method is called before [initialize]. It should use [kotlin.require] and
+         * [kotlin.collections.List.first] to validate the service and throw
+         * [IllegalArgumentException] or [NoSuchElementException] if validation fails. In that case,
+         * the outcome is downgraded to [unsupported] - exactly as if the services had not been found
+         * in the first place - and a required profile will still cause a disconnection with
+         * [RequiredServiceNotFound][ConnectionState.Disconnected.Reason.RequiredServiceNotFound].
+         *
+         * #### Example
+         *
+         * See [Profile] for a full worked example (`ProximityProfile`); the relevant part of its
+         * `prepare` is:
+         *
+         * ```kotlin
+         * override fun prepare(peripheral: Peripheral<*, *>, services: List<RemoteService>) {
+         *     // Link Loss Service is required.
+         *     val linkLossService = services.first { it.uuid == LINK_LOSS_SERVICE_UUID }
+         *     linkLossAlertLevel = linkLossService.characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+         *     require(linkLossAlertLevel.isWritable()) { "Alert Level characteristic must be writable." }
+         *
+         *     // Immediate Alert Service is optional - only present if the peripheral supports it.
+         *     immediateAlertLevel = services.firstOrNull { it.uuid == IMMEDIATE_ALERT_SERVICE_UUID }
+         *         ?.characteristics?.first { it.uuid == ALERT_LEVEL_UUID }
+         * }
+         * ```
+         *
+         * @param peripheral The peripheral the profile is being resolved on.
+         * @param services The discovered services.
+         * @see initialize
+         */
+        protected abstract fun prepare(peripheral: Peripheral<*, *>, services: List<RemoteService>)
+    }
+
+    /**
+     * A class representing a multiservice GATT profile that also uses local GATT services.
+     *
+     * This is intended for profiles that use services of the remote peripheral and the services
+     * of this device, i.e. Link Loss, where the remote Link Loss Service is written to configure
+     * the alert, and the local Immediate Alert Service is written by the peripheral when it wants
+     * this device to alert.
+     *
+     * The local services are not added by the profile. The application defines them when setting
+     * up the local server, which is given to the central manager. The profile is started when the
+     * required remote services were discovered and the local services are available. See
+     * [Peripheral.profile].
+     *
+     * Implement `prepare(target, remoteServices, localServices)`, which validates the services,
+     * and [initialize].
+     *
+     * ```kotlin
+     * class LinkLossProfile : Profile.WithLocalServices(
+     *     requiredServiceUuids = listOf(LINK_LOSS_SERVICE_UUID),
+     *     localServiceUuids = listOf(IMMEDIATE_ALERT_SERVICE_UUID),
+     *     name = "Link Loss",
+     * ) {
+     *     private lateinit var linkLossAlertLevel: RemoteCharacteristic
+     *     private lateinit var immediateAlertLevel: LocalCharacteristic
+     *
+     *     override fun prepare(
+     *         target: Peripheral<*, *>,
+     *         remoteServices: List<RemoteService>,
+     *         localServices: List<LocalService>,
+     *     ) {
+     *         linkLossAlertLevel = remoteServices.first().characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+     *         immediateAlertLevel = localServices.first().characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+     *     }
+     *
+     *     override suspend fun CoroutineScope.initialize(target: Peripheral<*, *>) {
+     *         // The local characteristic is the view of this peripheral, so only its writes are
+     *         // emitted.
+     *         immediateAlertLevel.writes
+     *             .onEach { alert(it.value) }
+     *             .launchIn(this)
+     *         linkLossAlertLevel.write(byteArrayOf(HIGH_ALERT))
+     *     }
+     * }
+     * ```
+     *
+     * @param requiredServiceUuids A list of UUIDs of required remote GATT services.
+     * @param localServiceUuids A list of UUIDs of the local GATT services the profile needs.
+     * @param optionalServiceUuids A list of UUIDs of optional remote GATT services.
+     * @param name The name of the profile. This is for convenience, used only in logging.
+     */
+    abstract class WithLocalServices(
+        requiredServiceUuids: List<Uuid>,
+        localServiceUuids: List<Uuid>,
+        optionalServiceUuids: List<Uuid> = emptyList(),
+        name: String? = null,
+    ): Profile(
+        requiredServiceUuids = requiredServiceUuids,
+        optionalServiceUuids = optionalServiceUuids,
+        localServiceUuids = localServiceUuids,
+        name = name,
     )
 
     /**
@@ -448,8 +516,11 @@ sealed class Profile(
         /**
          * @hide
          */
-        final override fun prepare(peripheral: Peripheral<*, *>, services: List<RemoteService>) =
-            prepare(peripheral, instance(services))
+        final override fun prepare(
+            target: Peripheral<*, *>,
+            remoteServices: List<RemoteService>,
+            localServices: List<LocalService>,
+        ) = prepare(target, instance(remoteServices))
 
         /**
          * This method should select a single service instance from the list of identical services

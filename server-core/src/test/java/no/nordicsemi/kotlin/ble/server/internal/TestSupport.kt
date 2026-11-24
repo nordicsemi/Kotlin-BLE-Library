@@ -159,9 +159,9 @@ class Fixture(private val testScope: TestScope) {
     val central2 = FakeCentral("BB")
     private var requestId = 0
 
-    lateinit var services: List<LocalService<FakeCentral>>
+    lateinit var services: List<LocalService>
 
-    suspend fun setup(): List<LocalService<FakeCentral>> {
+    suspend fun setup(): List<LocalService> {
         services = manager.setup {
             Service(SERVICE_UUID) {
                 Characteristic(
@@ -188,10 +188,10 @@ class Fixture(private val testScope: TestScope) {
         return services
     }
 
-    fun characteristic(uuid: Uuid): LocalCharacteristic<FakeCentral> =
+    fun characteristic(uuid: Uuid): LocalCharacteristic =
         services.flatMap { it.characteristics }.first { it.uuid == uuid }
 
-    fun cccd(uuid: Uuid): LocalDescriptor<FakeCentral> =
+    fun cccd(uuid: Uuid): LocalDescriptor =
         characteristic(uuid).descriptors.first { it.isClientCharacteristicConfiguration }
 
     val rw get() = characteristic(RW_UUID)
@@ -237,7 +237,7 @@ class Fixture(private val testScope: TestScope) {
     }
 
     /** Writes the CCCD of the characteristic. */
-    suspend fun writeCccd(characteristic: LocalCharacteristic<FakeCentral>, value: Int, from: FakeCentral = central): Response =
+    suspend fun writeCccd(characteristic: LocalCharacteristic, value: Int, from: FakeCentral = central): Response =
         write(
             attribute = characteristic.descriptors.first { it.isClientCharacteristicConfiguration }.instanceId,
             value = byteArrayOf((value and 0xFF).toByte(), (value shr 8).toByte()),
@@ -245,7 +245,7 @@ class Fixture(private val testScope: TestScope) {
         )!!
 
     /** Subscribes the central to notifications (1) or indications (2) of the characteristic. */
-    suspend fun subscribe(characteristic: LocalCharacteristic<FakeCentral>, value: Int = 1, from: FakeCentral = central) {
+    suspend fun subscribe(characteristic: LocalCharacteristic, value: Int = 1, from: FakeCentral = central) {
         val response = writeCccd(characteristic, value, from)
         check(response.status == OperationStatus.Success) { "Subscribing failed: ${response.status}" }
     }

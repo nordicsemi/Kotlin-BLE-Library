@@ -111,7 +111,7 @@ class SetupTest {
         val services = fixture.setup()
 
         val ids = mutableListOf<Int>()
-        fun collect(service: no.nordicsemi.kotlin.ble.server.AnyLocalService<FakeCentral>) {
+        fun collect(service: no.nordicsemi.kotlin.ble.server.AnyLocalService) {
             ids += service.instanceId
             service.characteristics.forEach { characteristic ->
                 ids += characteristic.instanceId
@@ -259,7 +259,7 @@ class SetupTest {
     @Test
     fun setup_concurrentCallsAreSerialized() = runTest {
         val fixture = Fixture(this)
-        val results = mutableListOf<List<LocalService<FakeCentral>>>()
+        val results = mutableListOf<List<LocalService>>()
         val jobs = List(5) { index ->
             launch {
                 results += fixture.manager.setup {

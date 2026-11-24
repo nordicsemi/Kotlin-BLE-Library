@@ -47,10 +47,9 @@ import no.nordicsemi.kotlin.ble.core.Peer
  * The Client Characteristic Configuration descriptor is handled by the library. Setting
  * a handler on it throws [IllegalStateException].
  *
- * @param C The type of the central.
  */
-interface LocalDescriptor<C: Central<*>>: Descriptor {
-    override val characteristic: LocalCharacteristic<C>
+interface LocalDescriptor: Descriptor {
+    override val characteristic: LocalCharacteristic
 
     /** Local attributes are not owned by a remote peer, so this is always `null`. */
     override val owner: Peer<*>?
@@ -60,13 +59,21 @@ interface LocalDescriptor<C: Central<*>>: Descriptor {
     val value: StateFlow<ByteArray>
 
     /** Writes accepted by the descriptor. Rejected writes are not emitted. */
-    val writes: SharedFlow<WriteRequest<C>>
+    val writes: SharedFlow<WriteRequest>
 
     /** Sets a handler for read requests, or removes it when `null`. See [LocalCharacteristic.onRead]. */
-    fun onRead(handler: (suspend ReadRequest<C>.() -> ReadResponse)?)
+    fun onRead(handler: (suspend ReadRequest.() -> ReadResponse)?)
+
+    /**
+     * Sets a provider of the value returned for each read request, or removes it when `null`.
+     *
+     * It is a shorthand for [onRead] which always succeeds.
+     */
+    fun provideValue(provider: (suspend ReadRequest.() -> ByteArray)?) =
+        onRead(provider?.let { p -> { ReadResponse.Success(p()) } })
 
     /** Sets a handler for write requests, or removes it when `null`. See [LocalCharacteristic.onWrite]. */
-    fun onWrite(handler: (suspend WriteRequest<C>.() -> WriteResponse)?)
+    fun onWrite(handler: (suspend WriteRequest.() -> WriteResponse)?)
 
     /**
      * Sets the value of the descriptor.

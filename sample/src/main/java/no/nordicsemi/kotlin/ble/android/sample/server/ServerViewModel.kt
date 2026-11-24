@@ -64,7 +64,7 @@ import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.Permission
 import no.nordicsemi.kotlin.ble.core.and
 import no.nordicsemi.kotlin.ble.server.WriteResponse
-import no.nordicsemi.kotlin.ble.server.android.LocalCharacteristic
+import no.nordicsemi.kotlin.ble.server.LocalCharacteristic
 import no.nordicsemi.kotlin.ble.server.android.LocalServer
 import timber.log.Timber
 import javax.inject.Inject
@@ -180,7 +180,7 @@ class ServerViewModel @Inject constructor(
                     led.writes
                         .onEach { request ->
                             val on = request.value.first() != 0.toByte()
-                            Timber.i("LED turned ${if (on) "ON" else "OFF"} by ${request.central.address}")
+                            Timber.i("LED turned ${if (on) "ON" else "OFF"} by ${request.central.identifier}")
                             isLedOn.update { on }
                         }
                         .launchIn(this)

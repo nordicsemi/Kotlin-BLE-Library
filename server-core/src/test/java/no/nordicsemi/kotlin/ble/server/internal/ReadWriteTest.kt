@@ -147,9 +147,19 @@ class ReadWriteTest {
     }
 
     @Test
+    fun read_valueProviderIsCalledForEachRead() = runTest {
+        val fixture = Fixture(this).apply { val _ = setup() }
+        var counter = 0
+        fixture.ro.provideValue { bytes((++counter).toByte().toInt()) }
+
+        assertContentEquals(bytes(1), fixture.read(fixture.ro.instanceId).value)
+        assertContentEquals(bytes(2), fixture.read(fixture.ro.instanceId).value)
+    }
+
+    @Test
     fun read_handlerSeesCentral() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        fixture.ro.onRead { ReadResponse.Success(central.identifier.encodeToByteArray()) }
+        fixture.ro.onRead { ReadResponse.Success(central.identifier.toString().encodeToByteArray()) }
 
         assertContentEquals("AA".encodeToByteArray(), fixture.read(fixture.ro.instanceId).value)
         assertContentEquals("BB".encodeToByteArray(), fixture.read(fixture.ro.instanceId, from = fixture.central2).value)
@@ -246,7 +256,7 @@ class ReadWriteTest {
     @Test
     fun write_defaultStoresAndEmits() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        val writes = mutableListOf<WriteRequest<FakeCentral>>()
+        val writes = mutableListOf<WriteRequest>()
         backgroundScope.launch { fixture.rw.writes.toList(writes) }
         testScheduler.runCurrent()
 
@@ -361,7 +371,7 @@ class ReadWriteTest {
     fun write_handlerSuccess_storesAndEmits() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.rw.onWrite { WriteResponse.Success }
-        val writes = mutableListOf<WriteRequest<FakeCentral>>()
+        val writes = mutableListOf<WriteRequest>()
         backgroundScope.launch { fixture.rw.writes.toList(writes) }
         testScheduler.runCurrent()
 
@@ -378,7 +388,7 @@ class ReadWriteTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.rw.setValue(bytes(1))
         fixture.rw.onWrite { WriteResponse.Failure(OperationStatus.ValueNotAllowed) }
-        val writes = mutableListOf<WriteRequest<FakeCentral>>()
+        val writes = mutableListOf<WriteRequest>()
         backgroundScope.launch { fixture.rw.writes.toList(writes) }
         testScheduler.runCurrent()
 
@@ -408,7 +418,7 @@ class ReadWriteTest {
     @Test
     fun write_handlerSeesValueAndCentral() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        var request: WriteRequest<FakeCentral>? = null
+        var request: WriteRequest? = null
         fixture.rw.onWrite { request = this; WriteResponse.Success }
 
         val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2, 3), from = fixture.central2)

@@ -46,11 +46,11 @@ import kotlin.uuid.Uuid
 
 private class LocalProfile(
     uuid: Uuid,
-): Profile<LocalServer<String, FakeCentral>, Nothing, LocalService<FakeCentral>>(
+): Profile<LocalServer<String, FakeCentral>, Nothing, LocalService>(
     localServiceUuids = listOf(uuid),
 ) {
     var prepared = 0
-    var services: List<LocalService<FakeCentral>>? = null
+    var services: List<LocalService>? = null
     var initialized = 0
     var cancelled = 0
     var unsupported = 0
@@ -59,7 +59,7 @@ private class LocalProfile(
     override fun prepare(
         target: LocalServer<String, FakeCentral>,
         remoteServices: List<Nothing>,
-        localServices: List<LocalService<FakeCentral>>,
+        localServices: List<LocalService>,
     ) {
         require(!reject)
         prepared++
