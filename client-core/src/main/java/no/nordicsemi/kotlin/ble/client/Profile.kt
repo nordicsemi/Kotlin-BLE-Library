@@ -463,7 +463,7 @@ sealed class Profile(
      *     }
      *
      *     override suspend fun CoroutineScope.initialize(target: Peripheral<*, *>) {
-     *         // The local characteristic is the view of this peripheral, so only its writes are
+     *         // The local characteristic is the view of this peripheral, so only its write requests are
      *         // emitted.
      *         immediateAlertLevel.writes
      *             .onEach { alert(it.value) }

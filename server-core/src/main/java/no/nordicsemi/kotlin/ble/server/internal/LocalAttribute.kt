@@ -70,12 +70,12 @@ internal interface LocalAttribute<C: Central<*>> {
     /** The `instanceId` of the attribute, unique within the GATT server. */
     val instanceId: Int
 
-    /** The value, handlers and writes of the attribute. */
+    /** The value, handlers and write requests of the attribute. */
     val state: AttributeState
 }
 
 /**
- * The value, the handlers and the accepted writes of a local characteristic or descriptor.
+ * The value, the handlers and the accepted write requests of a local characteristic or descriptor.
  *
  * @param C The type of the central.
  * @param initialValue The initial value.
@@ -93,7 +93,7 @@ internal class AttributeState(initialValue: ByteArray = byteArrayOf()) {
     /** The current value. */
     val value: StateFlow<ByteArray> = _value
 
-    /** The accepted writes. */
+    /** The accepted write requests. */
     val writes: SharedFlow<WriteRequest> = _writes
 
     /** Sets the read handler, or removes it when `null`. */

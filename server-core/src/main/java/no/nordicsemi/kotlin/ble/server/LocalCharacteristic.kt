@@ -40,10 +40,11 @@ import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.Peer
 
 /**
- * A characteristic hosted by the local GATT server, which remote centrals can read, write and
+ * A characteristic hosted by the local GATT server, which remote centrals can read, write to and
  * subscribe to.
  *
- * By default, reads return [value], and writes are stored and emitted in [writes]. Use [onRead]
+ * By default, read requests return [value], and write requests are stored and emitted in
+ * [writes]. Use [onRead]
  * and [onWrite] to handle requests dynamically, for example to validate data or to return
  * a different value for each central.
  *
@@ -59,7 +60,7 @@ interface LocalCharacteristic: Characteristic<LocalDescriptor> {
      * The current value of the characteristic, which is sent in response to read requests
      * unless a handler set with [onRead] provides one. Empty initially.
      *
-     * It changes when a write is accepted, and when [update] or [setValue] is called.
+     * It changes when a write request is accepted, and when [update] or [setValue] is called.
      */
     val value: StateFlow<ByteArray>
 
@@ -73,10 +74,10 @@ interface LocalCharacteristic: Characteristic<LocalDescriptor> {
     val subscribers: StateFlow<Set<Central<*>>>
 
     /**
-     * Writes accepted by the characteristic, that is writes for which the handler set with
+     * Write requests accepted by the characteristic, that is requests for which the handler set with
      * [onWrite], or the default one, returned [WriteResponse.Success].
      *
-     * It is a hot flow with no replay. Rejected writes are not emitted.
+     * It is a hot flow with no replay. Rejected write requests are not emitted.
      */
     val writes: SharedFlow<WriteRequest>
 
@@ -106,7 +107,7 @@ interface LocalCharacteristic: Characteristic<LocalDescriptor> {
     /**
      * Sets a handler for write requests, or removes it when `null`.
      *
-     * The handler decides whether the write is accepted. If it returns [WriteResponse.Success],
+     * The handler decides whether the write request is accepted. If it returns [WriteResponse.Success],
      * the value is stored and emitted in [writes]. Only one handler can be set; a new one
      * replaces the previous.
      */

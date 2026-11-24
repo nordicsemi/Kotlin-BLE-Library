@@ -59,7 +59,7 @@ import no.nordicsemi.kotlin.ble.server.mock.WriteResult
  * It is a [no.nordicsemi.kotlin.ble.server.LocalServer], the same one that apps use to
  * implement the peripheral role, running on top of a simulated GATT server. Every connectable
  * [PeripheralSpec] hosts one, also when its services are defined with the DSL of the builder
- * (see [PeripheralSpec.server]). It answers the requests of the mock clients: reads, writes, long and reliable writes, and subscriptions are
+ * (see [PeripheralSpec.server]). It answers the requests of the mock clients: read and write requests, long and reliable writes, and subscriptions are
  * handled by the handlers set with `onRead` and `onWrite` of the local characteristics and
  * descriptors, and by their values, and notifications and indications are sent with `update()`.
  *
@@ -397,7 +397,7 @@ interface GattInterceptor {
     /** A Read request, or a series of Read Blob requests, of the attribute. */
     suspend fun onRead(attribute: Int): ReadResponse? = null
 
-    /** A Write Request of the attribute, including writes of the CCCD. */
+    /** A Write Request of the attribute, including write requests to the CCCD. */
     suspend fun onWrite(attribute: Int, value: ByteArray): WriteResponse? = null
 
     /** A Write Command of the attribute. A non-null result means the command was consumed. */
@@ -410,6 +410,6 @@ interface GattInterceptor {
      */
     suspend fun onPrepareWrite(attribute: Int, value: ByteArray): PrepareWriteResponse? = null
 
-    /** An Execute Write request, which commits or cancels the prepared writes. */
+    /** An Execute Write request, which commits or cancels the prepared write requests. */
     suspend fun onExecuteWrite(execute: Boolean): WriteResponse? = null
 }

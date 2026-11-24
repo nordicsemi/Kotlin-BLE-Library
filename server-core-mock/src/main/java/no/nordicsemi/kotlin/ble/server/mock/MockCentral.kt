@@ -311,7 +311,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
      * Writes the value of a characteristic or a descriptor.
      *
      * A write command (without response) is sent as a single request and completes immediately.
-     * A write with response is sent as a single Write Request if the value fits in `mtu - 3`
+     * A write request is sent as a single Write Request if the value fits in `mtu - 3`
      * bytes, otherwise [writeLong] is used.
      *
      * @param attribute The `instanceId` of the characteristic or descriptor.
@@ -368,11 +368,11 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
     /**
      * Executes the Reliable Write procedure.
      *
-     * The writes done in the [block] are queued and executed together when it returns. If any of
+     * The write requests done in the [block] are queued and executed together when it returns. If any of
      * them failed, or the block threw an exception, they are cancelled.
      *
-     * @param block The block queuing writes.
-     * @return The result of the Execute Write, or the first error of a queued write.
+     * @param block The block queuing write requests.
+     * @return The result of the Execute Write, or the first error of a queued write request.
      * @throws IllegalStateException if the central is not connected.
      */
     suspend fun reliableWrite(block: suspend ReliableWrite.() -> Unit): WriteResult {
@@ -411,7 +411,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
         }
 
         /**
-         * Executes the queued writes. If any of the previous writes failed, the queue is
+         * Executes the queued write requests. If any of the previous ones failed, the queue is
          * cancelled instead, and the first error is returned.
          */
         suspend fun execute(): WriteResult = procedure {
@@ -427,7 +427,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
         }
 
         /**
-         * Cancels the queued writes. Nothing is written.
+         * Cancels the queued write requests. Nothing is written.
          */
         @IgnorableReturnValue
         suspend fun cancel(): WriteResult = procedure {
@@ -491,7 +491,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
      *
      * @param characteristic The `instanceId` of the characteristic.
      * @param indications `true` to enable indications, `false` to enable notifications.
-     * @return The result of the write, or [OperationStatus.SubscribeNotPermitted] failure if the
+     * @return The result of the write operation, or [OperationStatus.SubscribeNotPermitted] failure if the
      * characteristic has no Client Characteristic Configuration descriptor.
      * @throws IllegalStateException if the central is not connected.
      */
@@ -506,7 +506,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
      * Characteristic Configuration descriptor.
      *
      * @param characteristic The `instanceId` of the characteristic.
-     * @return The result of the write, or [OperationStatus.SubscribeNotPermitted] failure if the
+     * @return The result of the write operation, or [OperationStatus.SubscribeNotPermitted] failure if the
      * characteristic has no Client Characteristic Configuration descriptor.
      * @throws IllegalStateException if the central is not connected.
      */

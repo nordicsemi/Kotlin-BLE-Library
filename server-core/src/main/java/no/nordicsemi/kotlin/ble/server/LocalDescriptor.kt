@@ -41,8 +41,8 @@ import no.nordicsemi.kotlin.ble.core.Peer
 /**
  * A descriptor hosted by the local GATT server.
  *
- * It behaves like [LocalCharacteristic]: reads return [value], and writes are stored and emitted
- * in [writes], unless handlers are set. Descriptors are always written with response.
+ * It behaves like [LocalCharacteristic]: read requests return [value], and write requests are stored and
+ * emitted in [writes], unless handlers are set. Descriptors are always written with response.
  *
  * The Client Characteristic Configuration descriptor is handled by the library. Setting
  * a handler on it throws [IllegalStateException].
@@ -58,7 +58,7 @@ interface LocalDescriptor: Descriptor {
     /** The current value of the descriptor. Empty initially, unless defined by the service definition. */
     val value: StateFlow<ByteArray>
 
-    /** Writes accepted by the descriptor. Rejected writes are not emitted. */
+    /** Write requests accepted by the descriptor. Rejected ones are not emitted. */
     val writes: SharedFlow<WriteRequest>
 
     /** Sets a handler for read requests, or removes it when `null`. See [LocalCharacteristic.onRead]. */

@@ -45,8 +45,8 @@ class ReadRequest(val central: Central<*>)
 /**
  * A request from a central to write the value of a characteristic or a descriptor.
  *
- * Long writes and reliable writes are handled by the library: the whole value is delivered
- * once, after the write has been executed.
+ * Long write and reliable write operations are handled by the library: the whole value is delivered
+ * once, after the write operation has been executed.
  *
  * @property central The central that sent the request.
  * @property value The written value.
@@ -91,11 +91,11 @@ sealed class ReadResponse {
  */
 sealed class WriteResponse {
 
-    /** The write succeeded. The value will be stored and emitted in `writes`. */
+    /** The write operation succeeded. The value will be stored and the request emitted in `writes`. */
     data object Success: WriteResponse()
 
     /**
-     * The write was rejected, and the central will receive the given status. The value is not stored.
+     * The write request was rejected, and the central will receive the given status. The value is not stored.
      *
      * @property status The status to be sent to the central. Should not be
      * [OperationStatus.Success].

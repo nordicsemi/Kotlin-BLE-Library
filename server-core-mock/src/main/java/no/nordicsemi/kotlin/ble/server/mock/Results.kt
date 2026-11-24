@@ -100,16 +100,16 @@ sealed class WriteResult {
      */
     data class Failure(val status: OperationStatus): WriteResult()
 
-    /** `true` if the write succeeded. */
+    /** `true` if the write operation succeeded. */
     val isSuccess: Boolean
         get() = this is Success
 
-    /** Throws [GattOperationException] if the write failed. */
+    /** Throws [GattOperationException] if the write operation failed. */
     fun getOrThrow() {
         if (this is Failure) throw GattOperationException(status)
     }
 
-    /** Returns the status of a failed write, or `null` if the write succeeded. */
+    /** Returns the status of a failed write operation, or `null` if it succeeded. */
     fun statusOrNull(): OperationStatus? = (this as? Failure)?.status
 }
 

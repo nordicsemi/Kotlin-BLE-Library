@@ -76,7 +76,7 @@ interface LocalServer<ID: Any, C: Central<ID>>: Manager {
      * ([AnyLocalService.manager] becomes `null`).
      *
      * Handlers and collectors of [LocalCharacteristic.writes] should be set up right after this
-     * returns. Until then, reads return an empty value and writes are accepted and stored.
+     * returns. Until then, read requests return an empty value and write requests are accepted and stored.
      *
      * @param builder The services definition.
      * @return The services that have been added.
@@ -92,7 +92,7 @@ interface LocalServer<ID: Any, C: Central<ID>>: Manager {
      *
      * The services are the same as in [services], they share the values and the handlers, but
      * the requests and the subscribers of the characteristics and descriptors are limited to
-     * the central. For example, `writes` only emits the writes sent by this central, and
+     * the central. For example, `writes` only emits the write requests sent by this central, and
      * `update` sends the value to this central only.
      *
      * The central does not have to be connected yet.
