@@ -56,6 +56,9 @@ import kotlinx.coroutines.withContext
 import no.nordicsemi.kotlin.ble.advertiser.android.AdvertisingPayload
 import no.nordicsemi.kotlin.ble.advertiser.android.BluetoothLeAdvertiser
 import no.nordicsemi.kotlin.ble.android.sample.scanner.profile.LedButtonProfile
+import no.nordicsemi.kotlin.ble.core.PhyInUse
+import no.nordicsemi.kotlin.ble.core.ConnectionState
+import no.nordicsemi.kotlin.ble.core.ConnectionParameters
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.Permission
@@ -112,12 +115,18 @@ class ServerViewModel @Inject constructor(
             } else {
                 combine(
                     centrals.map { central ->
-                        combine(central.state, central.mtu, central.phy) { state, mtu, phy ->
+                        combine(
+                            central.state,
+                            central.mtu,
+                            central.phy,
+                            central.connectionParameters,
+                        ) { state, mtu, phy, parameters ->
                             CentralInfo(
                                 address = central.address,
-                                state = state.toString(),
+                                state = state,
                                 mtu = mtu,
-                                phy = phy?.toString(),
+                                phy = phy,
+                                connectionParameters = parameters as? ConnectionParameters.Specified,
                             )
                         }
                     }
@@ -266,10 +275,12 @@ class ServerViewModel @Inject constructor(
  * @property state The connection state.
  * @property mtu The ATT MTU, or `null` if not known.
  * @property phy The PHY in use, or `null` if not known.
+ * @property connectionParameters The connection parameters, or `null` if not known.
  */
 data class CentralInfo(
     val address: String,
-    val state: String,
+    val state: ConnectionState,
     val mtu: Int?,
-    val phy: String?,
+    val phy: PhyInUse?,
+    val connectionParameters: ConnectionParameters.Specified?,
 )

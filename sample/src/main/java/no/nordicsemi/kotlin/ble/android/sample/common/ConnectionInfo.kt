@@ -162,7 +162,7 @@ private fun EncryptionState.Reason.format() = when (this) {
     EncryptionState.Reason.BrEdrAuthenticationFailure -> "authentication failed"
 }
 
-private fun PhyInUse.format() =
+internal fun PhyInUse.format() =
     if (txPhy == rxPhy) "$txPhy" else "TX $txPhy · RX $rxPhy"
 
 @Composable
@@ -208,8 +208,9 @@ private fun RssiPane(
     }
 }
 
+/** A small label with a name and a value, used to show the details of a connection. */
 @Composable
-private fun InfoChip(
+internal fun InfoChip(
     label: String,
     value: String?,
     modifier: Modifier = Modifier,
