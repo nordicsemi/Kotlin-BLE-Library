@@ -58,7 +58,7 @@ import kotlin.uuid.Uuid
  * @property localServiceUuids UUIDs of the local services the profile needs.
  * @property name An optional name of the profile, used in the logs.
  */
-abstract class Profile<P: Any, R: PrimaryService<*>, L: PrimaryService<*>>(
+abstract class Profile<in P: Any, R: PrimaryService<*>, L: PrimaryService<*>>(
     val requiredServiceUuids: List<Uuid> = emptyList(),
     val optionalServiceUuids: List<Uuid> = emptyList(),
     val localServiceUuids: List<Uuid> = emptyList(),
