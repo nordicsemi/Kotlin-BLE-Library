@@ -72,7 +72,7 @@ class MockAndroidCentralTest {
     @Test
     fun `central with the same address cannot be created twice`() = runTest {
         val manager = mockManager()
-        manager.simulateCentral("11:22:33:44:55:66")
+        val _ = manager.simulateCentral("11:22:33:44:55:66")
 
         assertFailsWith<IllegalArgumentException> { manager.simulateCentral("11:22:33:44:55:66") }
     }
@@ -146,7 +146,7 @@ class MockAndroidCentralTest {
         val manager = mockManager(MockAndroidEnvironment.Api19())
         val central = manager.simulateCentral().also { it.connect() }
 
-        central.simulateMtuChange(517)
+        val _ = central.simulateMtuChange(517)
 
         assertEquals(23, central.mtu.value)
     }
@@ -155,7 +155,7 @@ class MockAndroidCentralTest {
     fun `MTU is limited to 517`() = runTest {
         val central = mockManager().simulateCentral().also { it.connect() }
 
-        central.simulateMtuChange(1000)
+        val _ = central.simulateMtuChange(1000)
 
         assertEquals(517, central.mtu.value)
     }
@@ -163,7 +163,7 @@ class MockAndroidCentralTest {
     @Test
     fun `MTU is reset when reconnecting`() = runTest {
         val central = mockManager().simulateCentral().also { it.connect() }
-        central.simulateMtuChange(185)
+        val _ = central.simulateMtuChange(185)
         central.disconnect()
 
         central.connect()
@@ -225,7 +225,7 @@ class MockAndroidCentralTest {
         val b = manager.simulateCentral("B").also { it.connect() }
         val c = manager.simulateCentral("C")
 
-        a.simulateMtuChange(100)
+        val _ = a.simulateMtuChange(100)
 
         assertEquals(setOf("A", "B"), manager.connectedCentrals.value.map { it.address }.toSet())
         assertEquals(100, a.mtu.value)

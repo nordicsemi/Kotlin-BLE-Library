@@ -115,7 +115,7 @@ class MockCentralTest {
     @Test
     fun `can reconnect after disconnecting and MTU is reset`() = runTest {
         val s = setup()
-        s.central.exchangeMtu(185)
+        val _ = s.central.exchangeMtu(185)
         s.central.disconnect()
 
         s.central.connect()
@@ -157,7 +157,7 @@ class MockCentralTest {
     fun `MTU exchange updates the maximum update value length`() = runTest {
         val s = setup()
 
-        s.central.exchangeMtu(517)
+        val _ = s.central.exchangeMtu(517)
 
         assertEquals(514, s.central.maximumUpdateValueLength)
     }
@@ -233,7 +233,7 @@ class MockCentralTest {
     @Test
     fun `readLong uses a single request when the MTU is large enough`() = runTest {
         val s = setup()
-        s.central.exchangeMtu(517)
+        val _ = s.central.exchangeMtu(517)
         s.app.values[s.readWrite] = bytes(300)
 
         val result = s.central.readLong(s.readWrite)
@@ -285,7 +285,7 @@ class MockCentralTest {
         val s = setup()
 
         assertFailsWith<IllegalArgumentException> { s.central.write(s.readWrite, bytes(21), withResponse = false) }
-        s.central.write(s.readWrite, bytes(20), withResponse = false)
+        val _ = s.central.write(s.readWrite, bytes(20), withResponse = false)
     }
 
     @Test
@@ -304,7 +304,7 @@ class MockCentralTest {
         val s = setup()
         val value = byteArrayOf(1, 2)
 
-        s.central.write(s.readWrite, value)
+        val _ = s.central.write(s.readWrite, value)
         value[0] = 99
 
         assertEquals(1, s.app.writes.single().value[0].toInt())
@@ -328,9 +328,9 @@ class MockCentralTest {
     @Test
     fun `long write fragments according to the MTU`() = runTest {
         val s = setup()
-        s.central.exchangeMtu(100)
+        val _ = s.central.exchangeMtu(100)
 
-        s.central.writeLong(s.readWrite, bytes(300))
+        val _ = s.central.writeLong(s.readWrite, bytes(300))
 
         assertEquals(listOf(0, 95, 190, 285), s.app.writes.map { it.offset })
         assertTrue(s.app.writes.all { it.value.size <= 95 })
@@ -341,7 +341,7 @@ class MockCentralTest {
     fun `value that fits in a single packet is not fragmented`() = runTest {
         val s = setup()
 
-        s.central.write(s.readWrite, bytes(20))
+        val _ = s.central.write(s.readWrite, bytes(20))
 
         assertEquals(1, s.app.writes.size)
         assertFalse(s.app.writes.single().prepared)
@@ -380,8 +380,8 @@ class MockCentralTest {
         val other = s.server.findDescriptor(SERVICE_UUID, READ_WRITE_UUID, DESCRIPTOR_UUID)!!
 
         val result = s.central.reliableWrite {
-            write(s.readWrite, bytes(30))
-            write(other, byteArrayOf(7))
+            val _ = write(s.readWrite, bytes(30))
+            val _ = write(other, byteArrayOf(7))
         }
 
         assertEquals(WriteResult.Success, result)
@@ -399,7 +399,7 @@ class MockCentralTest {
 
         assertFailsWith<IllegalArgumentException> {
             s.central.reliableWrite {
-                write(s.readWrite, bytes(10))
+                val _ = write(s.readWrite, bytes(10))
                 throw IllegalArgumentException("Stop")
             }
         }
@@ -415,8 +415,8 @@ class MockCentralTest {
         s.app.failing[other] = OperationStatus.WriteNotPermitted
 
         val result = s.central.reliableWrite {
-            write(s.readWrite, bytes(10))
-            write(other, byteArrayOf(1))
+            val _ = write(s.readWrite, bytes(10))
+            val _ = write(other, byteArrayOf(1))
         }
 
         assertEquals(WriteResult.Failure(OperationStatus.WriteNotPermitted), result)
@@ -428,7 +428,7 @@ class MockCentralTest {
     fun `reliable write can be cancelled explicitly`() = runTest {
         val s = setup()
         val write = s.central.beginReliableWrite()
-        write.write(s.readWrite, bytes(10))
+        val _ = write.write(s.readWrite, bytes(10))
 
         val result = write.cancel()
 
@@ -456,7 +456,7 @@ class MockCentralTest {
     fun `subscribe for indications writes the CCCD with indications enabled`() = runTest {
         val s = setup()
 
-        s.central.subscribe(s.notify, indications = true)
+        val _ = s.central.subscribe(s.notify, indications = true)
 
         assertContentEquals(byteArrayOf(0x02, 0x00), s.app.writes.single().value)
     }
@@ -465,7 +465,7 @@ class MockCentralTest {
     fun `unsubscribe writes zeros to the CCCD`() = runTest {
         val s = setup()
 
-        s.central.unsubscribe(s.notify)
+        val _ = s.central.unsubscribe(s.notify)
 
         assertContentEquals(byteArrayOf(0x00, 0x00), s.app.writes.single().value)
     }
@@ -514,7 +514,7 @@ class MockCentralTest {
         val s = setup()
         s.app.values[s.readWrite] = byteArrayOf(1)
 
-        repeat(3) { s.central.read(s.readWrite) }
+        repeat(3) { val _ = s.central.read(s.readWrite) }
 
         assertEquals(3, s.app.reads.map { it.requestId }.toSet().size)
     }
@@ -533,7 +533,7 @@ class MockCentralTest {
         val s = setup()
         val other = TestCentral("CC", s.server).also { it.connect() }
 
-        other.exchangeMtu(200)
+        val _ = other.exchangeMtu(200)
 
         assertEquals(23, s.central.attMtu.value)
         assertEquals(200, other.attMtu.value)

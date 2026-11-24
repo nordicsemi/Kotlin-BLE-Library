@@ -347,7 +347,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
     suspend fun writeLong(attribute: Int, value: ByteArray): WriteResult = procedure {
         val result = prepareWrites(attribute, value)
         if (result is WriteResult.Failure) {
-            executeWriteRequest(execute = false)
+            val _ = executeWriteRequest(execute = false)
             result
         } else {
             executeWriteRequest(execute = true)
@@ -419,7 +419,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
             finished = true
             val error = failure
             if (error != null) {
-                executeWriteRequest(execute = false)
+                val _ = executeWriteRequest(execute = false)
                 error
             } else {
                 executeWriteRequest(execute = true)
@@ -429,6 +429,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
         /**
          * Cancels the queued writes. Nothing is written.
          */
+        @IgnorableReturnValue
         suspend fun cancel(): WriteResult = procedure {
             if (finished) return@procedure WriteResult.Success
             finished = true
