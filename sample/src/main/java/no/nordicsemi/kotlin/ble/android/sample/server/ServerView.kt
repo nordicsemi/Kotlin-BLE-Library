@@ -42,11 +42,13 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -65,6 +67,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import no.nordicsemi.kotlin.ble.android.sample.common.InfoChip
 import no.nordicsemi.kotlin.ble.android.sample.common.format
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
@@ -111,9 +114,6 @@ fun ServerView(
 
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -208,40 +208,54 @@ private fun CentralItem(
         },
         label = "central color animation",
     )
-    ElevatedCard(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        ),
-    ) {
-        ListItem(
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            headlineContent = { Text(text = central.address) },
-            supportingContent = { Text(text = central.state.toString()) },
-            leadingContent = {
-                Icon(
-                    imageVector = Nordic.Icons.Bluetooth,
-                    contentDescription = "Central Icon",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(color)
-                        .padding(4.dp),
-                )
-            },
-        )
-        FlowRow(
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+    Column(modifier = modifier.fillMaxWidth()) {
+        ElevatedCard(
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ),
+            modifier = Modifier.zIndex(1.0f),
         ) {
-            val parameters = central.connectionParameters
-            InfoChip("MTU", central.mtu?.let { "$it bytes" })
-            InfoChip("PHY", central.phy?.format())
-            InfoChip("Interval", parameters?.let { "${it.connectionIntervalMillis} ms" })
-            InfoChip("Latency", parameters?.latency?.toString())
-            InfoChip("Timeout", parameters?.let { "${it.supervisionTimeoutMillis} ms" })
+            ListItem(
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                headlineContent = { Text(text = central.address) },
+                supportingContent = { Text(text = central.state.toString()) },
+                leadingContent = {
+                    Icon(
+                        imageVector = Nordic.Icons.Bluetooth,
+                        contentDescription = "Central Icon",
+                        tint = Color.White,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(color)
+                            .padding(4.dp),
+                    )
+                },
+            )
+        }
+        // The details "expand" from the card above, which is drawn in front of them.
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset(y = (-2).dp)
+                .padding(start = 16.dp, end = 8.dp),
+            shape = MaterialTheme.shapes.medium.copy(
+                topStart = CornerSize(0.dp),
+                topEnd = CornerSize(0.dp),
+            ),
+        ) {
+            FlowRow(
+                modifier = Modifier.padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                val parameters = central.connectionParameters
+                InfoChip("MTU", central.mtu?.let { "$it bytes" })
+                InfoChip("PHY", central.phy?.format())
+                InfoChip("Interval", parameters?.let { "${it.connectionIntervalMillis} ms" })
+                InfoChip("Latency", parameters?.latency?.toString())
+                InfoChip("Timeout", parameters?.let { "${it.supervisionTimeoutMillis} ms" })
+            }
         }
     }
 }
