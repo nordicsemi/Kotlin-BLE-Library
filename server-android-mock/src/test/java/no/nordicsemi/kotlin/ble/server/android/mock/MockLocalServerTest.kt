@@ -461,7 +461,7 @@ class MockLocalServerTest {
         a.subscribe(attribute).getOrThrow()
         b.subscribe(attribute).getOrThrow()
 
-        characteristic.update(byteArrayOf(5), to = b)
+        manager.services(b).value.single().characteristic(NOTIFY_UUID).update(byteArrayOf(5))
 
         assertTrue(updatesA.isEmpty())
         assertEquals(1, updatesB.size)

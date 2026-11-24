@@ -147,12 +147,14 @@ class CentralServicesTest {
     }
 
     @Test
-    fun update_toAnotherCentralIsRejected() = runTest {
+    fun update_notSubscribedCentral_throws() = runTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
-        val view = fixture.manager.services(fixture.central).value.single().characteristics.first { it.uuid == NOTIFY_UUID }
+        fixture.subscribe(fixture.notify, from = fixture.central)
+        val view = fixture.manager.services(fixture.central2).value.single().characteristics.first { it.uuid == NOTIFY_UUID }
 
-        assertFailsWith<IllegalArgumentException> { view.update(bytes(1), to = fixture.central2) }
+        assertFailsWith<IllegalStateException> { view.update(bytes(1)) }
+        assertTrue(fixture.server.notifications.isEmpty())
     }
 
     @Test

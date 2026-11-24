@@ -125,16 +125,20 @@ interface LocalCharacteristic: Characteristic<LocalDescriptor> {
      * Sets the value of the characteristic and sends a notification, or an indication, to
      * subscribed centrals.
      *
+     * The services of [LocalServer.services] notify all [subscribers]. The services returned by
+     * [LocalServer.services] for a given central notify only that central, which must be
+     * subscribed.
+     *
      * A notification is used if the characteristic has the [CharacteristicProperty.NOTIFY]
      * property, otherwise an indication. The method suspends until the value has been sent
      * to all targets, or in case of an indication, confirmed by them.
      *
      * @param value The new value.
-     * @param to The central to notify, or `null` to notify all [subscribers].
      * @throws IllegalArgumentException if the value is longer than the maximum update value length
      * of any of the targets, see [Central.maximumUpdateValueLength].
      * @throws IllegalStateException if the characteristic does not support notifications or
-     * indications, or [to] is not subscribed.
+     * indications, or the characteristic belongs to the services of a central that is not
+     * subscribed.
      */
-    suspend fun update(value: ByteArray, to: Central<*>? = null)
+    suspend fun update(value: ByteArray)
 }

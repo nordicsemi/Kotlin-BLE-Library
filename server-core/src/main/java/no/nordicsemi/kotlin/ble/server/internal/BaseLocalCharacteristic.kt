@@ -91,7 +91,14 @@ internal class BaseLocalCharacteristic<C: Central<*>>(
     override fun onWrite(handler: (suspend WriteRequest.() -> WriteResponse)?) = state.onWrite(handler)
     override fun setValue(value: ByteArray) = state.setValue(value)
 
-    override suspend fun update(value: ByteArray, to: Central<*>?) {
+    override suspend fun update(value: ByteArray) = update(value, to = null)
+
+    /**
+     * Sets the value and notifies the given central, or all subscribers when `null`.
+     *
+     * @throws IllegalStateException if [to] is not subscribed.
+     */
+    suspend fun update(value: ByteArray, to: Central<*>?) {
         check(canUpdate) { "Characteristic does not support notifications nor indications" }
         check(service.manager != null) { "The service has been removed" }
         require(value.size <= MAX_ATTRIBUTE_LENGTH) {

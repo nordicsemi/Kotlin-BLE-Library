@@ -67,7 +67,7 @@ class UpdateTest {
         fixture.subscribe(fixture.notify, 1, fixture.central)
         fixture.subscribe(fixture.notify, 1, fixture.central2)
 
-        fixture.notify.update(bytes(4), to = fixture.central2)
+        fixture.manager.services(fixture.central2).value.single().characteristics.first { it.uuid == fixture.notify.uuid }.update(bytes(4))
 
         val notification = fixture.server.notifications.single()
         assertEquals(fixture.central2, notification.central)
@@ -142,7 +142,7 @@ class UpdateTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify, 1, fixture.central)
 
-        assertFailsWith<IllegalStateException> { fixture.notify.update(bytes(1), to = fixture.central2) }
+        assertFailsWith<IllegalStateException> { fixture.manager.services(fixture.central2).value.single().characteristics.first { it.uuid == fixture.notify.uuid }.update(bytes(1)) }
         assertTrue(fixture.server.notifications.isEmpty())
     }
 
@@ -151,7 +151,7 @@ class UpdateTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         assertFailsWith<IllegalStateException> { fixture.ro.update(bytes(1)) }
-        assertFailsWith<IllegalStateException> { fixture.rw.update(bytes(1), to = fixture.central) }
+        assertFailsWith<IllegalStateException> { fixture.manager.services(fixture.central).value.single().characteristics.first { it.uuid == fixture.rw.uuid }.update(bytes(1)) }
         assertTrue(fixture.ro.value.value.isEmpty())
     }
 
@@ -187,7 +187,7 @@ class UpdateTest {
         assertTrue(fixture.server.notifications.isEmpty())
 
         // But it can be sent to the one with a larger MTU.
-        fixture.notify.update(ByteArray(15), to = fixture.central)
+        fixture.manager.services(fixture.central).value.single().characteristics.first { it.uuid == fixture.notify.uuid }.update(ByteArray(15))
         assertEquals(fixture.central, fixture.server.notifications.single().central)
     }
 

@@ -138,15 +138,11 @@ internal class CentralLocalCharacteristic(
 
     override val writes: SharedFlow<WriteRequest> = CentralWrites(characteristic.writes, identifier)
 
-    override suspend fun update(value: ByteArray, to: Central<*>?) {
-        require(to == null || to.identifier == identifier) {
-            "The characteristic belongs to the view of another central"
-        }
+    override suspend fun update(value: ByteArray) {
         // Updates are sent to the central of the view only.
-        val central = to ?: characteristic.subscribers.value.firstOrNull { it.identifier == identifier }
-        if (central != null) {
-            characteristic.update(value, central)
-        }
+        val central = characteristic.subscribers.value.firstOrNull { it.identifier == identifier }
+        checkNotNull(central) { "The central has not subscribed to this characteristic" }
+        (characteristic as BaseLocalCharacteristic<*>).update(value, central)
     }
 
     override fun toString() = "Central$characteristic"
