@@ -155,8 +155,7 @@ class PeripheralSpec<ID: Any> private constructor(
     peripheralHasBond: Boolean,
     internal val advertisingSets: List<MockAdvertisingSet>?,
     internal val eventHandler: PeripheralSpecEventHandler?,
-    internal val server: MockPeripheralServer?,
-    private var services: List<ServiceDefinition>?,
+    val server: MockPeripheralServer?,
     private val cachedServices: List<ServiceDefinition>?,
     isServiceCacheValid: Boolean,
 ): MockPeripheral {
@@ -164,7 +163,7 @@ class PeripheralSpec<ID: Any> private constructor(
      * The services available after service discovery: the services of the hosted [server], if any.
      */
     private val actualServices: List<ServiceDefinition>?
-        get() = server?.definitions ?: services
+        get() = server?.definitions
 
     /** A flow of GATT events emitted by the peripheral. */
     val events: SharedFlow<GattEvent>
@@ -1116,7 +1115,7 @@ class PeripheralSpec<ID: Any> private constructor(
      */
     override fun simulateServiceChange(newServices: MockServerScope.() -> Unit) {
         // Replace the services with new ones. With a hosted server, they are replaced there.
-        val isServiceChangedEnabled = server?.replaceServices(newServices) ?: replaceServices(newServices)
+        val isServiceChangedEnabled = checkNotNull(server) { "The peripheral is not connectable." }.replaceServices(newServices)
         isServiceCacheValid = false
 
         val connectionInterval = connectionParameters?.connectionIntervalMillis?.milliseconds ?: return
@@ -1136,24 +1135,6 @@ class PeripheralSpec<ID: Any> private constructor(
                 }
             }
         }
-    }
-
-    /**
-     * Replaces the services with the new ones.
-     *
-     * @return Whether the indications on Service Changed characteristic were enabled.
-     */
-    private fun replaceServices(newServices: MockServerScope.() -> Unit): Boolean {
-        val oldServices = services
-        services = MockServerScopeImpl().apply(newServices).build()
-
-        val serviceChangedCharacteristicCccd = oldServices
-            ?.firstOrNull { it.uuid == Service.GENERIC_ATTRIBUTE_UUID }
-            ?.characteristics
-            ?.firstOrNull { it.uuid == Characteristic.SERVICE_CHANGED }
-            ?.descriptors
-            ?.firstOrNull { it.uuid == Descriptor.CLIENT_CHAR_CONF_UUID } as? CCCD
-        return serviceChangedCharacteristicCccd?.enabled == true
     }
 
     /**
@@ -1859,7 +1840,7 @@ class PeripheralSpec<ID: Any> private constructor(
             delay(connectionParameters.connectionIntervalMillis.milliseconds)
 
             val eventHandler = checkNotNull(eventHandler)
-            val result = server?.executeWrite(execute) ?: eventHandler.onExecuteWriteRequest(this@PeripheralSpec, execute)
+            val result = checkNotNull(server).executeWrite(execute)
             when (val response = result) {
                 is WriteResponse.Success -> {
                     events.emit(ReliableWriteCompleted(OperationStatus.Success))
@@ -1889,7 +1870,7 @@ class PeripheralSpec<ID: Any> private constructor(
         private var advertisingSets: List<MockAdvertisingSet>? = null
         private var name: String? = null
         private var appearance: Int? = null
-        private var services: List<ServiceDefinition>? = null
+        private var serverBlock: (MockServerScope.() -> Unit)? = null
         private var cachedServices: List<ServiceDefinition>? = null
         private var eventHandler: PeripheralSpecEventHandler? = null
         private var server: MockPeripheralServer? = null
@@ -2016,7 +1997,7 @@ class PeripheralSpec<ID: Any> private constructor(
             require(this.name == null) { "Device is already configured as connectable." }
             this.name = name
             this.appearance = appearance
-            this.services = MockServerScopeImpl().apply(services).build()
+            this.serverBlock = services
             this.eventHandler = eventHandler
         }
 
@@ -2084,7 +2065,7 @@ class PeripheralSpec<ID: Any> private constructor(
             this.appearance = appearance
             this.eventHandler = eventHandler
             this.cachedServices = MockServerScopeImpl().apply(cachedServices).build()
-            this.services = actualServices?.let { MockServerScopeImpl().apply(it).build() } ?: this.cachedServices
+            this.serverBlock = actualServices ?: cachedServices
             // If the actual services were are specified, mark cache as invalid.
             // Accessing cached services will result in INVALID_HANDLE error and a new service
             // discovery will have to be performed
@@ -2161,7 +2142,7 @@ class PeripheralSpec<ID: Any> private constructor(
             this.appearance = appearance
             this.eventHandler = eventHandler
             this.cachedServices = MockServerScopeImpl().apply(cachedServices).build()
-            this.services = actualServices?.let { MockServerScopeImpl().apply(it).build() } ?: this.cachedServices
+            this.serverBlock = actualServices ?: cachedServices
             // If the actual services were are specified, mark cache as invalid.
             // Accessing cached services will result in INVALID_HANDLE error and a new service
             // discovery will have to be performed
@@ -2453,8 +2434,11 @@ class PeripheralSpec<ID: Any> private constructor(
             peripheralHasBond = peripheralHasBond,
             advertisingSets = advertisingSets,
             eventHandler = eventHandler,
-            server = server,
-            services = services,
+            server = server ?: serverBlock?.let { block ->
+                // The services defined with the DSL are hosted by an internal server.
+                MockPeripheralServer(CoroutineScope(SupervisorJob() + Dispatchers.Unconfined))
+                    .also { it.setupBlocking(block) }
+            },
             cachedServices = cachedServices,
             isServiceCacheValid = isServiceCacheValid,
         )

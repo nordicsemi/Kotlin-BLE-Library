@@ -57,15 +57,14 @@ import no.nordicsemi.kotlin.ble.server.mock.WriteResult
  * A GATT server hosted by a mock peripheral, [PeripheralSpec].
  *
  * It is a [no.nordicsemi.kotlin.ble.server.LocalServer], the same one that apps use to
- * implement the peripheral role, running on top of a simulated GATT server. A [PeripheralSpec]
- * created with the `server` parameter of [PeripheralSpec.Builder.connectable] answers the requests
- * of the mock clients using the services defined here, instead of calling
- * [PeripheralSpecEventHandler]: reads, writes, long and reliable writes, and subscriptions are
+ * implement the peripheral role, running on top of a simulated GATT server. Every connectable
+ * [PeripheralSpec] hosts one, also when its services are defined with the DSL of the builder
+ * (see [PeripheralSpec.server]). It answers the requests of the mock clients: reads, writes, long and reliable writes, and subscriptions are
  * handled by the handlers set with `onRead` and `onWrite` of the local characteristics and
  * descriptors, and by their values, and notifications and indications are sent with `update()`.
  *
  * The requests of the clients go through the same simulation as the requests to peripherals using
- * [PeripheralSpecEventHandler]: they take as much time as the transfer of the value, using
+ * other peripherals: they take as much time as the transfer of the value, using
  * the connection interval, the MTU and the PHY of the connection, and are subject to the same
  * checks of permissions, bonding and the validity of cached services.
  *
@@ -125,9 +124,13 @@ import no.nordicsemi.kotlin.ble.server.mock.WriteResult
  *
  * - One server can be used by one [PeripheralSpec] only.
  * - The only central is [central], the phone. It is the same for all the clients of the peripheral.
- * - A peripheral with a hosted server does not call the GATT callbacks of [PeripheralSpecEventHandler]
- *   (reads and writes). [PeripheralSpec.simulateValueUpdate] still sends a notification to the
- *   clients, but it bypasses the server.
+ * - [PeripheralSpec.simulateValueUpdate] sends a notification to the clients, but it bypasses the
+ *   server. Use `update()` of the local characteristic instead.
+ *
+ * ### Simulating faults
+ *
+ * The server handles Prepare Write, Execute Write and Client Characteristic Configuration requests
+ * itself. To simulate a fault at the level of ATT requests, set an [interceptor][GattInterceptor].
  *
  * @param scope The scope of the event loop of the manager, which also runs the handlers.
  */
@@ -146,6 +149,23 @@ class MockPeripheralServer private constructor(
 
     /** The central, which is also a [MockCentral] sending the requests of the clients. */
     internal val simulatedCentral = SimulatedCentralImpl(gatt)
+
+    /**
+     * Defines the services without suspending.
+     *
+     * Used for the services defined with the DSL of the peripheral builder, which are hosted by
+     * an internal server.
+     */
+    internal fun setupBlocking(block: MockServerScope.() -> Unit) {
+        runImmediately { setup { MockServerScopeView(this).block() } }
+    }
+
+    /**
+     * An optional interceptor of the requests of the clients.
+     *
+     * It simulates faults at the level of ATT requests. See [GattInterceptor].
+     */
+    var interceptor: GattInterceptor? = null
 
     /** The peripheral using this server. */
     private var peripheral: PeripheralSpec<*>? = null
@@ -190,17 +210,18 @@ class MockPeripheralServer private constructor(
      * Reads the whole value of the attribute, using the Read, and Read Blob requests when needed.
      */
     internal suspend fun read(attribute: Int): ReadResponse =
-        when (val result = simulatedCentral.readLong(attribute)) {
+        interceptor?.onRead(attribute) ?: when (val result = simulatedCentral.readLong(attribute)) {
             is ReadResult.Success -> ReadResponse.Success(result.value)
             is ReadResult.Failure -> ReadResponse.Failure(result.status)
         }
 
     /** Sends a single Write Request. The value must fit in a single request. */
     internal suspend fun write(attribute: Int, value: ByteArray): WriteResponse =
-        simulatedCentral.write(attribute, value, withResponse = true).toResponse()
+        interceptor?.onWrite(attribute, value) ?: simulatedCentral.write(attribute, value, withResponse = true).toResponse()
 
     /** Sends a Write Command. The value must fit in a single command. */
     internal suspend fun writeCommand(attribute: Int, value: ByteArray) {
+        interceptor?.onWriteCommand(attribute, value)?.let { return }
         val _ = simulatedCentral.write(attribute, value, withResponse = false)
     }
 
@@ -211,6 +232,7 @@ class MockPeripheralServer private constructor(
      * a failure, until it is executed or cancelled. A failed Long Write cancels the queue.
      */
     internal suspend fun prepareWrite(attribute: Int, value: ByteArray, reliable: Boolean): PrepareWriteResponse {
+        interceptor?.onPrepareWrite(attribute, value)?.let { return it }
         val write = reliableWrite
             ?: simulatedCentral.beginReliableWrite().also { reliableWrite = it }
         return when (val result = write.write(attribute, value)) {
@@ -229,6 +251,7 @@ class MockPeripheralServer private constructor(
      * Executes or cancels the values queued with [prepareWrite]. Does nothing if nothing was queued.
      */
     internal suspend fun executeWrite(execute: Boolean): WriteResponse {
+        interceptor?.onExecuteWrite(execute)?.let { return it }
         val write = reliableWrite ?: return WriteResponse.Success
         reliableWrite = null
         return (if (execute) write.execute() else write.cancel()).toResponse()
@@ -356,4 +379,37 @@ internal class SimulatedGattServer: MockGattServer<String, SimulatedCentral>() {
         updateSink?.invoke(attribute, value, confirm)
         super.notify(central, attribute, value, confirm)
     }
+}
+
+/**
+ * Intercepts the ATT requests sent by the clients to a [MockPeripheralServer].
+ *
+ * The requests are intercepted before they reach the services of the server. Use it to simulate faults that the GATT API of the server cannot
+ * express, as the server handles Prepare Write, Execute Write and Client Characteristic
+ * Configuration writes itself.
+ *
+ * Each method returns `null` to let the request go to the server as usual, or a response to
+ * answer the request without the server seeing it. The attributes are identified by their handle,
+ * the `instanceId`.
+ */
+interface GattInterceptor {
+
+    /** A Read request, or a series of Read Blob requests, of the attribute. */
+    suspend fun onRead(attribute: Int): ReadResponse? = null
+
+    /** A Write Request of the attribute, including writes of the CCCD. */
+    suspend fun onWrite(attribute: Int, value: ByteArray): WriteResponse? = null
+
+    /** A Write Command of the attribute. A non-null result means the command was consumed. */
+    suspend fun onWriteCommand(attribute: Int, value: ByteArray): Unit? = null
+
+    /**
+     * A Prepare Write request, a part of a Long Write or a Reliable Write. Returning
+     * [PrepareWriteResponse.Success] with a value different from the sent one simulates
+     * a transmission error.
+     */
+    suspend fun onPrepareWrite(attribute: Int, value: ByteArray): PrepareWriteResponse? = null
+
+    /** An Execute Write request, which commits or cancels the prepared writes. */
+    suspend fun onExecuteWrite(execute: Boolean): WriteResponse? = null
 }

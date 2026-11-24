@@ -108,12 +108,12 @@ class HostedServerSpecTest {
     }
 
     @Test
-    fun `spec using an event handler does not have a server`() {
+    fun `spec with services defined by the builder hosts an internal server`() {
         val spec = PeripheralSpec.simulatePeripheral("id") {
             connectable(name = "Device", eventHandler = object : PeripheralSpecEventHandler {}, services = { })
         }
 
-        assertNull(spec.server)
+        assertNotNull(spec.server)
     }
 
     @Test

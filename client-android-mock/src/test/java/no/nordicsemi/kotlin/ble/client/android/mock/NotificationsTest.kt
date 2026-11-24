@@ -51,6 +51,7 @@ import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
 import no.nordicsemi.kotlin.ble.client.mock.ConnectionResult
 import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
+import no.nordicsemi.kotlin.ble.client.mock.GattInterceptor
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.client.mock.WriteResponse
@@ -95,12 +96,21 @@ class NotificationsTest {
 
     private val eventHandler = object : PeripheralSpecEventHandler {
         override fun onConnectionRequest(peripheral: MockPeripheral, phy: PrimaryPhy) = ConnectionResult.Accept
+    }
 
-        override fun onWriteRequest(peripheral: MockPeripheral, descriptor: MockRemoteDescriptor, value: ByteArray): WriteResponse {
-            if (!descriptor.isClientCharacteristicConfiguration) return WriteResponse.Success
+    /** The services discovered by the client. */
+    private var discovered: List<RemoteService> = emptyList()
+
+    private val interceptor = object : GattInterceptor {
+        override suspend fun onWrite(attribute: Int, value: ByteArray): WriteResponse? {
+            val descriptor = discovered
+                .flatMap { it.characteristics }
+                .flatMap { c -> c.descriptors.map { c to it } }
+                .firstOrNull { (_, d) -> d.instanceId == attribute && d.isClientCharacteristicConfiguration }
+                ?: return null
 
             cccdWrites++
-            isNotifyingOnCccdWrite = descriptor.characteristic.isNotifying.value
+            isNotifyingOnCccdWrite = descriptor.first.isNotifying.value
 
             // Send a notification immediately after notifications were enabled.
             // It will be received by the client before the CCCD Write Response.
@@ -108,7 +118,8 @@ class NotificationsTest {
             if (enabled && cccdWriteResponse is WriteResponse.Success) {
                 peripheralSpec.simulateValueUpdate(handle, this@NotificationsTest.value)
             }
-            return cccdWriteResponse
+            // On success, the server handles the write.
+            return cccdWriteResponse.takeIf { it is WriteResponse.Failure }
         }
     }
 
@@ -117,6 +128,7 @@ class NotificationsTest {
         cccdWrites = 0
         isNotifyingOnCccdWrite = null
         cccdWriteResponse = WriteResponse.Success
+        discovered = emptyList()
         peripheralSpec = PeripheralSpec.simulatePeripheral(
             identifier = "AA:BB:CC:DD:EE:FF",
             // Android assumes PUBLIC address type for devices that weren't scanned.
@@ -148,6 +160,7 @@ class NotificationsTest {
                 }
             }
         }
+        peripheralSpec.server!!.interceptor = interceptor
     }
 
     /**
@@ -162,6 +175,7 @@ class NotificationsTest {
             .filterIsInstance<RemoteServices.Discovered>()
             .first()
             .services
+            .also { discovered = it }
     }
 
     @Test
