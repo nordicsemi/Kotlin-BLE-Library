@@ -48,6 +48,7 @@ import no.nordicsemi.kotlin.ble.client.Peripheral
 import no.nordicsemi.kotlin.ble.client.ScanResult
 import no.nordicsemi.kotlin.ble.core.Environment
 import no.nordicsemi.kotlin.ble.core.Manager
+import no.nordicsemi.kotlin.ble.server.LocalServer
 import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
 
 /**
@@ -69,6 +70,8 @@ abstract class CentralManagerImpl<
 >(
     protected val scope: CoroutineScope,
     private val environment: Environment,
+    /** The local GATT server of this device, whose services are available to the profiles. */
+    val server: LocalServer<ID, *>? = null,
 ): CentralManager<ID, P, EX, F, SR> {
     /**
      * The scope of the jobs of this manager, e.g. closing the peripherals.
@@ -116,6 +119,7 @@ abstract class CentralManagerImpl<
      */
     protected fun addPeripheral(id: ID, peripheral: P) {
         synchronized(peripheralsLock) {
+            peripheral.server = server
             managedPeripherals[id] = peripheral
         }
     }
@@ -149,6 +153,7 @@ abstract class CentralManagerImpl<
     protected fun peripheral(id: ID, factory: (ID) -> P): P = synchronized(peripheralsLock) {
         managedPeripherals.getOrPut(id) {
             factory(id).also { newPeripheral ->
+                newPeripheral.server = server
                 // Make sure the new peripheral is closed when the manager gets closed or
                 // the scope gets canceled.
                 state

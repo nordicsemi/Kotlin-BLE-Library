@@ -35,6 +35,7 @@ package no.nordicsemi.kotlin.ble.client
 
 import kotlinx.coroutines.CoroutineScope
 import no.nordicsemi.kotlin.ble.core.ConnectionState
+import no.nordicsemi.kotlin.ble.core.Profile as CoreProfile
 import kotlin.uuid.Uuid
 
 /**
@@ -206,10 +207,20 @@ import kotlin.uuid.Uuid
  * @see Peripheral.profile
  */
 sealed class Profile(
-    internal val requiredServiceUuids: List<Uuid>,
-    internal val optionalServiceUuids: List<Uuid> = emptyList(),
-    val name: String? = null,
+    requiredServiceUuids: List<Uuid>,
+    optionalServiceUuids: List<Uuid> = emptyList(),
+    name: String? = null,
+) : CoreProfile<Peripheral<*, *>, RemoteService, Nothing>(
+    requiredServiceUuids = requiredServiceUuids,
+    optionalServiceUuids = optionalServiceUuids,
+    name = name,
 ) {
+    final override fun prepare(
+        target: Peripheral<*, *>,
+        remoteServices: List<RemoteService>,
+        localServices: List<Nothing>,
+    ) = prepare(target, remoteServices)
+
     /**
      * Validates and prepares the services to be used in [initialize].
      *
@@ -274,7 +285,7 @@ sealed class Profile(
      * @param peripheral The peripheral the profile is being resolved on.
      * @see prepare
      */
-    protected abstract suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>)
+    abstract override suspend fun CoroutineScope.initialize(target: Peripheral<*, *>)
 
     /**
      * Notifies the profile implementation, that the peripheral does not support the required
@@ -316,7 +327,7 @@ sealed class Profile(
      * @param peripheral The peripheral the profile is being resolved on.
      * @see Peripheral.profile
      */
-    protected open suspend fun unsupported(peripheral: Peripheral<*, *>) {
+    override suspend fun unsupported(target: Peripheral<*, *>) {
         // Empty default implementation.
     }
 
@@ -344,6 +355,9 @@ sealed class Profile(
         // Empty default implementation.
     }
 
+    final override suspend fun failed(target: Peripheral<*, *>, reason: Any) =
+        failed(target, reason as RemoteServices.Failed.Reason)
+
     /**
      * Runs [prepare] on behalf of [Peripheral.profile], before it commits to reporting
      * [Found][ProfileServices.Found].
@@ -358,13 +372,8 @@ sealed class Profile(
      * @param services The discovered services.
      * @throws IllegalArgumentException if [prepare] does, or if it throws [NoSuchElementException].
      */
-    internal fun validate(peripheral: Peripheral<*, *>, services: List<RemoteService>) {
-        try {
-            prepare(peripheral, services)
-        } catch (e: NoSuchElementException) {
-            throw IllegalArgumentException(e)
-        }
-    }
+    internal fun validate(peripheral: Peripheral<*, *>, services: List<RemoteService>) =
+        validate(peripheral, services, emptyList())
 
     /**
      * Executes the profile for the given [state]: [initialize] on
@@ -382,9 +391,9 @@ sealed class Profile(
         profileScope: CoroutineScope,
     ) {
         when (state) {
-            is ProfileServices.Found -> with(profileScope) { initialize(peripheral) }
-            is ProfileServices.Unsupported -> unsupported(peripheral)
-            is ProfileServices.Failed -> failed(peripheral, state.reason)
+            is ProfileServices.Found -> start(peripheral, profileScope)
+            is ProfileServices.Unsupported -> reportUnsupported(peripheral)
+            is ProfileServices.Failed -> reportFailed(peripheral, state.reason)
         }
     }
 

@@ -50,6 +50,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
@@ -71,12 +72,15 @@ import no.nordicsemi.kotlin.ble.client.exception.PeripheralNotConnectedException
 import no.nordicsemi.kotlin.ble.client.internal.OperationMutex
 import no.nordicsemi.kotlin.ble.core.Characteristic
 import no.nordicsemi.kotlin.ble.core.ConnectionState
+import no.nordicsemi.kotlin.ble.core.PrimaryService
+import no.nordicsemi.kotlin.ble.core.Profile as CoreProfile
 import no.nordicsemi.kotlin.ble.core.Environment
 import no.nordicsemi.kotlin.ble.core.Peer
 import no.nordicsemi.kotlin.ble.core.Service
 import no.nordicsemi.kotlin.ble.core.WriteType
 import no.nordicsemi.kotlin.ble.core.internal.withCallSite
 import no.nordicsemi.kotlin.ble.core.log.Layer
+import no.nordicsemi.kotlin.ble.server.LocalServer
 import no.nordicsemi.kotlin.log.Log
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
@@ -114,6 +118,15 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
 
     /** @hide */
     internal val executor = this.impl
+
+    /**
+     * The local GATT server of this device, set when the peripheral is created by a central manager.
+     *
+     * Its services are available to the profiles registered on this peripheral.
+     *
+     * @hide
+     */
+    internal var server: LocalServer<ID, *>? = null
 
     /**
      * A job that collects GATT events from the peripheral.
@@ -1469,10 +1482,108 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
     )
 
     /**
-     * Suspends until the peripheral is disconnected.
+     * Registers a profile that uses the services of this peripheral and the local services.
      *
-     * @throws CancellationException if the current coroutine is canceled.
+     * The profile is started when the required services of the peripheral were discovered and all
+     * the local services it needs, [Profile.localServiceUuids][CoreProfile.localServiceUuids], are
+     * available in the local server of the central manager. If the local services are not
+     * available yet, the profile waits for them.
+     *
+     * The local services are not added by the profile. The application defines them when it sets
+     * up the local server. They are the services as seen by this peripheral, see
+     * [LocalServer.services], so for example `writes` of a local characteristic emits only
+     * the writes sent by this peripheral.
+     *
+     * The profile is started on a child coroutine of the given [scope], which is cancelled when
+     * the peripheral disconnects, or the services are invalidated.
+     *
+     * @param L The type of the local services.
+     * @param scope The scope in which the profile runs.
+     * @param profile The profile, which can use the services of this peripheral and the local ones.
+     * @param required Whether the peripheral should be disconnected when the required services
+     * are not found, or are rejected by the profile.
+     * @throws IllegalStateException if the profile needs local services, but the central manager
+     * was created without a local server.
+     * @see Profile
      */
+    fun <L: PrimaryService<*>> profile(
+        scope: CoroutineScope,
+        profile: CoreProfile<Peripheral<*, *>, RemoteService, L>,
+        required: Boolean = true,
+    ) {
+        check(profile.localServiceUuids.isEmpty() || server != null) {
+            "${profile.name ?: "Profile"} needs local services, but the central manager has no local server"
+        }
+        profileImpl(
+            scope = scope,
+            requiredServiceUuids = profile.requiredServiceUuids,
+            optionalServiceUuids = profile.optionalServiceUuids,
+            required = required,
+            name = profile.name,
+            validate = null,
+            block = { state ->
+                when (state) {
+                    is ProfileServices.Found -> {
+                        // Wait until the local services are available.
+                        val local = localServicesOf(profile)
+                        try {
+                            profile.validate(this@Peripheral, state.services, local)
+                        } catch (e: IllegalArgumentException) {
+                            logger?.warn(Layer.GATT, e) { "${profile.name ?: "Profile"}: Validation failed" }
+                            if (required) {
+                                disconnect(ConnectionState.Disconnected.Reason.RequiredServiceNotFound)
+                            }
+                            profile.reportUnsupported(this@Peripheral)
+                            return@profileImpl
+                        }
+                        profile.start(this@Peripheral, this)
+                    }
+                    is ProfileServices.Unsupported -> profile.reportUnsupported(this@Peripheral)
+                    is ProfileServices.Failed -> profile.reportFailed(this@Peripheral, state.reason)
+                }
+            }
+        )
+    }
+
+    /**
+     * Registers a profile that uses the services of this peripheral and the local services.
+     *
+     * The profile runs in the scope of the caller. See the overload with a scope for details.
+     *
+     * @param L The type of the local services.
+     * @param profile The profile, which can use the services of this peripheral and the local ones.
+     * @param required Whether the peripheral should be disconnected when the required services
+     * are not found, or are rejected by the profile.
+     * @throws IllegalStateException if the profile needs local services, but the central manager
+     * was created without a local server.
+     */
+    suspend fun <L: PrimaryService<*>> profile(
+        profile: CoreProfile<Peripheral<*, *>, RemoteService, L>,
+        required: Boolean = true,
+    ) {
+        val userScope = CoroutineScope(currentCoroutineContext())
+        profile(userScope, profile, required)
+    }
+
+    /**
+     * Waits until the local services needed by the profile are available.
+     *
+     * The services are the views of the local server for this peripheral.
+     */
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun <L: PrimaryService<*>> localServicesOf(
+        profile: CoreProfile<Peripheral<*, *>, RemoteService, L>,
+    ): List<L> {
+        if (profile.localServiceUuids.isEmpty()) return emptyList()
+        val server = checkNotNull(server) {
+            "${profile.name ?: "Profile"} needs local services, but the central manager has no local server"
+        }
+        return server.services(identifier)
+            .first { list -> profile.localServiceUuids.all { uuid -> list.any { it.uuid == uuid } } }
+            .filter { it.uuid in profile.localServiceUuids }
+            .map { it as L }
+    }
+
     @IgnorableReturnValue
     suspend fun awaitDisconnection(): ConnectionState.Disconnected.Reason? = state
         .filterIsInstance<ConnectionState.Disconnected>()

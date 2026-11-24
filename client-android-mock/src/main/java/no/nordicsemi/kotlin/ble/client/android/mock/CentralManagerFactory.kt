@@ -33,6 +33,7 @@
 
 package no.nordicsemi.kotlin.ble.client.android.mock
 
+import no.nordicsemi.kotlin.ble.server.LocalServer
 import kotlinx.coroutines.CoroutineScope
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.mock.internal.MockCentralManagerImpl
@@ -61,4 +62,5 @@ fun CentralManager.Factory.mock(
     environment: MockAndroidEnvironment = LatestApi(),
     scope: CoroutineScope,
     clock: Clock = Clock.System,
-): MockCentralManager = MockCentralManagerImpl(scope, environment, clock)
+    server: LocalServer<String, *>? = null,
+): MockCentralManager = MockCentralManagerImpl(scope, environment, clock, server)

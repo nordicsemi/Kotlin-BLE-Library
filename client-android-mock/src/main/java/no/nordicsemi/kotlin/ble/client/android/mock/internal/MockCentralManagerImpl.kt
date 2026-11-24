@@ -31,6 +31,7 @@
 
 package no.nordicsemi.kotlin.ble.client.android.mock.internal
 
+import no.nordicsemi.kotlin.ble.server.LocalServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -79,7 +80,8 @@ open class MockCentralManagerImpl(
     scope: CoroutineScope,
     private val environment: MockAndroidEnvironment = LatestApi(),
     clock: Clock = Clock.System,
-): MockCentralManager, CentralManagerImpl(scope, environment) {
+    server: LocalServer<String, *>? = null,
+): MockCentralManager, CentralManagerImpl(scope, environment, server) {
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
 
     /** The number of scans (flows returned by [scan]) that are currently collected. */

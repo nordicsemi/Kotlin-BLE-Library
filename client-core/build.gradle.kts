@@ -50,6 +50,7 @@ nordicPublishing {
 
 dependencies {
     api(project(":core"))
+    api(project(":server-core"))
 
     api(libs.kotlinx.datetime)
 
