@@ -90,7 +90,7 @@ class LifecycleTest {
 
     @Test
     fun close_clearsSubscribers() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
         val notify = fixture.notify
 
@@ -101,7 +101,7 @@ class LifecycleTest {
 
     @Test
     fun close_stopsProcessingEvents() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         val rw = fixture.rw
         fixture.manager.close()
 
@@ -114,7 +114,7 @@ class LifecycleTest {
 
     @Test
     fun close_update_throws() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
         val notify = fixture.notify
         fixture.manager.close()
@@ -173,7 +173,7 @@ class LifecycleTest {
 
     @Test
     fun events_areProcessedInOrder() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         val order = mutableListOf<Int>()
         fixture.ro.onRead {
             kotlinx.coroutines.delay(100)

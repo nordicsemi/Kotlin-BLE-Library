@@ -45,7 +45,7 @@ class PreparedWriteTest {
 
     @Test
     fun prepared_isEchoedAndNotApplied() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         val response = fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, offset = 0)
 
@@ -57,7 +57,7 @@ class PreparedWriteTest {
 
     @Test
     fun prepared_echoesOffset() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         val response = fixture.write(fixture.rw.instanceId, bytes(3, 4), prepared = true, offset = 2)
 
@@ -67,10 +67,10 @@ class PreparedWriteTest {
 
     @Test
     fun execute_assemblesFragments() = runTest {
-        val fixture = Fixture(this).apply { setup() }
-        fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, offset = 0)
-        fixture.write(fixture.rw.instanceId, bytes(3, 4), prepared = true, offset = 2)
-        fixture.write(fixture.rw.instanceId, bytes(5), prepared = true, offset = 4)
+        val fixture = Fixture(this).apply { val _ = setup() }
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, offset = 0)
+        val _ = fixture.write(fixture.rw.instanceId, bytes(3, 4), prepared = true, offset = 2)
+        val _ = fixture.write(fixture.rw.instanceId, bytes(5), prepared = true, offset = 4)
 
         val response = fixture.execute()
 
@@ -80,13 +80,13 @@ class PreparedWriteTest {
 
     @Test
     fun execute_deliversOneWriteRequest() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         val requests = mutableListOf<WriteRequest<FakeCentral>>()
         fixture.rw.onWrite { requests += this; WriteResponse.Success }
-        fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, offset = 0)
-        fixture.write(fixture.rw.instanceId, bytes(3), prepared = true, offset = 2)
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, offset = 0)
+        val _ = fixture.write(fixture.rw.instanceId, bytes(3), prepared = true, offset = 2)
 
-        fixture.execute()
+        val _ = fixture.execute()
 
         assertEquals(1, requests.size)
         assertContentEquals(bytes(1, 2, 3), requests[0].value)
@@ -96,10 +96,10 @@ class PreparedWriteTest {
 
     @Test
     fun execute_multipleAttributes() = runTest {
-        val fixture = Fixture(this).apply { setup() }
-        fixture.write(fixture.rw.instanceId, bytes(1), prepared = true, offset = 0)
-        fixture.write(fixture.wo.instanceId, bytes(7, 8), prepared = true, offset = 0)
-        fixture.write(fixture.rw.instanceId, bytes(2), prepared = true, offset = 1)
+        val fixture = Fixture(this).apply { val _ = setup() }
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1), prepared = true, offset = 0)
+        val _ = fixture.write(fixture.wo.instanceId, bytes(7, 8), prepared = true, offset = 0)
+        val _ = fixture.write(fixture.rw.instanceId, bytes(2), prepared = true, offset = 1)
 
         val response = fixture.execute()
 
@@ -110,28 +110,28 @@ class PreparedWriteTest {
 
     @Test
     fun execute_clearsTheQueue() = runTest {
-        val fixture = Fixture(this).apply { setup() }
-        fixture.write(fixture.rw.instanceId, bytes(1), prepared = true)
-        fixture.execute()
+        val fixture = Fixture(this).apply { val _ = setup() }
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1), prepared = true)
+        val _ = fixture.execute()
         fixture.rw.setValue(bytes())
 
-        fixture.execute()
+        val _ = fixture.execute()
 
         assertTrue(fixture.rw.value.value.isEmpty())
     }
 
     @Test
     fun execute_emptyQueue_success() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         assertEquals(OperationStatus.Success, fixture.execute().status)
     }
 
     @Test
     fun execute_gap_invalidOffset() = runTest {
-        val fixture = Fixture(this).apply { setup() }
-        fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, offset = 0)
-        fixture.write(fixture.rw.instanceId, bytes(5), prepared = true, offset = 3)
+        val fixture = Fixture(this).apply { val _ = setup() }
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, offset = 0)
+        val _ = fixture.write(fixture.rw.instanceId, bytes(5), prepared = true, offset = 3)
 
         val response = fixture.execute()
 
@@ -141,9 +141,9 @@ class PreparedWriteTest {
 
     @Test
     fun execute_overlap_invalidOffset() = runTest {
-        val fixture = Fixture(this).apply { setup() }
-        fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, offset = 0)
-        fixture.write(fixture.rw.instanceId, bytes(5), prepared = true, offset = 1)
+        val fixture = Fixture(this).apply { val _ = setup() }
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, offset = 0)
+        val _ = fixture.write(fixture.rw.instanceId, bytes(5), prepared = true, offset = 1)
 
         assertEquals(OperationStatus.InvalidOffset, fixture.execute().status)
         assertTrue(fixture.rw.value.value.isEmpty())
@@ -151,17 +151,17 @@ class PreparedWriteTest {
 
     @Test
     fun execute_firstFragmentNotAtZero_invalidOffset() = runTest {
-        val fixture = Fixture(this).apply { setup() }
-        fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, offset = 2)
+        val fixture = Fixture(this).apply { val _ = setup() }
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, offset = 2)
 
         assertEquals(OperationStatus.InvalidOffset, fixture.execute().status)
     }
 
     @Test
     fun execute_tooLong_invalidAttributeLength() = runTest {
-        val fixture = Fixture(this).apply { setup() }
-        fixture.write(fixture.rw.instanceId, ByteArray(300), prepared = true, offset = 0)
-        fixture.write(fixture.rw.instanceId, ByteArray(300), prepared = true, offset = 300)
+        val fixture = Fixture(this).apply { val _ = setup() }
+        val _ = fixture.write(fixture.rw.instanceId, ByteArray(300), prepared = true, offset = 0)
+        val _ = fixture.write(fixture.rw.instanceId, ByteArray(300), prepared = true, offset = 300)
 
         assertEquals(OperationStatus.InvalidAttributeLength, fixture.execute().status)
         assertTrue(fixture.rw.value.value.isEmpty())
@@ -169,10 +169,10 @@ class PreparedWriteTest {
 
     @Test
     fun execute_handlerFailure_returnsStatusAndDropsTheRest() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.rw.onWrite { WriteResponse.Failure(OperationStatus.ValueNotAllowed) }
-        fixture.write(fixture.rw.instanceId, bytes(1), prepared = true)
-        fixture.write(fixture.wo.instanceId, bytes(2), prepared = true)
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1), prepared = true)
+        val _ = fixture.write(fixture.wo.instanceId, bytes(2), prepared = true)
 
         val response = fixture.execute()
 
@@ -187,29 +187,29 @@ class PreparedWriteTest {
 
     @Test
     fun execute_handlerException_unlikelyError() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.rw.onWrite { throw RuntimeException("Boom") }
-        fixture.write(fixture.rw.instanceId, bytes(1), prepared = true)
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1), prepared = true)
 
         assertEquals(OperationStatus.UnlikelyError, fixture.execute().status)
     }
 
     @Test
     fun cancel_clearsTheQueue() = runTest {
-        val fixture = Fixture(this).apply { setup() }
-        fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true)
+        val fixture = Fixture(this).apply { val _ = setup() }
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true)
 
         val response = fixture.execute(execute = false)
 
         assertEquals(OperationStatus.Success, response.status)
         assertTrue(fixture.rw.value.value.isEmpty())
-        fixture.execute()
+        val _ = fixture.execute()
         assertTrue(fixture.rw.value.value.isEmpty())
     }
 
     @Test
     fun prepared_queueFull() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         var last: Response? = null
         repeat(64) { last = fixture.write(fixture.rw.instanceId, bytes(1), prepared = true, offset = it) }
         assertEquals(OperationStatus.Success, last?.status)
@@ -221,27 +221,27 @@ class PreparedWriteTest {
 
     @Test
     fun prepared_queuesAreIndependentPerCentral() = runTest {
-        val fixture = Fixture(this).apply { setup() }
-        fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, from = fixture.central)
-        fixture.write(fixture.rw.instanceId, bytes(9), prepared = true, from = fixture.central2)
+        val fixture = Fixture(this).apply { val _ = setup() }
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, from = fixture.central)
+        val _ = fixture.write(fixture.rw.instanceId, bytes(9), prepared = true, from = fixture.central2)
 
-        fixture.execute(from = fixture.central)
+        val _ = fixture.execute(from = fixture.central)
         assertContentEquals(bytes(1, 2), fixture.rw.value.value)
 
-        fixture.execute(from = fixture.central2)
+        val _ = fixture.execute(from = fixture.central2)
         assertContentEquals(bytes(9), fixture.rw.value.value)
     }
 
     @Test
     fun prepared_unknownAttribute_invalidHandle() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         assertEquals(OperationStatus.InvalidHandle, fixture.write(9999, bytes(1), prepared = true)?.status)
     }
 
     @Test
     fun prepared_notWritable_notPermitted() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         assertEquals(
             OperationStatus.WriteNotPermitted,
@@ -253,8 +253,8 @@ class PreparedWriteTest {
 
     @Test
     fun execute_toCccd_updatesSubscription() = runTest {
-        val fixture = Fixture(this).apply { setup() }
-        fixture.write(fixture.cccd(NOTIFY_UUID).instanceId, bytes(1, 0), prepared = true)
+        val fixture = Fixture(this).apply { val _ = setup() }
+        val _ = fixture.write(fixture.cccd(NOTIFY_UUID).instanceId, bytes(1, 0), prepared = true)
 
         assertEquals(OperationStatus.Success, fixture.execute().status)
 
@@ -263,11 +263,11 @@ class PreparedWriteTest {
 
     @Test
     fun execute_afterServicesReplaced_invalidHandle() = runTest {
-        val fixture = Fixture(this).apply { setup() }
-        fixture.write(fixture.rw.instanceId, bytes(1), prepared = true)
+        val fixture = Fixture(this).apply { val _ = setup() }
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1), prepared = true)
         val old = fixture.rw
 
-        fixture.manager.setup {
+        val _ = fixture.manager.setup {
             Service(SERVICE_UUID) {
                 Characteristic(RW_UUID, no.nordicsemi.kotlin.ble.core.CharacteristicProperty.WRITE, no.nordicsemi.kotlin.ble.core.Permission.WRITE)
             }

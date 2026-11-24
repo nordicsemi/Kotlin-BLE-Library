@@ -42,7 +42,7 @@ class SubscriptionTest {
 
     @Test
     fun cccd_enableNotifications() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         val response = fixture.writeCccd(fixture.notify, 0x0001)
 
@@ -52,7 +52,7 @@ class SubscriptionTest {
 
     @Test
     fun cccd_enableIndications() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         val response = fixture.writeCccd(fixture.indicate, 0x0002)
 
@@ -62,7 +62,7 @@ class SubscriptionTest {
 
     @Test
     fun cccd_disable() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
 
         val response = fixture.writeCccd(fixture.notify, 0x0000)
@@ -73,7 +73,7 @@ class SubscriptionTest {
 
     @Test
     fun cccd_notifyOnCharacteristicWithBoth() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         assertEquals(OperationStatus.Success, fixture.writeCccd(fixture.both, 0x0001).status)
         assertEquals(OperationStatus.Success, fixture.writeCccd(fixture.both, 0x0002).status)
@@ -82,7 +82,7 @@ class SubscriptionTest {
 
     @Test
     fun cccd_indicationsOnNotifyOnlyCharacteristic_improperlyConfigured() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         val response = fixture.writeCccd(fixture.notify, 0x0002)
 
@@ -92,7 +92,7 @@ class SubscriptionTest {
 
     @Test
     fun cccd_notificationsOnIndicateOnlyCharacteristic_improperlyConfigured() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         val response = fixture.writeCccd(fixture.indicate, 0x0001)
 
@@ -102,7 +102,7 @@ class SubscriptionTest {
 
     @Test
     fun cccd_notificationsAndIndications_improperlyConfigured() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         val response = fixture.writeCccd(fixture.both, 0x0003)
 
@@ -112,7 +112,7 @@ class SubscriptionTest {
 
     @Test
     fun cccd_unknownBits_improperlyConfigured() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         val response = fixture.writeCccd(fixture.both, 0x0004)
 
@@ -121,7 +121,7 @@ class SubscriptionTest {
 
     @Test
     fun cccd_wrongLength_invalidAttributeLength() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         val cccd = fixture.cccd(NOTIFY_UUID)
 
         assertEquals(OperationStatus.InvalidAttributeLength, fixture.write(cccd.instanceId, bytes(1))?.status)
@@ -132,7 +132,7 @@ class SubscriptionTest {
 
     @Test
     fun cccd_readReturnsCentralsValue() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         val cccd = fixture.cccd(BOTH_UUID)
 
         assertContentEquals(bytes(0, 0), fixture.read(cccd.instanceId).value)
@@ -144,7 +144,7 @@ class SubscriptionTest {
 
     @Test
     fun cccd_isPerCentral() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         val cccd = fixture.cccd(NOTIFY_UUID)
 
         fixture.subscribe(fixture.notify, 1, fixture.central)
@@ -156,19 +156,19 @@ class SubscriptionTest {
 
     @Test
     fun cccd_multipleSubscribers() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         fixture.subscribe(fixture.notify, 1, fixture.central)
         fixture.subscribe(fixture.notify, 1, fixture.central2)
         assertEquals(setOf(fixture.central, fixture.central2), fixture.notify.subscribers.value)
 
-        fixture.writeCccd(fixture.notify, 0, fixture.central)
+        val _ = fixture.writeCccd(fixture.notify, 0, fixture.central)
         assertEquals(setOf(fixture.central2), fixture.notify.subscribers.value)
     }
 
     @Test
     fun cccd_subscriptionsAreIndependentBetweenCharacteristics() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         fixture.subscribe(fixture.notify)
 
@@ -178,17 +178,17 @@ class SubscriptionTest {
 
     @Test
     fun cccd_writeWithoutResponse_notAllowed() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         val cccd = fixture.cccd(NOTIFY_UUID)
 
-        fixture.write(cccd.instanceId, bytes(1, 0), responseNeeded = false)
+        val _ = fixture.write(cccd.instanceId, bytes(1, 0), responseNeeded = false)
 
         assertTrue(fixture.notify.subscribers.value.isEmpty())
     }
 
     @Test
     fun subscriptionChanged_updatesSubscribers() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         fixture.emit(GattServerEvent.SubscriptionChanged(fixture.central, fixture.notify.instanceId, true, false))
         assertEquals(setOf(fixture.central), fixture.notify.subscribers.value)
@@ -199,7 +199,7 @@ class SubscriptionTest {
 
     @Test
     fun subscriptionChanged_indications() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         fixture.emit(GattServerEvent.SubscriptionChanged(fixture.central, fixture.indicate.instanceId, false, true))
 
@@ -208,7 +208,7 @@ class SubscriptionTest {
 
     @Test
     fun subscriptionChanged_unsupportedIgnored() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         fixture.emit(GattServerEvent.SubscriptionChanged(fixture.central, fixture.notify.instanceId, false, true))
         fixture.emit(GattServerEvent.SubscriptionChanged(fixture.central, fixture.ro.instanceId, true, false))
@@ -220,7 +220,7 @@ class SubscriptionTest {
 
     @Test
     fun subscriptionChanged_isVisibleInCccd() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.emit(GattServerEvent.SubscriptionChanged(fixture.central, fixture.notify.instanceId, true, false))
 
         assertContentEquals(bytes(1, 0), fixture.read(fixture.cccd(NOTIFY_UUID).instanceId).value)
@@ -228,7 +228,7 @@ class SubscriptionTest {
 
     @Test
     fun disconnect_removesSubscriptions() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify, 1, fixture.central)
         fixture.subscribe(fixture.notify, 1, fixture.central2)
         fixture.subscribe(fixture.both, 2, fixture.central)
@@ -241,7 +241,7 @@ class SubscriptionTest {
 
     @Test
     fun disconnect_resetsCccdValue() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
 
         fixture.emit(GattServerEvent.CentralDisconnected(fixture.central))
@@ -251,8 +251,8 @@ class SubscriptionTest {
 
     @Test
     fun disconnect_dropsPreparedWrites() = runTest {
-        val fixture = Fixture(this).apply { setup() }
-        fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true)
+        val fixture = Fixture(this).apply { val _ = setup() }
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true)
 
         fixture.emit(GattServerEvent.CentralDisconnected(fixture.central))
         val response = fixture.execute()
@@ -263,7 +263,7 @@ class SubscriptionTest {
 
     @Test
     fun disconnect_unknownCentral_isIgnored() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
 
         fixture.emit(GattServerEvent.CentralDisconnected(FakeCentral("CC")))
@@ -273,11 +273,11 @@ class SubscriptionTest {
 
     @Test
     fun replacingServices_oldAttributesAreNotRouted() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
         val old = fixture.notify
 
-        fixture.manager.setup { Service(SERVICE_UUID) }
+        val _ = fixture.manager.setup { Service(SERVICE_UUID) }
 
         // The old characteristic is no longer hosted, so requests are not routed to it.
         assertEquals(OperationStatus.InvalidHandle, fixture.read(old.instanceId).status)

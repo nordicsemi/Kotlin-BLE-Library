@@ -72,7 +72,7 @@ class SetupTest {
     @Test
     fun setup_passesDefinitionsToServer() = runTest {
         val fixture = Fixture(this)
-        fixture.setup()
+        val _ = fixture.setup()
 
         assertEquals(1, fixture.server.setServicesCalls.size)
         val definitions = fixture.server.setServicesCalls[0]
@@ -128,7 +128,7 @@ class SetupTest {
     @Test
     fun setup_addsCccdForNotifyAndIndicate() = runTest {
         val fixture = Fixture(this)
-        fixture.setup()
+        val _ = fixture.setup()
 
         assertEquals(1, fixture.notify.descriptors.count { it.isClientCharacteristicConfiguration })
         assertEquals(1, fixture.indicate.descriptors.count { it.isClientCharacteristicConfiguration })
@@ -139,7 +139,7 @@ class SetupTest {
     @Test
     fun setup_cccdInitialValueIsZero() = runTest {
         val fixture = Fixture(this)
-        fixture.setup()
+        val _ = fixture.setup()
 
         assertContentEquals(bytes(0, 0), fixture.cccd(NOTIFY_UUID).value.value)
     }
@@ -147,7 +147,7 @@ class SetupTest {
     @Test
     fun setup_cudValueIsDescription() = runTest {
         val fixture = Fixture(this)
-        fixture.setup()
+        val _ = fixture.setup()
 
         val cud = fixture.rw.descriptors.first { it.uuid == Descriptor.CHAR_USER_DESC_UUID }
         assertContentEquals("Some value".encodeToByteArray(), cud.value.value)
@@ -178,7 +178,7 @@ class SetupTest {
     @Test
     fun setup_customDescriptorHasEmptyValue() = runTest {
         val fixture = Fixture(this)
-        fixture.setup()
+        val _ = fixture.setup()
 
         val descriptor = fixture.rw.descriptors.first { it.uuid == CUSTOM_DESCRIPTOR_UUID }
         assertTrue(descriptor.value.value.isEmpty())

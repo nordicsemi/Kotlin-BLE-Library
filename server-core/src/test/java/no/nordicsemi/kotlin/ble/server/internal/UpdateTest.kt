@@ -45,7 +45,7 @@ class UpdateTest {
 
     @Test
     fun update_notifiesAllSubscribers() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify, 1, fixture.central)
         fixture.subscribe(fixture.notify, 1, fixture.central2)
 
@@ -63,7 +63,7 @@ class UpdateTest {
 
     @Test
     fun update_notifiesOnlyTheGivenCentral() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify, 1, fixture.central)
         fixture.subscribe(fixture.notify, 1, fixture.central2)
 
@@ -75,7 +75,7 @@ class UpdateTest {
 
     @Test
     fun update_storesValue() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
 
         fixture.notify.update(bytes(5, 6))
@@ -86,7 +86,7 @@ class UpdateTest {
 
     @Test
     fun update_indicateOnlyUsesIndications() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.indicate, 2)
 
         fixture.indicate.update(bytes(1))
@@ -96,7 +96,7 @@ class UpdateTest {
 
     @Test
     fun update_notifyAndIndicateUsesNotification() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.both, 2)
 
         fixture.both.update(bytes(1))
@@ -107,7 +107,7 @@ class UpdateTest {
 
     @Test
     fun update_noSubscribers_storesValueOnly() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         fixture.notify.update(bytes(1, 2))
 
@@ -117,9 +117,9 @@ class UpdateTest {
 
     @Test
     fun update_afterUnsubscribe_doesNotNotify() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
-        fixture.writeCccd(fixture.notify, 0)
+        val _ = fixture.writeCccd(fixture.notify, 0)
 
         fixture.notify.update(bytes(1))
 
@@ -128,7 +128,7 @@ class UpdateTest {
 
     @Test
     fun update_afterDisconnect_doesNotNotify() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
         fixture.emit(GattServerEvent.CentralDisconnected(fixture.central))
 
@@ -139,7 +139,7 @@ class UpdateTest {
 
     @Test
     fun update_notSubscribedCentral_throws() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify, 1, fixture.central)
 
         assertFailsWith<IllegalStateException> { fixture.notify.update(bytes(1), to = fixture.central2) }
@@ -148,7 +148,7 @@ class UpdateTest {
 
     @Test
     fun update_unsupportedCharacteristic_throws() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
 
         assertFailsWith<IllegalStateException> { fixture.ro.update(bytes(1)) }
         assertFailsWith<IllegalStateException> { fixture.rw.update(bytes(1), to = fixture.central) }
@@ -157,7 +157,7 @@ class UpdateTest {
 
     @Test
     fun update_tooLongForCentral_throws() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
 
         assertFailsWith<IllegalArgumentException> { fixture.notify.update(ByteArray(21)) }
@@ -168,7 +168,7 @@ class UpdateTest {
 
     @Test
     fun update_maxLengthForCentral_accepted() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
 
         fixture.notify.update(ByteArray(20))
@@ -178,7 +178,7 @@ class UpdateTest {
 
     @Test
     fun update_tooLongForOneOfCentrals_throwsAndDoesNotNotifyAny() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.central2.maximumUpdateValueLength = 10
         fixture.subscribe(fixture.notify, 1, fixture.central)
         fixture.subscribe(fixture.notify, 1, fixture.central2)
@@ -193,7 +193,7 @@ class UpdateTest {
 
     @Test
     fun update_largerThan512_throws() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.central.maximumUpdateValueLength = 1000
         fixture.subscribe(fixture.notify)
 
@@ -202,7 +202,7 @@ class UpdateTest {
 
     @Test
     fun update_usesCurrentMaximumUpdateValueLength() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
         fixture.central.maximumUpdateValueLength = 100
 
@@ -213,7 +213,7 @@ class UpdateTest {
 
     @Test
     fun update_targetsAreNotifiedConcurrently() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify, 1, fixture.central)
         fixture.subscribe(fixture.notify, 1, fixture.central2)
         val gate = CompletableDeferred<Unit>()
@@ -233,7 +233,7 @@ class UpdateTest {
 
     @Test
     fun update_failure_isRethrownAfterAllAttempted() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify, 1, fixture.central)
         fixture.subscribe(fixture.notify, 1, fixture.central2)
         fixture.server.onNotify = {
@@ -248,11 +248,11 @@ class UpdateTest {
 
     @Test
     fun update_onReplacedService_throws() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         val old = fixture.notify
         fixture.subscribe(old)
 
-        fixture.manager.setup { Service(SERVICE_UUID) }
+        val _ = fixture.manager.setup { Service(SERVICE_UUID) }
 
         assertFailsWith<IllegalStateException> { old.update(bytes(1)) }
         assertTrue(fixture.server.notifications.isEmpty())
@@ -260,7 +260,7 @@ class UpdateTest {
 
     @Test
     fun update_onCharacteristicWithoutReadProperty_works() = runTest {
-        val fixture = Fixture(this).apply { setup() }
+        val fixture = Fixture(this).apply { val _ = setup() }
         val notifyOnly = fixture.characteristic(NOTIFY2_UUID)
         fixture.subscribe(notifyOnly)
 
