@@ -87,5 +87,27 @@ interface LocalServer<ID: Any, C: Central<ID>>: Manager {
      */
     suspend fun setup(builder: ServerScope.() -> Unit): List<LocalService<C>>
 
+    /**
+     * The local services, as seen by the central with the given identifier.
+     *
+     * The services are the same as in [services], they share the values and the handlers, but
+     * the requests and the subscribers of the characteristics and descriptors are limited to
+     * the central. For example, `writes` only emits the writes sent by this central, and
+     * `update` sends the value to this central only.
+     *
+     * The central does not have to be connected yet.
+     *
+     * @param identifier The identifier of the central.
+     */
+    fun services(identifier: ID): StateFlow<List<LocalService<C>>>
+
+    /**
+     * The local services, as seen by the given central.
+     *
+     * @param central The central.
+     * @see services
+     */
+    fun services(central: C): StateFlow<List<LocalService<C>>> = services(central.identifier)
+
     companion object Factory
 }

@@ -43,6 +43,7 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -116,6 +117,14 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
 
     override val state get() = server.state
     override val services: StateFlow<List<LocalService<C>>> get() = _services
+
+    /** The views of the services for each central. */
+    private val centralServices = MutableStateFlow<Map<ID, StateFlow<List<LocalService<C>>>>>(emptyMap())
+
+    override fun services(identifier: ID): StateFlow<List<LocalService<C>>> =
+        centralServices.value[identifier] ?: centralServices
+            .updateAndGet { map -> if (identifier in map) map else map + (identifier to CentralServices(_services, identifier)) }
+            .getValue(identifier)
 
     init {
         // Make sure the manager gets closed when its scope gets canceled.
