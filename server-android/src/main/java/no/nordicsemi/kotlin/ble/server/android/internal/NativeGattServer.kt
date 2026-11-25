@@ -61,8 +61,8 @@ import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
 import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
 import no.nordicsemi.kotlin.ble.core.log.Layer
 import no.nordicsemi.kotlin.ble.environment.android.NativeAndroidEnvironment
-import no.nordicsemi.kotlin.ble.server.android.Central
-import no.nordicsemi.kotlin.ble.server.exception.CentralNotConnectedException
+import no.nordicsemi.kotlin.ble.server.android.Client
+import no.nordicsemi.kotlin.ble.server.exception.ClientNotConnectedException
 import no.nordicsemi.kotlin.ble.server.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.server.internal.GattServer
 import no.nordicsemi.kotlin.ble.server.internal.GattServerEvent
@@ -101,23 +101,23 @@ private const val GATT_CONN_TERMINATE_LOCAL_HOST = 0x16
 internal class NativeGattServer(
     scope: CoroutineScope,
     private val environment: NativeAndroidEnvironment,
-): GattServer<String, Central>, Log.Emitter {
+): GattServer<String, Client>, Log.Emitter {
 
-    /** The logger. It is also set to the centrals. */
+    /** The logger. It is also set to the clients. */
     var logger: Log.Sink<Layer>? = Log.Sink.Null
         set(value) {
             field = value
-            synchronized(centrals) { centrals.values.toList() }.forEach { it.logger = value }
+            synchronized(clients) { clients.values.toList() }.forEach { it.logger = value }
         }
 
     override val state: StateFlow<Manager.State> = environment.bluetoothState
 
-    override val events: SharedFlow<GattServerEvent<Central>>
-        field = MutableSharedFlow<GattServerEvent<Central>>(extraBufferCapacity = EVENT_BUFFER_CAPACITY)
+    override val events: SharedFlow<GattServerEvent<Client>>
+        field = MutableSharedFlow<GattServerEvent<Client>>(extraBufferCapacity = EVENT_BUFFER_CAPACITY)
 
-    /** The centrals that are currently connected. */
-    val connectedCentrals: StateFlow<List<Central>>
-        field = MutableStateFlow<List<Central>>(emptyList())
+    /** The clients that are currently connected. */
+    val connectedClients: StateFlow<List<Client>>
+        field = MutableStateFlow<List<Client>>(emptyList())
 
     /** The native server, or `null` if it was not opened yet, or Bluetooth was turned off. */
     @Volatile
@@ -132,8 +132,8 @@ internal class NativeGattServer(
     /** Guards setting the services. */
     private val servicesMutex = Mutex()
 
-    /** Connected centrals, by their addresses. Guarded by itself. */
-    private val centrals = LinkedHashMap<String, NativeCentral>()
+    /** Connected clients, by their addresses. Guarded by itself. */
+    private val clients = LinkedHashMap<String, NativeClient>()
 
     /** The pending [BluetoothGattServer.addService], waiting for `onServiceAdded`. */
     @Volatile
@@ -142,7 +142,7 @@ internal class NativeGattServer(
     /**
      * Guards setting the value of a characteristic and notifying with it before Android 13.
      *
-     * The characteristics are shared by all centrals and the value is a part of their state.
+     * The characteristics are shared by all clients and the value is a part of their state.
      */
     private val valueLock = Any()
 
@@ -287,13 +287,13 @@ internal class NativeGattServer(
     // Responses and notifications
 
     override fun respond(
-        central: Central,
+        client: Client,
         requestId: Int,
         status: OperationStatus,
         offset: Int,
         value: ByteArray,
     ) {
-        val device = central.asNative().device
+        val device = client.asNative().device
         val server = server
         if (server == null) {
             logger?.w(Layer.GATT) { "Cannot respond to $device, the server is not open" }
@@ -313,28 +313,28 @@ internal class NativeGattServer(
     }
 
     override suspend fun notify(
-        central: Central,
+        client: Client,
         attribute: Int,
         value: ByteArray,
         confirm: Boolean,
     ) {
         ensureOpen()
-        val nativeCentral = central.asNative()
+        val nativeClient = client.asNative()
         val characteristic = attributes.attributeOf(attribute) as? BluetoothGattCharacteristic
             ?: throw IllegalArgumentException("Attribute $attribute is not a known characteristic")
-        if (!nativeCentral.state.value.isConnected) {
-            throw CentralNotConnectedException()
+        if (!nativeClient.state.value.isConnected) {
+            throw ClientNotConnectedException()
         }
 
-        // Only one notification can be in flight per central. The next ones are queued.
-        val status = nativeCentral.notifications.send(NOTIFICATION_TIMEOUT) {
+        // Only one notification can be in flight per client. The next ones are queued.
+        val status = nativeClient.notifications.send(NOTIFICATION_TIMEOUT) {
             // The server may have been closed while the notification was queued.
-            val server = server ?: throw CentralNotConnectedException()
-            if (!nativeCentral.state.value.isConnected) {
-                throw CentralNotConnectedException()
+            val server = server ?: throw ClientNotConnectedException()
+            if (!nativeClient.state.value.isConnected) {
+                throw ClientNotConnectedException()
             }
-            logger?.d(Layer.GATT) { "server.notifyCharacteristicChanged(device=${nativeCentral.device}, characteristic=${characteristic.uuid}, confirm=$confirm, value=0x${value.toHexString()})" }
-            server.sendNotification(nativeCentral.device, characteristic, confirm, value)
+            logger?.d(Layer.GATT) { "server.notifyCharacteristicChanged(device=${nativeClient.device}, characteristic=${characteristic.uuid}, confirm=$confirm, value=0x${value.toHexString()})" }
+            server.sendNotification(nativeClient.device, characteristic, confirm, value)
         } ?: throw OperationFailedException(OperationStatus.ConnectionTimeout)
 
         if (status != BluetoothGatt.GATT_SUCCESS) {
@@ -345,7 +345,7 @@ internal class NativeGattServer(
     /**
      * Sends the notification using the API available on the running Android version.
      *
-     * @throws CentralNotConnectedException if the central is not connected.
+     * @throws ClientNotConnectedException if the client is not connected.
      * @throws OperationFailedException if the notification could not be sent.
      */
     @Suppress("DEPRECATION")
@@ -359,12 +359,12 @@ internal class NativeGattServer(
             val result = notifyCharacteristicChanged(device, characteristic, confirm, value)
             when (result) {
                 0 /* BluetoothStatusCodes.SUCCESS */ -> return
-                4 /* BluetoothStatusCodes.ERROR_DEVICE_NOT_CONNECTED */ -> throw CentralNotConnectedException()
+                4 /* BluetoothStatusCodes.ERROR_DEVICE_NOT_CONNECTED */ -> throw ClientNotConnectedException()
                 200 /* BluetoothStatusCodes.ERROR_GATT_WRITE_REQUEST_BUSY */ -> throw OperationFailedException(OperationStatus.Busy)
                 else -> throw OperationFailedException(OperationStatus.RequestFailed)
             }
         } else {
-            // The value is a part of the characteristic, which is shared by all centrals.
+            // The value is a part of the characteristic, which is shared by all clients.
             // The native call reads it synchronously, so the lock needs to be held for that time only.
             val result = synchronized(valueLock) {
                 characteristic.value = value
@@ -376,25 +376,25 @@ internal class NativeGattServer(
         }
     }
 
-    // Central operations
+    // Client operations
 
     /** Requests changing the PHY of the connection. The result is reported in `onPhyUpdate`. */
     @RequiresApi(Build.VERSION_CODES.O)
-    fun setPreferredPhy(central: NativeCentral, txPhy: Phy, rxPhy: Phy, phyOptions: PhyOption) {
-        val server = server ?: throw CentralNotConnectedException()
-        logger?.d(Layer.PHY) { "server.setPreferredPhy(device=${central.device}, tx=${txPhy.toPhyMask()}, rx=${rxPhy.toPhyMask()}, options=${phyOptions.toOption()})" }
-        server.setPreferredPhy(central.device, txPhy.toPhyMask(), rxPhy.toPhyMask(), phyOptions.toOption())
+    fun setPreferredPhy(client: NativeClient, txPhy: Phy, rxPhy: Phy, phyOptions: PhyOption) {
+        val server = server ?: throw ClientNotConnectedException()
+        logger?.d(Layer.PHY) { "server.setPreferredPhy(device=${client.device}, tx=${txPhy.toPhyMask()}, rx=${rxPhy.toPhyMask()}, options=${phyOptions.toOption()})" }
+        server.setPreferredPhy(client.device, txPhy.toPhyMask(), rxPhy.toPhyMask(), phyOptions.toOption())
     }
 
-    /** Terminates the connection with the central. */
-    fun cancelConnection(central: NativeCentral) {
+    /** Terminates the connection with the client. */
+    fun cancelConnection(client: NativeClient) {
         val server = server ?: return
-        logger?.d(Layer.GAP) { "server.cancelConnection(${central.device})" }
-        server.cancelConnection(central.device)
+        logger?.d(Layer.GAP) { "server.cancelConnection(${client.device})" }
+        server.cancelConnection(client.device)
     }
 
-    private fun Central.asNative(): NativeCentral =
-        this as? NativeCentral
+    private fun Client.asNative(): NativeClient =
+        this as? NativeClient
             ?: throw IllegalArgumentException("$this was not created by the native GATT server")
 
     // Lifecycle
@@ -403,9 +403,9 @@ internal class NativeGattServer(
         if (isClosed) return
         isClosed = true
 
-        // The centrals are disconnected, but the callbacks may not be called after the server
+        // The clients are disconnected, but the callbacks may not be called after the server
         // is closed.
-        dropAllCentrals()
+        dropAllClients()
         serviceAdded?.completeExceptionally(ManagerClosedException())
 
         val server = synchronized(this) { server.also { server = null } }
@@ -420,7 +420,7 @@ internal class NativeGattServer(
     private fun onBluetoothUnavailable() {
         val server = synchronized(this) { server.also { server = null } } ?: return
         logger?.w(Layer.GAP) { "Bluetooth is not available, closing the server" }
-        dropAllCentrals()
+        dropAllClients()
         serviceAdded?.completeExceptionally(BluetoothUnavailableException())
         try {
             server.close()
@@ -430,33 +430,33 @@ internal class NativeGattServer(
         attributes.clear()
     }
 
-    // Centrals
+    // Clients
 
     /**
-     * Returns the central for the given device, creating it, if it was not known.
+     * Returns the client for the given device, creating it, if it was not known.
      *
-     * Android reports connections of all centrals, but a request may also come from a central
+     * Android reports connections of all clients, but a request may also come from a client
      * that was connected before the server was opened.
      */
     @IgnorableReturnValue
-    private fun centralFor(device: BluetoothDevice): NativeCentral {
+    private fun clientFor(device: BluetoothDevice): NativeClient {
         var isNew = false
-        val central = synchronized(centrals) {
-            centrals[device.address] ?: NativeCentral(device, this).also {
+        val client = synchronized(clients) {
+            clients[device.address] ?: NativeClient(device, this).also {
                 isNew = true
                 it.logger = logger
-                centrals[device.address] = it
-                connectedCentrals.value = centrals.values.toList()
+                clients[device.address] = it
+                connectedClients.value = clients.values.toList()
             }
         }
         if (isNew) {
-            logger?.i(Layer.GAP) { "Central $device connected" }
-            // Android does not report the PHY when a central connects.
+            logger?.i(Layer.GAP) { "Client $device connected" }
+            // Android does not report the PHY when a client connects.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 readPhy(device)
             }
         }
-        return central
+        return client
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -469,30 +469,30 @@ internal class NativeGattServer(
         }
     }
 
-    /** Removes the central and reports that it disconnected. */
-    private fun dropCentral(device: BluetoothDevice, status: Int) {
-        val central = synchronized(centrals) {
-            centrals.remove(device.address)?.also {
-                connectedCentrals.value = centrals.values.toList()
+    /** Removes the client and reports that it disconnected. */
+    private fun dropClient(device: BluetoothDevice, status: Int) {
+        val client = synchronized(clients) {
+            clients.remove(device.address)?.also {
+                connectedClients.value = clients.values.toList()
             }
         } ?: return
-        logger?.i(Layer.GAP) { "Central $device disconnected (status: $status)" }
-        central.onDisconnected(status)
-        emit(GattServerEvent.CentralDisconnected(central))
+        logger?.i(Layer.GAP) { "Client $device disconnected (status: $status)" }
+        client.onDisconnected(status)
+        emit(GattServerEvent.ClientDisconnected(client))
     }
 
-    private fun dropAllCentrals() {
-        synchronized(centrals) { centrals.values.map { it.device } }.forEach {
-            dropCentral(it, GATT_CONN_TERMINATE_LOCAL_HOST)
+    private fun dropAllClients() {
+        synchronized(clients) { clients.values.map { it.device } }.forEach {
+            dropClient(it, GATT_CONN_TERMINATE_LOCAL_HOST)
         }
     }
 
-    private fun existingCentral(device: BluetoothDevice): NativeCentral? =
-        synchronized(centrals) { centrals[device.address] }
+    private fun existingClient(device: BluetoothDevice): NativeClient? =
+        synchronized(clients) { clients[device.address] }
 
     // Events
 
-    private fun emit(event: GattServerEvent<Central>) {
+    private fun emit(event: GattServerEvent<Client>) {
         if (!events.tryEmit(event)) {
             logger?.e(Layer.GATT) { "Event $event was lost" }
         }
@@ -509,9 +509,9 @@ internal class NativeGattServer(
         override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
             logger?.d(Layer.GAP) { "onConnectionStateChange(device=$device, newState=$newState, status=$status)" }
             when (newState) {
-                BluetoothGatt.STATE_CONNECTED -> centralFor(device)
-                BluetoothGatt.STATE_DISCONNECTED -> dropCentral(device, status)
-                else -> existingCentral(device)?.onStateChanged(newState.toConnectionState(status, userInitiated = false))
+                BluetoothGatt.STATE_CONNECTED -> clientFor(device)
+                BluetoothGatt.STATE_DISCONNECTED -> dropClient(device, status)
+                else -> existingClient(device)?.onStateChanged(newState.toConnectionState(status, userInitiated = false))
             }
         }
 
@@ -527,10 +527,10 @@ internal class NativeGattServer(
             characteristic: BluetoothGattCharacteristic,
         ) {
             logger?.d(Layer.GATT) { "onCharacteristicReadRequest(device=$device, requestId=$requestId, characteristic=${characteristic.uuid}, offset=$offset)" }
-            val central = centralFor(device)
+            val client = clientFor(device)
             val id = attributes.idOf(characteristic)
                 ?: return rejectUnknownAttribute(device, requestId, offset)
-            emit(GattServerEvent.ReadRequested(central, requestId, id, offset))
+            emit(GattServerEvent.ReadRequested(client, requestId, id, offset))
         }
 
         override fun onCharacteristicWriteRequest(
@@ -543,10 +543,10 @@ internal class NativeGattServer(
             value: ByteArray?,
         ) {
             logger?.d(Layer.GATT) { "onCharacteristicWriteRequest(device=$device, requestId=$requestId, characteristic=${characteristic.uuid}, prepared=$preparedWrite, responseNeeded=$responseNeeded, offset=$offset, value=0x${value?.toHexString()})" }
-            val central = centralFor(device)
+            val client = clientFor(device)
             val id = attributes.idOf(characteristic)
                 ?: return if (responseNeeded) rejectUnknownAttribute(device, requestId, offset) else Unit
-            emit(GattServerEvent.WriteRequested(central, requestId, id, offset, value ?: byteArrayOf(), preparedWrite, responseNeeded))
+            emit(GattServerEvent.WriteRequested(client, requestId, id, offset, value ?: byteArrayOf(), preparedWrite, responseNeeded))
         }
 
         override fun onDescriptorReadRequest(
@@ -556,10 +556,10 @@ internal class NativeGattServer(
             descriptor: BluetoothGattDescriptor,
         ) {
             logger?.d(Layer.GATT) { "onDescriptorReadRequest(device=$device, requestId=$requestId, descriptor=${descriptor.uuid}, offset=$offset)" }
-            val central = centralFor(device)
+            val client = clientFor(device)
             val id = attributes.idOf(descriptor)
                 ?: return rejectUnknownAttribute(device, requestId, offset)
-            emit(GattServerEvent.ReadRequested(central, requestId, id, offset))
+            emit(GattServerEvent.ReadRequested(client, requestId, id, offset))
         }
 
         override fun onDescriptorWriteRequest(
@@ -572,25 +572,25 @@ internal class NativeGattServer(
             value: ByteArray?,
         ) {
             logger?.d(Layer.GATT) { "onDescriptorWriteRequest(device=$device, requestId=$requestId, descriptor=${descriptor.uuid}, prepared=$preparedWrite, responseNeeded=$responseNeeded, offset=$offset, value=0x${value?.toHexString()})" }
-            val central = centralFor(device)
+            val client = clientFor(device)
             val id = attributes.idOf(descriptor)
                 ?: return if (responseNeeded) rejectUnknownAttribute(device, requestId, offset) else Unit
-            emit(GattServerEvent.WriteRequested(central, requestId, id, offset, value ?: byteArrayOf(), preparedWrite, responseNeeded))
+            emit(GattServerEvent.WriteRequested(client, requestId, id, offset, value ?: byteArrayOf(), preparedWrite, responseNeeded))
         }
 
         override fun onExecuteWrite(device: BluetoothDevice, requestId: Int, execute: Boolean) {
             logger?.d(Layer.GATT) { "onExecuteWrite(device=$device, requestId=$requestId, execute=$execute)" }
-            emit(GattServerEvent.ExecuteWrite(centralFor(device), requestId, execute))
+            emit(GattServerEvent.ExecuteWrite(clientFor(device), requestId, execute))
         }
 
         override fun onNotificationSent(device: BluetoothDevice, status: Int) {
             logger?.d(Layer.GATT) { "onNotificationSent(device=$device, status=$status)" }
-            existingCentral(device)?.notifications?.onSent(status)
+            existingClient(device)?.notifications?.onSent(status)
         }
 
         override fun onMtuChanged(device: BluetoothDevice, mtu: Int) {
             logger?.d(Layer.GATT) { "onMtuChanged(device=$device, mtu=$mtu)" }
-            centralFor(device).onMtuChanged(mtu)
+            clientFor(device).onMtuChanged(mtu)
         }
 
         override fun onPhyUpdate(device: BluetoothDevice, txPhy: Int, rxPhy: Int, status: Int) {
@@ -599,7 +599,7 @@ internal class NativeGattServer(
                 logger?.w(Layer.PHY) { "PHY update failed with status $status" }
                 // no return, the request must be completed
             }
-            existingCentral(device)?.onPhyChanged(txPhy, rxPhy, isUpdate = true)
+            existingClient(device)?.onPhyChanged(txPhy, rxPhy, isUpdate = true)
         }
 
         override fun onPhyRead(device: BluetoothDevice, txPhy: Int, rxPhy: Int, status: Int) {
@@ -608,7 +608,7 @@ internal class NativeGattServer(
                 logger?.w(Layer.PHY) { "Reading PHY failed with status $status" }
                 return
             }
-            existingCentral(device)?.onPhyChanged(txPhy, rxPhy, isUpdate = false)
+            existingClient(device)?.onPhyChanged(txPhy, rxPhy, isUpdate = false)
         }
 
         // Note:
@@ -628,7 +628,7 @@ internal class NativeGattServer(
                 logger?.w(Layer.LINK) { "Connection update failed with status $status" }
                 // no return, the parameters are still valid
             }
-            existingCentral(device)?.onConnectionParametersChanged(interval, latency, timeout)
+            existingClient(device)?.onConnectionParametersChanged(interval, latency, timeout)
         }
     }
 }

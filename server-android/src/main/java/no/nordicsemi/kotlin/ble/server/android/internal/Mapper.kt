@@ -139,7 +139,7 @@ internal fun Int.toDisconnectionReason(userInitiated: Boolean): ConnectionState.
     userInitiated && (this == BluetoothGatt.GATT_SUCCESS || this == 0x16) ->
         ConnectionState.Disconnected.Reason.Success
     // The GATT server is not told why the link was terminated when the status is 0. Most often
-    // it is the central that terminates the connection. A link loss is reported by Android
+    // it is the client that terminates the connection. A link loss is reported by Android
     // as a timeout, when it's reported correctly.
     this == BluetoothGatt.GATT_SUCCESS -> ConnectionState.Disconnected.Reason.TerminatePeerUser
     this == 0x05 /* HCI_ERR_AUTH_FAILURE */ -> ConnectionState.Disconnected.Reason.InsufficientAuthentication

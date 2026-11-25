@@ -35,7 +35,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import no.nordicsemi.kotlin.ble.server.Central
+import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.ReadRequest
 import no.nordicsemi.kotlin.ble.server.ReadResponse
 import no.nordicsemi.kotlin.ble.server.WriteRequest
@@ -53,19 +53,19 @@ internal const val MAX_ATTRIBUTE_LENGTH = 512
  *
  * It lets the attributes use the platform layer without a reference to the whole manager.
  */
-internal interface LocalServerHost<C: Central<*>> {
+internal interface LocalServerHost<C: Client<*>> {
 
     /** Logs a message in the GATT layer, if the logger is set. */
     fun trace(message: () -> String)
 
     /** Sends a notification or indication, see [GattServer.notify]. */
-    suspend fun notify(central: C, characteristic: Int, value: ByteArray, confirm: Boolean)
+    suspend fun notify(client: C, characteristic: Int, value: ByteArray, confirm: Boolean)
 }
 
 /**
  * An attribute (a characteristic or a descriptor) which can be a target of a read or write request.
  */
-internal interface LocalAttribute<C: Central<*>> {
+internal interface LocalAttribute<C: Client<*>> {
 
     /** The `instanceId` of the attribute, unique within the GATT server. */
     val instanceId: Int
@@ -77,7 +77,7 @@ internal interface LocalAttribute<C: Central<*>> {
 /**
  * The value, the handlers and the accepted write requests of a local characteristic or descriptor.
  *
- * @param C The type of the central.
+ * @param C The type of the client.
  * @param initialValue The initial value.
  */
 internal class AttributeState(initialValue: ByteArray = byteArrayOf()) {

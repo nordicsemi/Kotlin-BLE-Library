@@ -41,7 +41,7 @@ import kotlinx.coroutines.flow.update
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.internal.CharacteristicDefinition
 import no.nordicsemi.kotlin.ble.server.AnyLocalService
-import no.nordicsemi.kotlin.ble.server.Central
+import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.LocalCharacteristic
 import no.nordicsemi.kotlin.ble.server.ReadRequest
 import no.nordicsemi.kotlin.ble.server.ReadResponse
@@ -50,32 +50,32 @@ import no.nordicsemi.kotlin.ble.server.WriteResponse
 import kotlin.uuid.Uuid
 
 /**
- * A characteristic that can notify a single central.
+ * A characteristic that can notify a single client.
  *
- * Used by the per-central views, which are built on the public [LocalCharacteristic] interface.
+ * Used by the per-client views, which are built on the public [LocalCharacteristic] interface.
  */
 internal interface TargetedUpdate {
 
     /**
-     * Sets the value and notifies the given central only.
+     * Sets the value and notifies the given client only.
      *
      * @throws IllegalStateException if [to] is not subscribed.
      */
-    suspend fun update(value: ByteArray, to: Central<*>)
+    suspend fun update(value: ByteArray, to: Client<*>)
 }
 
 /**
  * Base implementation of [LocalCharacteristic].
  *
- * The state of Client Characteristic Configuration descriptors of all centrals is kept here.
+ * The state of Client Characteristic Configuration descriptors of all clients is kept here.
  * It is modified only by the event loop of the [LocalServerImpl].
  *
- * @param C The type of the central.
+ * @param C The type of the client.
  * @param definition The definition of the characteristic.
  * @property service The service the characteristic belongs to.
  * @property host The services of the manager.
  */
-internal class BaseLocalCharacteristic<C: Central<*>>(
+internal class BaseLocalCharacteristic<C: Client<*>>(
     definition: CharacteristicDefinition,
     override val service: AnyLocalService,
     private val host: LocalServerHost<C>,
@@ -108,10 +108,10 @@ internal class BaseLocalCharacteristic<C: Central<*>>(
 
     override suspend fun update(value: ByteArray) = notify(value, to = null)
 
-    override suspend fun update(value: ByteArray, to: Central<*>) = notify(value, to)
+    override suspend fun update(value: ByteArray, to: Client<*>) = notify(value, to)
 
-    /** Sets the value and notifies the given central, or all subscribers when `null`. */
-    private suspend fun notify(value: ByteArray, to: Central<*>?) {
+    /** Sets the value and notifies the given client, or all subscribers when `null`. */
+    private suspend fun notify(value: ByteArray, to: Client<*>?) {
         check(canUpdate) { "Characteristic does not support notifications nor indications" }
         check(service.manager != null) { "The service has been removed" }
         require(value.size <= MAX_ATTRIBUTE_LENGTH) {
@@ -135,13 +135,13 @@ internal class BaseLocalCharacteristic<C: Central<*>>(
         val confirm = CharacteristicProperty.NOTIFY !in properties
         val failures = coroutineScope {
             targets
-                .map { central ->
+                .map { client ->
                     async {
                         try {
                             host.trace {
-                                "Sending ${if (confirm) "indication" else "notification"} to $central: ${value.size} bytes"
+                                "Sending ${if (confirm) "indication" else "notification"} to $client: ${value.size} bytes"
                             }
-                            host.notify(central, instanceId, value, confirm)
+                            host.notify(client, instanceId, value, confirm)
                             null
                         } catch (e: CancellationException) {
                             throw e
@@ -155,24 +155,24 @@ internal class BaseLocalCharacteristic<C: Central<*>>(
         failures.firstOrNull { it != null }?.let { throw it }
     }
 
-    /** Returns the value of the Client Characteristic Configuration descriptor of the central. */
-    fun cccdValue(central: C): Int = cccdValues.value[central] ?: 0
+    /** Returns the value of the Client Characteristic Configuration descriptor of the client. */
+    fun cccdValue(client: C): Int = cccdValues.value[client] ?: 0
 
     /**
-     * Sets the value of the Client Characteristic Configuration descriptor of the central.
+     * Sets the value of the Client Characteristic Configuration descriptor of the client.
      *
      * @param value Bit 0 for notifications, bit 1 for indications.
      */
-    fun setCccdValue(central: C, value: Int) {
-        cccdValues.update { if (value == 0) it - central else it + (central to value) }
+    fun setCccdValue(client: C, value: Int) {
+        cccdValues.update { if (value == 0) it - client else it + (client to value) }
         _subscribers.value = cccdValues.value.keys
     }
 
-    /** Forgets the central. */
-    fun removeCentral(central: C) = setCccdValue(central, 0)
+    /** Forgets the client. */
+    fun removeClient(client: C) = setCccdValue(client, 0)
 
-    /** Forgets all centrals. */
-    fun removeAllCentrals() {
+    /** Forgets all clients. */
+    fun removeAllClients() {
         cccdValues.value = emptyMap()
         _subscribers.value = emptySet()
     }

@@ -37,8 +37,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import no.nordicsemi.kotlin.ble.core.Manager
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
-import no.nordicsemi.kotlin.ble.server.android.Central
-import no.nordicsemi.kotlin.ble.server.android.mock.MockAndroidCentral
+import no.nordicsemi.kotlin.ble.server.android.Client
+import no.nordicsemi.kotlin.ble.server.android.mock.MockAndroidClient
 import no.nordicsemi.kotlin.ble.server.android.mock.MockLocalServer
 import no.nordicsemi.kotlin.ble.server.internal.LocalServerImpl
 import no.nordicsemi.kotlin.ble.server.mock.MockGattServer
@@ -49,7 +49,7 @@ import no.nordicsemi.kotlin.ble.server.mock.MockGattServer
  */
 internal class MockAndroidGattServer(
     private val environment: MockAndroidEnvironment,
-): MockGattServer<String, Central>(environment.bluetoothState) {
+): MockGattServer<String, Client>(environment.bluetoothState) {
 
     override fun checkAvailable() {
         super.checkAvailable()
@@ -67,14 +67,14 @@ internal class MockLocalServerImpl private constructor(
     scope: CoroutineScope,
     private val environment: MockAndroidEnvironment,
     private val mockServer: MockAndroidGattServer,
-): LocalServerImpl<String, Central>(scope, mockServer), MockLocalServer {
+): LocalServerImpl<String, Client>(scope, mockServer), MockLocalServer {
 
     constructor(
         scope: CoroutineScope,
         environment: MockAndroidEnvironment,
     ): this(scope, environment, MockAndroidGattServer(environment))
 
-    private val centrals = mutableMapOf<String, MockAndroidCentral>()
+    private val clients = mutableMapOf<String, MockAndroidClient>()
 
     // Like on a real device, all connections are lost when Bluetooth is turned off.
     private val bluetoothWatcher: Job = internalScope.launch {
@@ -86,13 +86,13 @@ internal class MockLocalServerImpl private constructor(
             }
     }
 
-    override val connectedCentrals: StateFlow<List<Central>>
-        get() = mockServer.connectedCentrals
+    override val connectedClients: StateFlow<List<Client>>
+        get() = mockServer.connectedClients
 
-    override fun simulateCentral(address: String): MockAndroidCentral {
-        require(address !in centrals) { "A central with address $address already exists" }
-        return MockAndroidCentral(address, mockServer, environment)
-            .also { centrals[address] = it }
+    override fun simulateClient(address: String): MockAndroidClient {
+        require(address !in clients) { "A client with address $address already exists" }
+        return MockAndroidClient(address, mockServer, environment)
+            .also { clients[address] = it }
     }
 
     override fun close() {

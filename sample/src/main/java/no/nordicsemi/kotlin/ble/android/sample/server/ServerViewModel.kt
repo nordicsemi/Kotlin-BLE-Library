@@ -72,8 +72,8 @@ import javax.inject.Inject
 /**
  * A ViewModel of the Server screen, which hosts a Nordic LED Button Service (LBS).
  *
- * The LED characteristic can be written by the connected central, and the Button characteristic
- * notifies the subscribed centrals about the state of the button.
+ * The LED characteristic can be written by the connected client, and the Button characteristic
+ * notifies the subscribed clients about the state of the button.
  */
 @HiltViewModel
 class ServerViewModel @Inject constructor(
@@ -91,7 +91,7 @@ class ServerViewModel @Inject constructor(
     val isAdvertising: StateFlow<Boolean>
         field = MutableStateFlow(false)
 
-    /** The state of the LED, set by the central. */
+    /** The state of the LED, set by the client. */
     val isLedOn: StateFlow<Boolean>
         field = MutableStateFlow(false)
 
@@ -99,30 +99,30 @@ class ServerViewModel @Inject constructor(
     val isButtonPressed: StateFlow<Boolean>
         field = MutableStateFlow(false)
 
-    /** The number of centrals subscribed to the Button characteristic. */
+    /** The number of clients subscribed to the Button characteristic. */
     val subscribersCount: StateFlow<Int>
         field = MutableStateFlow(0)
 
     val error: StateFlow<String?>
         field = MutableStateFlow<String?>(null)
 
-    /** The centrals connected to the server, together with their connection details. */
+    /** The clients connected to the server, together with their connection details. */
     @OptIn(ExperimentalCoroutinesApi::class)
-    val centrals: StateFlow<List<CentralInfo>> = localServer.connectedCentrals
-        .flatMapLatest { centrals ->
-            if (centrals.isEmpty()) {
+    val clients: StateFlow<List<ClientInfo>> = localServer.connectedClients
+        .flatMapLatest { clients ->
+            if (clients.isEmpty()) {
                 flowOf(emptyList())
             } else {
                 combine(
-                    centrals.map { central ->
+                    clients.map { client ->
                         combine(
-                            central.state,
-                            central.mtu,
-                            central.phy,
-                            central.connectionParameters,
+                            client.state,
+                            client.mtu,
+                            client.phy,
+                            client.connectionParameters,
                         ) { state, mtu, phy, parameters ->
-                            CentralInfo(
-                                address = central.address,
+                            ClientInfo(
+                                address = client.address,
                                 state = state,
                                 mtu = mtu,
                                 phy = phy,
@@ -180,7 +180,7 @@ class ServerViewModel @Inject constructor(
                     led.writes
                         .onEach { request ->
                             val on = request.value.first() != 0.toByte()
-                            Timber.i("LED turned ${if (on) "ON" else "OFF"} by ${request.central.identifier}")
+                            Timber.i("LED turned ${if (on) "ON" else "OFF"} by ${request.client.identifier}")
                             isLedOn.update { on }
                         }
                         .launchIn(this)
@@ -226,7 +226,7 @@ class ServerViewModel @Inject constructor(
         serverJob?.cancel()
     }
 
-    /** Sets the state of the button and notifies the subscribed centrals. */
+    /** Sets the state of the button and notifies the subscribed clients. */
     fun onButtonPressedChanged(pressed: Boolean) {
         val button = buttonCharacteristic ?: return
         val value = byteArrayOf(if (pressed) 1 else 0)
@@ -269,15 +269,15 @@ class ServerViewModel @Inject constructor(
 }
 
 /**
- * A central connected to the server.
+ * A client connected to the server.
  *
- * @property address The MAC address of the central.
+ * @property address The MAC address of the client.
  * @property state The connection state.
  * @property mtu The ATT MTU, or `null` if not known.
  * @property phy The PHY in use, or `null` if not known.
  * @property connectionParameters The connection parameters, or `null` if not known.
  */
-data class CentralInfo(
+data class ClientInfo(
     val address: String,
     val state: ConnectionState,
     val mtu: Int?,

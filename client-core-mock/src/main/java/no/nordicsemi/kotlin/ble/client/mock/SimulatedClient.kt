@@ -29,35 +29,37 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package no.nordicsemi.kotlin.ble.client.mock.internal
+package no.nordicsemi.kotlin.ble.client.mock
 
 import kotlinx.coroutines.flow.StateFlow
-import no.nordicsemi.kotlin.ble.client.mock.SimulatedCentral
 import no.nordicsemi.kotlin.ble.core.ConnectionState
-import no.nordicsemi.kotlin.ble.server.mock.MockCentral
-import no.nordicsemi.kotlin.ble.server.mock.MockGattServer
+import no.nordicsemi.kotlin.ble.server.Client
 
 /**
- * The simulated central of a [no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec] with
- * a hosted GATT server.
+ * The client device, that is the phone, as seen by the services hosted by a [MockPeripheralServer].
  *
- * It is a [MockCentral], which sends the requests of the client to the server.
- * The [no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec] connects and disconnects it, and
- * keeps its MTU in sync with the connection.
+ * It is the [Client] given in [no.nordicsemi.kotlin.ble.server.ReadRequest] and
+ * [no.nordicsemi.kotlin.ble.server.WriteRequest], and in
+ * [no.nordicsemi.kotlin.ble.server.LocalCharacteristic.subscribers].
+ *
+ * A mock peripheral is connected to the phone with a single connection, even when it is used by
+ * more than one mock central manager (or more than one client of the same manager), so there is
+ * only one client. It is connected when the [PeripheralSpec] is connected, and disconnected
+ * when the connection ends. The state kept by the server for the client, like the subscriptions,
+ * is dropped then, as it would be for a real peripheral that does not have a bond with the phone.
+ *
+ * The maximum length of a notification or an indication, [maximumUpdateValueLength], follows
+ * the ATT MTU of the connection, see [PeripheralSpec.mtu].
  */
-internal class SimulatedCentralImpl(
-    server: MockGattServer<String, SimulatedCentral>,
-): MockCentral<String, SimulatedCentral>(IDENTIFIER, server), SimulatedCentral {
+interface SimulatedClient: Client<String> {
 
-    override val state: StateFlow<ConnectionState>
-        get() = connectionState
+    /**
+     * The connection state of the client. It is connected when the [PeripheralSpec] is connected.
+     */
+    val state: StateFlow<ConnectionState>
 
-    override val mtu: StateFlow<Int>
-        get() = attMtu
-
-    override fun toString() = "SimulatedCentral(state=${connectionState.value}, mtu=${attMtu.value})"
-
-    private companion object {
-        const val IDENTIFIER = "MOCK-CENTRAL"
-    }
+    /**
+     * The current ATT MTU of the connection. The value is retained after disconnecting.
+     */
+    val mtu: StateFlow<Int>
 }

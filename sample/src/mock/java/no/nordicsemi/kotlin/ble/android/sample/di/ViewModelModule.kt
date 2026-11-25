@@ -385,6 +385,6 @@ object ViewModelModule {
         environment: MockAndroidEnvironment,
         scope: CoroutineScope,
     ): LocalServer = LocalServer.mock(environment, scope)
-        // A simulated central that connects, toggles the LED and receives button notifications.
-        .also { it.simulateLedButtonCentral(scope) }
+        // A simulated client that connects, toggles the LED and receives button notifications.
+        .also { it.simulateLedButtonClient(scope) }
 }

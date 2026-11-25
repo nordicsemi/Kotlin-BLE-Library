@@ -34,35 +34,35 @@ package no.nordicsemi.kotlin.ble.server.android.mock
 import no.nordicsemi.kotlin.ble.server.android.LocalServer
 
 /**
- * A mock [LocalServer], which hosts a simulated GATT server and is used by simulated centrals.
+ * A mock [LocalServer], which hosts a simulated GATT server and is used by simulated clients.
  *
  * Create it using `LocalServer.mock(...)`, define services using `setup { ... }` and
- * simulate centrals using [simulateCentral].
+ * simulate clients using [simulateClient].
  *
  * ```kotlin
  * val environment = MockAndroidEnvironment.Api31()
  * val manager = LocalServer.mock(environment, scope)
  * val services = manager.setup { Service(SERVICE_UUID) { Characteristic(...) } }
  *
- * val central = manager.simulateCentral()
- * central.connect()
- * val value = central.read(central.findCharacteristic(SERVICE_UUID, CHAR_UUID)!!)
+ * val client = manager.simulateClient()
+ * client.connect()
+ * val value = client.read(client.findCharacteristic(SERVICE_UUID, CHAR_UUID)!!)
  * ```
  *
  * Bluetooth state is taken from the [MockAndroidEnvironment][no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment].
- * When Bluetooth is turned off, all simulated centrals are disconnected, and [setup] throws
+ * When Bluetooth is turned off, all simulated clients are disconnected, and [setup] throws
  * `BluetoothUnavailableException`.
  */
 interface MockLocalServer: LocalServer {
 
     /**
-     * Creates a simulated central, which can connect to the local GATT server.
+     * Creates a simulated client, which can connect to the local GATT server.
      *
-     * The central is not connected until [MockAndroidCentral.connect] is called.
+     * The client is not connected until [MockAndroidClient.connect] is called.
      *
-     * @param address The MAC address of the central, by default a random one.
-     * @return The simulated central.
-     * @throws IllegalArgumentException if a central with the same address has already been created.
+     * @param address The MAC address of the client, by default a random one.
+     * @return The simulated client.
+     * @throws IllegalArgumentException if a client with the same address has already been created.
      */
-    fun simulateCentral(address: String = randomMacAddress()): MockAndroidCentral
+    fun simulateClient(address: String = randomMacAddress()): MockAndroidClient
 }

@@ -46,14 +46,14 @@ class UpdateTest {
     @Test
     fun update_notifiesAllSubscribers() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        fixture.subscribe(fixture.notify, 1, fixture.central)
-        fixture.subscribe(fixture.notify, 1, fixture.central2)
+        fixture.subscribe(fixture.notify, 1, fixture.client)
+        fixture.subscribe(fixture.notify, 1, fixture.client2)
 
         fixture.notify.update(bytes(1, 2, 3))
 
         val notifications = fixture.server.notifications
         assertEquals(2, notifications.size)
-        assertEquals(setOf(fixture.central, fixture.central2), notifications.map { it.central }.toSet())
+        assertEquals(setOf(fixture.client, fixture.client2), notifications.map { it.client }.toSet())
         notifications.forEach {
             assertContentEquals(bytes(1, 2, 3), it.value)
             assertEquals(fixture.notify.instanceId, it.attribute)
@@ -62,15 +62,15 @@ class UpdateTest {
     }
 
     @Test
-    fun update_notifiesOnlyTheGivenCentral() = runTest {
+    fun update_notifiesOnlyTheGivenClient() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        fixture.subscribe(fixture.notify, 1, fixture.central)
-        fixture.subscribe(fixture.notify, 1, fixture.central2)
+        fixture.subscribe(fixture.notify, 1, fixture.client)
+        fixture.subscribe(fixture.notify, 1, fixture.client2)
 
-        fixture.manager.services(fixture.central2).value.single().characteristics.first { it.uuid == fixture.notify.uuid }.update(bytes(4))
+        fixture.manager.services(fixture.client2).value.single().characteristics.first { it.uuid == fixture.notify.uuid }.update(bytes(4))
 
         val notification = fixture.server.notifications.single()
-        assertEquals(fixture.central2, notification.central)
+        assertEquals(fixture.client2, notification.client)
     }
 
     @Test
@@ -130,7 +130,7 @@ class UpdateTest {
     fun update_afterDisconnect_doesNotNotify() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
-        fixture.emit(GattServerEvent.CentralDisconnected(fixture.central))
+        fixture.emit(GattServerEvent.ClientDisconnected(fixture.client))
 
         fixture.notify.update(bytes(1))
 
@@ -138,11 +138,11 @@ class UpdateTest {
     }
 
     @Test
-    fun update_notSubscribedCentral_throws() = runTest {
+    fun update_notSubscribedClient_throws() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        fixture.subscribe(fixture.notify, 1, fixture.central)
+        fixture.subscribe(fixture.notify, 1, fixture.client)
 
-        assertFailsWith<IllegalStateException> { fixture.manager.services(fixture.central2).value.single().characteristics.first { it.uuid == fixture.notify.uuid }.update(bytes(1)) }
+        assertFailsWith<IllegalStateException> { fixture.manager.services(fixture.client2).value.single().characteristics.first { it.uuid == fixture.notify.uuid }.update(bytes(1)) }
         assertTrue(fixture.server.notifications.isEmpty())
     }
 
@@ -151,12 +151,12 @@ class UpdateTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         assertFailsWith<IllegalStateException> { fixture.ro.update(bytes(1)) }
-        assertFailsWith<IllegalStateException> { fixture.manager.services(fixture.central).value.single().characteristics.first { it.uuid == fixture.rw.uuid }.update(bytes(1)) }
+        assertFailsWith<IllegalStateException> { fixture.manager.services(fixture.client).value.single().characteristics.first { it.uuid == fixture.rw.uuid }.update(bytes(1)) }
         assertTrue(fixture.ro.value.value.isEmpty())
     }
 
     @Test
-    fun update_tooLongForCentral_throws() = runTest {
+    fun update_tooLongForClient_throws() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
 
@@ -167,7 +167,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_maxLengthForCentral_accepted() = runTest {
+    fun update_maxLengthForClient_accepted() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
 
@@ -177,24 +177,24 @@ class UpdateTest {
     }
 
     @Test
-    fun update_tooLongForOneOfCentrals_throwsAndDoesNotNotifyAny() = runTest {
+    fun update_tooLongForOneOfClients_throwsAndDoesNotNotifyAny() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        fixture.central2.maximumUpdateValueLength = 10
-        fixture.subscribe(fixture.notify, 1, fixture.central)
-        fixture.subscribe(fixture.notify, 1, fixture.central2)
+        fixture.client2.maximumUpdateValueLength = 10
+        fixture.subscribe(fixture.notify, 1, fixture.client)
+        fixture.subscribe(fixture.notify, 1, fixture.client2)
 
         assertFailsWith<IllegalArgumentException> { fixture.notify.update(ByteArray(15)) }
         assertTrue(fixture.server.notifications.isEmpty())
 
         // But it can be sent to the one with a larger MTU.
-        fixture.manager.services(fixture.central).value.single().characteristics.first { it.uuid == fixture.notify.uuid }.update(ByteArray(15))
-        assertEquals(fixture.central, fixture.server.notifications.single().central)
+        fixture.manager.services(fixture.client).value.single().characteristics.first { it.uuid == fixture.notify.uuid }.update(ByteArray(15))
+        assertEquals(fixture.client, fixture.server.notifications.single().client)
     }
 
     @Test
     fun update_largerThan512_throws() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        fixture.central.maximumUpdateValueLength = 1000
+        fixture.client.maximumUpdateValueLength = 1000
         fixture.subscribe(fixture.notify)
 
         assertFailsWith<IllegalArgumentException> { fixture.notify.update(ByteArray(513)) }
@@ -204,7 +204,7 @@ class UpdateTest {
     fun update_usesCurrentMaximumUpdateValueLength() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
-        fixture.central.maximumUpdateValueLength = 100
+        fixture.client.maximumUpdateValueLength = 100
 
         fixture.notify.update(ByteArray(100))
 
@@ -214,8 +214,8 @@ class UpdateTest {
     @Test
     fun update_targetsAreNotifiedConcurrently() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        fixture.subscribe(fixture.notify, 1, fixture.central)
-        fixture.subscribe(fixture.notify, 1, fixture.central2)
+        fixture.subscribe(fixture.notify, 1, fixture.client)
+        fixture.subscribe(fixture.notify, 1, fixture.client2)
         val gate = CompletableDeferred<Unit>()
         var started = 0
         fixture.server.onNotify = { started++; gate.await() }
@@ -234,16 +234,16 @@ class UpdateTest {
     @Test
     fun update_failure_isRethrownAfterAllAttempted() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        fixture.subscribe(fixture.notify, 1, fixture.central)
-        fixture.subscribe(fixture.notify, 1, fixture.central2)
+        fixture.subscribe(fixture.notify, 1, fixture.client)
+        fixture.subscribe(fixture.notify, 1, fixture.client2)
         fixture.server.onNotify = {
-            if (it.central == fixture.central) throw IllegalStateException("Disconnected")
+            if (it.client == fixture.client) throw IllegalStateException("Disconnected")
         }
 
         assertFailsWith<IllegalStateException> { fixture.notify.update(bytes(1)) }
 
-        // The other central was notified.
-        assertEquals(fixture.central2, fixture.server.notifications.single().central)
+        // The other client was notified.
+        assertEquals(fixture.client2, fixture.server.notifications.single().client)
     }
 
     @Test

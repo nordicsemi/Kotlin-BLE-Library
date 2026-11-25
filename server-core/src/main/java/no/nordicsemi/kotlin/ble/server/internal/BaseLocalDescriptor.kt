@@ -36,7 +36,7 @@ import no.nordicsemi.kotlin.ble.core.Permission
 import no.nordicsemi.kotlin.ble.core.internal.CEPD
 import no.nordicsemi.kotlin.ble.core.internal.CUD
 import no.nordicsemi.kotlin.ble.core.internal.DescriptorDefinition
-import no.nordicsemi.kotlin.ble.server.Central
+import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.LocalDescriptor
 import no.nordicsemi.kotlin.ble.server.ReadRequest
 import no.nordicsemi.kotlin.ble.server.ReadResponse
@@ -48,13 +48,13 @@ import kotlin.uuid.Uuid
  * Base implementation of [LocalDescriptor].
  *
  * The Client Characteristic Configuration descriptor is handled by the [LocalServerImpl]:
- * its value is stored per central in the characteristic.
+ * its value is stored per client in the characteristic.
  *
- * @param C The type of the central.
+ * @param C The type of the client.
  * @param definition The definition of the descriptor.
  * @property characteristic The characteristic the descriptor belongs to.
  */
-internal class BaseLocalDescriptor<C: Central<*>>(
+internal class BaseLocalDescriptor<C: Client<*>>(
     definition: DescriptorDefinition,
     override val characteristic: BaseLocalCharacteristic<C>,
 ): LocalDescriptor, LocalAttribute<C> {
@@ -62,12 +62,12 @@ internal class BaseLocalDescriptor<C: Central<*>>(
     override val instanceId: Int = definition.instanceId
     override val state = AttributeState(initialValue(definition))
 
-    /** `true` if the descriptor can be read by a central. */
+    /** `true` if the descriptor can be read by a client. */
     val isReadPermitted = definition.permissions.any {
         it == Permission.READ || it == Permission.READ_ENCRYPTED || it == Permission.READ_ENCRYPTED_MITM
     }
 
-    /** `true` if the descriptor can be written by a central. */
+    /** `true` if the descriptor can be written by a client. */
     val isWritePermitted = definition.permissions.any {
         it == Permission.WRITE || it == Permission.WRITE_ENCRYPTED || it == Permission.WRITE_ENCRYPTED_MITM ||
         it == Permission.WRITE_SIGNED || it == Permission.WRITE_SIGNED_MITM

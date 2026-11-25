@@ -43,28 +43,28 @@ import no.nordicsemi.kotlin.ble.core.Permission
 import no.nordicsemi.kotlin.ble.core.and
 import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
 import no.nordicsemi.kotlin.ble.core.log.Layer
-import no.nordicsemi.kotlin.ble.server.Central
+import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.LocalCharacteristic
 import no.nordicsemi.kotlin.ble.server.LocalDescriptor
 import no.nordicsemi.kotlin.ble.server.LocalService
 import no.nordicsemi.kotlin.log.Log
 import kotlin.uuid.Uuid
 
-/** A central used in tests. Centrals with the same identifier are equal. */
-class FakeCentral(
+/** A client used in tests. Clients with the same identifier are equal. */
+class FakeClient(
     override val identifier: String,
     override var maximumUpdateValueLength: Int = 20,
-): Central<String> {
+): Client<String> {
     override var logger: Log.Sink<Layer>? = null
 
-    override fun equals(other: Any?) = other is FakeCentral && other.identifier == identifier
+    override fun equals(other: Any?) = other is FakeClient && other.identifier == identifier
     override fun hashCode() = identifier.hashCode()
-    override fun toString() = "FakeCentral($identifier)"
+    override fun toString() = "FakeClient($identifier)"
 }
 
 /** A response sent using [GattServer.respond]. */
 class Response(
-    val central: FakeCentral,
+    val client: FakeClient,
     val requestId: Int,
     val status: OperationStatus,
     val offset: Int,
@@ -73,16 +73,16 @@ class Response(
 
 /** A notification or an indication sent using [GattServer.notify]. */
 class Notification(
-    val central: FakeCentral,
+    val client: FakeClient,
     val attribute: Int,
     val value: ByteArray,
     val confirm: Boolean,
 )
 
 /** A [GattServer] that records calls and lets tests emit events. */
-class FakeGattServer: GattServer<String, FakeCentral> {
+class FakeGattServer: GattServer<String, FakeClient> {
     override val state = MutableStateFlow(Manager.State.POWERED_ON)
-    override val events = MutableSharedFlow<GattServerEvent<FakeCentral>>(extraBufferCapacity = 256)
+    override val events = MutableSharedFlow<GattServerEvent<FakeClient>>(extraBufferCapacity = 256)
 
     val setServicesCalls = mutableListOf<List<ServiceDefinition>>()
     val responses = mutableListOf<Response>()
@@ -108,16 +108,16 @@ class FakeGattServer: GattServer<String, FakeCentral> {
         setServicesHook()
     }
 
-    override fun respond(central: FakeCentral, requestId: Int, status: OperationStatus, offset: Int, value: ByteArray) {
+    override fun respond(client: FakeClient, requestId: Int, status: OperationStatus, offset: Int, value: ByteArray) {
         respondError?.let {
             respondError = null
             throw it
         }
-        responses += Response(central, requestId, status, offset, value)
+        responses += Response(client, requestId, status, offset, value)
     }
 
-    override suspend fun notify(central: FakeCentral, attribute: Int, value: ByteArray, confirm: Boolean) {
-        val notification = Notification(central, attribute, value, confirm)
+    override suspend fun notify(client: FakeClient, attribute: Int, value: ByteArray, confirm: Boolean) {
+        val notification = Notification(client, attribute, value, confirm)
         onNotify(notification)
         notifications += notification
     }
@@ -155,8 +155,8 @@ val CUSTOM_DESCRIPTOR_UUID = Uuid.parse("00002a00-0000-1000-8000-00805f9b34fb")
 class Fixture(private val testScope: TestScope) {
     val server = FakeGattServer()
     val manager = LocalServerImpl(testScope.backgroundScope, server)
-    val central = FakeCentral("AA")
-    val central2 = FakeCentral("BB")
+    val client = FakeClient("AA")
+    val client2 = FakeClient("BB")
     private var requestId = 0
 
     lateinit var services: List<LocalService>
@@ -202,7 +202,7 @@ class Fixture(private val testScope: TestScope) {
     val both get() = characteristic(BOTH_UUID)
 
     /** Emits an event and lets the manager process it. */
-    suspend fun emit(event: GattServerEvent<FakeCentral>) {
+    suspend fun emit(event: GattServerEvent<FakeClient>) {
         server.events.emit(event)
         testScope.testScheduler.runCurrent()
     }
@@ -211,7 +211,7 @@ class Fixture(private val testScope: TestScope) {
     fun run() = testScope.testScheduler.runCurrent()
 
     /** Sends a read request and returns the response. */
-    suspend fun read(attribute: Int, offset: Int = 0, from: FakeCentral = central): Response {
+    suspend fun read(attribute: Int, offset: Int = 0, from: FakeClient = client): Response {
         emit(GattServerEvent.ReadRequested(from, ++requestId, attribute, offset))
         return server.responses.last()
     }
@@ -220,7 +220,7 @@ class Fixture(private val testScope: TestScope) {
     suspend fun write(
         attribute: Int,
         value: ByteArray,
-        from: FakeCentral = central,
+        from: FakeClient = client,
         responseNeeded: Boolean = true,
         prepared: Boolean = false,
         offset: Int = 0,
@@ -231,21 +231,21 @@ class Fixture(private val testScope: TestScope) {
     }
 
     /** Sends an execute write request and returns the response. */
-    suspend fun execute(execute: Boolean = true, from: FakeCentral = central): Response {
+    suspend fun execute(execute: Boolean = true, from: FakeClient = client): Response {
         emit(GattServerEvent.ExecuteWrite(from, ++requestId, execute))
         return server.responses.last()
     }
 
     /** Writes the CCCD of the characteristic. */
-    suspend fun writeCccd(characteristic: LocalCharacteristic, value: Int, from: FakeCentral = central): Response =
+    suspend fun writeCccd(characteristic: LocalCharacteristic, value: Int, from: FakeClient = client): Response =
         write(
             attribute = characteristic.descriptors.first { it.isClientCharacteristicConfiguration }.instanceId,
             value = byteArrayOf((value and 0xFF).toByte(), (value shr 8).toByte()),
             from = from,
         )!!
 
-    /** Subscribes the central to notifications (1) or indications (2) of the characteristic. */
-    suspend fun subscribe(characteristic: LocalCharacteristic, value: Int = 1, from: FakeCentral = central) {
+    /** Subscribes the client to notifications (1) or indications (2) of the characteristic. */
+    suspend fun subscribe(characteristic: LocalCharacteristic, value: Int = 1, from: FakeClient = client) {
         val response = writeCccd(characteristic, value, from)
         check(response.status == OperationStatus.Success) { "Subscribing failed: ${response.status}" }
     }

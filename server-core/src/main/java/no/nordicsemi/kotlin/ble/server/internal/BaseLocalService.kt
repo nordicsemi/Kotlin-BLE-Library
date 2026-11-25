@@ -33,7 +33,7 @@ package no.nordicsemi.kotlin.ble.server.internal
 
 import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
 import no.nordicsemi.kotlin.ble.server.AnyLocalService
-import no.nordicsemi.kotlin.ble.server.Central
+import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.LocalIncludedService
 import no.nordicsemi.kotlin.ble.server.LocalService
 import no.nordicsemi.kotlin.ble.server.LocalServer
@@ -46,11 +46,11 @@ import kotlin.uuid.Uuid
  * The service, with all its characteristics, descriptors and included services, is created from
  * the definition. It stays valid until the services are replaced or the manager is closed.
  *
- * @param C The type of the central.
+ * @param C The type of the client.
  * @param definition The definition of the service.
  * @param host The services of the manager.
  */
-internal class BaseLocalService<C: Central<*>>(
+internal class BaseLocalService<C: Client<*>>(
     definition: ServiceDefinition,
     manager: LocalServer<*, C>,
     host: LocalServerHost<C>,
@@ -77,12 +77,12 @@ internal class BaseLocalService<C: Central<*>>(
 /**
  * Base implementation of [LocalIncludedService].
  *
- * @param C The type of the central.
+ * @param C The type of the client.
  * @param definition The definition of the service.
  * @property service The service that includes this one.
  * @param host The services of the manager.
  */
-internal class BaseLocalIncludedService<C: Central<*>>(
+internal class BaseLocalIncludedService<C: Client<*>>(
     definition: ServiceDefinition,
     override val service: AnyLocalService,
     host: LocalServerHost<C>,

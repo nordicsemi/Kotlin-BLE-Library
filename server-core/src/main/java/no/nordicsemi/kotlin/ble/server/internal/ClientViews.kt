@@ -38,19 +38,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import no.nordicsemi.kotlin.ble.server.AnyLocalService
-import no.nordicsemi.kotlin.ble.server.Central
+import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.LocalCharacteristic
 import no.nordicsemi.kotlin.ble.server.LocalDescriptor
 import no.nordicsemi.kotlin.ble.server.LocalIncludedService
 import no.nordicsemi.kotlin.ble.server.LocalService
 import no.nordicsemi.kotlin.ble.server.WriteRequest
 
-// Views of the local services, as seen by one central. They share the values, handlers and
+// Views of the local services, as seen by one client. They share the values, handlers and
 // subscriptions with the services of the server, but the requests and the subscribers are limited
-// to the central, and updates are sent to the central only.
+// to the client, and updates are sent to the client only.
 
-/** The views of the services of the server, as seen by one central. */
-internal class CentralServices(
+/** The views of the services of the server, as seen by one client. */
+internal class ClientServices(
     private val source: StateFlow<List<LocalService>>,
     private val identifier: Any,
 ): StateFlow<List<LocalService>> {
@@ -62,7 +62,7 @@ internal class CentralServices(
     /** The views are created once for each list of services, so they are the same when asked again. */
     private fun viewsOf(services: List<LocalService>): List<LocalService> {
         cached?.takeIf { it.first === services }?.let { return it.second }
-        val views = services.map { CentralLocalService(it, identifier) }
+        val views = services.map { ClientLocalService(it, identifier) }
         cached = services to views
         return views
     }
@@ -87,71 +87,71 @@ private class DerivedStateFlow<T, R>(
     }
 }
 
-/** A [SharedFlow] of the requests sent by one central. */
-private class CentralWrites(
+/** A [SharedFlow] of the requests sent by one client. */
+private class ClientWrites(
     private val source: SharedFlow<WriteRequest>,
     private val identifier: Any,
 ): SharedFlow<WriteRequest> {
     override val replayCache: List<WriteRequest>
-        get() = source.replayCache.filter { it.central.identifier == identifier }
+        get() = source.replayCache.filter { it.client.identifier == identifier }
 
     override suspend fun collect(collector: FlowCollector<WriteRequest>): Nothing {
         source.collect { request ->
-            if (request.central.identifier == identifier) collector.emit(request)
+            if (request.client.identifier == identifier) collector.emit(request)
         }
     }
 }
 
-internal class CentralLocalService(
+internal class ClientLocalService(
     private val service: LocalService,
     identifier: Any,
 ): LocalService by service {
     override val characteristics: List<LocalCharacteristic> =
-        service.characteristics.map { CentralLocalCharacteristic(it, this, identifier) }
+        service.characteristics.map { ClientLocalCharacteristic(it, this, identifier) }
     override val includedServices: List<LocalIncludedService> =
-        service.includedServices.map { CentralIncludedService(it, this, identifier) }
+        service.includedServices.map { ClientIncludedService(it, this, identifier) }
 
-    override fun toString() = "CentralService($service)"
+    override fun toString() = "ClientService($service)"
 }
 
-internal class CentralIncludedService(
+internal class ClientIncludedService(
     included: LocalIncludedService,
     override val service: AnyLocalService,
     identifier: Any,
 ): LocalIncludedService by included {
     override val characteristics: List<LocalCharacteristic> =
-        included.characteristics.map { CentralLocalCharacteristic(it, this, identifier) }
+        included.characteristics.map { ClientLocalCharacteristic(it, this, identifier) }
     override val includedServices: List<LocalIncludedService> =
-        included.includedServices.map { CentralIncludedService(it, this, identifier) }
+        included.includedServices.map { ClientIncludedService(it, this, identifier) }
 }
 
-internal class CentralLocalCharacteristic(
+internal class ClientLocalCharacteristic(
     private val characteristic: LocalCharacteristic,
     override val service: AnyLocalService,
     private val identifier: Any,
 ): LocalCharacteristic by characteristic {
     override val descriptors: List<LocalDescriptor> =
-        characteristic.descriptors.map { CentralLocalDescriptor(it, this, identifier) }
+        characteristic.descriptors.map { ClientLocalDescriptor(it, this, identifier) }
 
-    override val subscribers: StateFlow<Set<Central<*>>> =
+    override val subscribers: StateFlow<Set<Client<*>>> =
         DerivedStateFlow(characteristic.subscribers) { set -> set.filterTo(mutableSetOf()) { it.identifier == identifier } }
 
-    override val writes: SharedFlow<WriteRequest> = CentralWrites(characteristic.writes, identifier)
+    override val writes: SharedFlow<WriteRequest> = ClientWrites(characteristic.writes, identifier)
 
     override suspend fun update(value: ByteArray) {
-        // Updates are sent to the central of the view only.
-        val central = characteristic.subscribers.value.firstOrNull { it.identifier == identifier }
-        checkNotNull(central) { "The central has not subscribed to this characteristic" }
-        (characteristic as TargetedUpdate).update(value, central)
+        // Updates are sent to the client of the view only.
+        val client = characteristic.subscribers.value.firstOrNull { it.identifier == identifier }
+        checkNotNull(client) { "The client has not subscribed to this characteristic" }
+        (characteristic as TargetedUpdate).update(value, client)
     }
 
-    override fun toString() = "Central$characteristic"
+    override fun toString() = "Client$characteristic"
 }
 
-internal class CentralLocalDescriptor(
+internal class ClientLocalDescriptor(
     descriptor: LocalDescriptor,
     override val characteristic: LocalCharacteristic,
     identifier: Any,
 ): LocalDescriptor by descriptor {
-    override val writes: SharedFlow<WriteRequest> = CentralWrites(descriptor.writes, identifier)
+    override val writes: SharedFlow<WriteRequest> = ClientWrites(descriptor.writes, identifier)
 }

@@ -46,7 +46,7 @@ import no.nordicsemi.kotlin.ble.client.mock.AddressType
 import no.nordicsemi.kotlin.ble.client.mock.MockPeripheralServer
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
-import no.nordicsemi.kotlin.ble.client.mock.SimulatedCentral
+import no.nordicsemi.kotlin.ble.client.mock.SimulatedClient
 import no.nordicsemi.kotlin.ble.core.ServerScope
 import no.nordicsemi.kotlin.ble.core.util.fromShortUuid
 import no.nordicsemi.kotlin.ble.environment.android.mock.LatestApi

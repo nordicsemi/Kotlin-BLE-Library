@@ -40,33 +40,33 @@ import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PhyInUse
 import no.nordicsemi.kotlin.ble.core.PhyOption
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
-import no.nordicsemi.kotlin.ble.server.android.Central
-import no.nordicsemi.kotlin.ble.server.mock.MockCentral
+import no.nordicsemi.kotlin.ble.server.android.Client
+import no.nordicsemi.kotlin.ble.server.mock.MockClient
 import no.nordicsemi.kotlin.ble.server.mock.MockGattServer
 import kotlin.time.Duration
 
 /**
- * A simulated Android central, created using [MockLocalServer.simulateCentral].
+ * A simulated Android client, created using [MockLocalServer.simulateClient].
  *
- * It is the [Central] seen by the app (in requests and in [LocalServer.connectedCentrals]),
- * and at the same time a [MockCentral], which is used to simulate what the central does: connecting,
+ * It is the [Client] seen by the app (in requests and in [LocalServer.connectedClients]),
+ * and at the same time a [MockClient], which is used to simulate what the client does: connecting,
  * reading, writing, subscribing, and changing the MTU, PHY and connection parameters.
  *
  * ```kotlin
- * val central = localServer.simulateCentral()
- * central.connect()
- * central.simulateMtuChange(185)
- * val led = central.findCharacteristic(SERVICE_UUID, LED_UUID)!!
- * central.write(led, byteArrayOf(1))
+ * val client = localServer.simulateClient()
+ * client.connect()
+ * client.simulateMtuChange(185)
+ * val led = client.findCharacteristic(SERVICE_UUID, LED_UUID)!!
+ * client.write(led, byteArrayOf(1))
  * ```
  *
- * The central is not connected until [connect] is called.
+ * The client is not connected until [connect] is called.
  */
-class MockAndroidCentral internal constructor(
+class MockAndroidClient internal constructor(
     address: String,
-    server: MockGattServer<String, Central>,
+    server: MockGattServer<String, Client>,
     private val environment: MockAndroidEnvironment,
-): MockCentral<String, Central>(address, server, environment.maxAttMtu), Central {
+): MockClient<String, Client>(address, server, environment.maxAttMtu), Client {
 
     private val _mtu = MutableStateFlow<Int?>(null)
     private val _phy = MutableStateFlow<PhyInUse?>(null)
@@ -98,9 +98,9 @@ class MockAndroidCentral internal constructor(
     }
 
     /**
-     * Disconnects the central, as if the local device terminated the connection.
+     * Disconnects the client, as if the local device terminated the connection.
      *
-     * Does nothing if the central is not connected.
+     * Does nothing if the client is not connected.
      */
     override suspend fun disconnect() {
         disconnect(ConnectionState.Disconnected.Reason.TerminateLocalHost)
@@ -113,7 +113,7 @@ class MockAndroidCentral internal constructor(
      * LE Coded is not supported, LE 1M is used instead.
      *
      * @return The PHYs in use after the change.
-     * @throws IllegalStateException if the central is not connected.
+     * @throws IllegalStateException if the client is not connected.
      */
     override suspend fun setPreferredPhy(
         txPhy: Phy,
@@ -128,11 +128,11 @@ class MockAndroidCentral internal constructor(
     }
 
     /**
-     * Simulates the central changing the PHY of the connection.
+     * Simulates the client changing the PHY of the connection.
      *
      * @param txPhy The new TX PHY, as seen from the local device.
      * @param rxPhy The new RX PHY, as seen from the local device.
-     * @throws IllegalStateException if the central is not connected.
+     * @throws IllegalStateException if the client is not connected.
      */
     fun simulatePhyChange(txPhy: Phy, rxPhy: Phy = txPhy) {
         check(isConnected) { "Not connected" }
@@ -140,13 +140,13 @@ class MockAndroidCentral internal constructor(
     }
 
     /**
-     * Simulates the central changing the MTU of the connection, by requesting the MTU exchange.
+     * Simulates the client changing the MTU of the connection, by requesting the MTU exchange.
      *
      * The new MTU is limited to the maximum MTU supported by the environment.
      *
-     * @param mtu The MTU requested by the central.
+     * @param mtu The MTU requested by the client.
      * @return The new MTU.
-     * @throws IllegalStateException if the central is not connected.
+     * @throws IllegalStateException if the client is not connected.
      */
     fun simulateMtuChange(mtu: Int): Int = exchangeMtu(mtu)
 
@@ -154,7 +154,7 @@ class MockAndroidCentral internal constructor(
      * Simulates the connection parameters being changed.
      *
      * @param parameters The new connection parameters.
-     * @throws IllegalStateException if the central is not connected.
+     * @throws IllegalStateException if the client is not connected.
      */
     fun simulateConnectionParametersChange(parameters: ConnectionParameters) {
         check(isConnected) { "Not connected" }
@@ -167,7 +167,7 @@ class MockAndroidCentral internal constructor(
      * @param connectionInterval The connection interval, in 1.25 ms units, 6 to 3200.
      * @param latency The peripheral latency, in connection events, 0 to 499.
      * @param supervisionTimeout The supervision timeout, in 10 ms units, 10 to 3200.
-     * @throws IllegalStateException if the central is not connected.
+     * @throws IllegalStateException if the client is not connected.
      */
     fun simulateConnectionParametersChange(
         connectionInterval: Int,
@@ -183,5 +183,5 @@ class MockAndroidCentral internal constructor(
         else -> Phy.PHY_LE_1M
     }
 
-    override fun toString() = "MockAndroidCentral(address=$address, state=${state.value}, mtu=${mtu.value})"
+    override fun toString() = "MockAndroidClient(address=$address, state=${state.value}, mtu=${mtu.value})"
 }

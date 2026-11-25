@@ -40,7 +40,7 @@ import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import no.nordicsemi.kotlin.ble.server.ReadResponse
 import no.nordicsemi.kotlin.ble.server.WriteRequest
 import no.nordicsemi.kotlin.ble.server.WriteResponse
-import no.nordicsemi.kotlin.ble.server.android.Central
+import no.nordicsemi.kotlin.ble.server.android.Client
 import no.nordicsemi.kotlin.ble.server.mock.ReadResult
 import no.nordicsemi.kotlin.ble.server.mock.WriteResult
 import kotlin.test.Test
@@ -53,7 +53,7 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 /**
- * End-to-end tests of the mock local server: simulated centrals talking to the shared
+ * End-to-end tests of the mock local server: simulated clients talking to the shared
  * [no.nordicsemi.kotlin.ble.server.internal.LocalServerImpl].
  */
 class MockLocalServerTest {
@@ -61,13 +61,13 @@ class MockLocalServerTest {
     // ---- Setup ----
 
     @Test
-    fun `setup defines services and makes them visible to centrals`() = runTest {
+    fun `setup defines services and makes them visible to clients`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
-        val central = manager.simulateCentral().also { it.connect() }
+        val client = manager.simulateClient().also { it.connect() }
 
         assertEquals(service, manager.services.value.single())
-        assertEquals(service.characteristic(RW_UUID).instanceId, central.findCharacteristic(SERVICE_UUID, RW_UUID))
+        assertEquals(service.characteristic(RW_UUID).instanceId, client.findCharacteristic(SERVICE_UUID, RW_UUID))
         assertEquals(3, service.characteristics.size)
     }
 
@@ -123,9 +123,9 @@ class MockLocalServerTest {
         val manager = mockManager()
         val service = manager.defineServices()
         service.characteristic(RW_UUID).setValue(byteArrayOf(1, 2, 3))
-        val central = manager.simulateCentral().also { it.connect() }
+        val client = manager.simulateClient().also { it.connect() }
 
-        val result = central.read(central.findCharacteristic(SERVICE_UUID, RW_UUID)!!)
+        val result = client.read(client.findCharacteristic(SERVICE_UUID, RW_UUID)!!)
 
         assertContentEquals(byteArrayOf(1, 2, 3), result.getOrThrow())
     }
@@ -134,28 +134,28 @@ class MockLocalServerTest {
     fun `read returns empty value by default`() = runTest {
         val manager = mockManager()
         val _ = manager.defineServices()
-        val central = manager.simulateCentral().also { it.connect() }
+        val client = manager.simulateClient().also { it.connect() }
 
-        val result = central.read(central.findCharacteristic(SERVICE_UUID, RW_UUID)!!)
+        val result = client.read(client.findCharacteristic(SERVICE_UUID, RW_UUID)!!)
 
         assertEquals(0, result.getOrThrow().size)
     }
 
     @Test
-    fun `read handler receives the central and provides the value`() = runTest {
+    fun `read handler receives the client and provides the value`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
-        var requester: no.nordicsemi.kotlin.ble.server.Central<*>? = null
+        var requester: no.nordicsemi.kotlin.ble.server.Client<*>? = null
         service.characteristic(RW_UUID).onRead {
-            requester = central
+            requester = client
             ReadResponse.Success(byteArrayOf(42))
         }
-        val central = manager.simulateCentral().also { it.connect() }
+        val client = manager.simulateClient().also { it.connect() }
 
-        val result = central.read(central.findCharacteristic(SERVICE_UUID, RW_UUID)!!)
+        val result = client.read(client.findCharacteristic(SERVICE_UUID, RW_UUID)!!)
 
         assertContentEquals(byteArrayOf(42), result.getOrThrow())
-        assertSame(central, requester)
+        assertSame(client, requester)
     }
 
     @Test
@@ -163,9 +163,9 @@ class MockLocalServerTest {
         val manager = mockManager()
         val service = manager.defineServices()
         service.characteristic(RW_UUID).onRead { ReadResponse.Failure(OperationStatus.InsufficientAuthentication) }
-        val central = manager.simulateCentral().also { it.connect() }
+        val client = manager.simulateClient().also { it.connect() }
 
-        val result = central.read(central.findCharacteristic(SERVICE_UUID, RW_UUID)!!)
+        val result = client.read(client.findCharacteristic(SERVICE_UUID, RW_UUID)!!)
 
         assertEquals(ReadResult.Failure(OperationStatus.InsufficientAuthentication), result)
     }
@@ -175,21 +175,21 @@ class MockLocalServerTest {
         val manager = mockManager()
         val service = manager.defineServices()
         service.characteristic(RW_UUID).setValue(bytes(100))
-        val central = manager.simulateCentral().also { it.connect() }
-        val attribute = central.findCharacteristic(SERVICE_UUID, RW_UUID)!!
+        val client = manager.simulateClient().also { it.connect() }
+        val attribute = client.findCharacteristic(SERVICE_UUID, RW_UUID)!!
 
         // A single read is truncated to MTU - 1 bytes.
-        assertContentEquals(bytes(22), central.read(attribute).getOrThrow())
-        assertContentEquals(bytes(100), central.readLong(attribute).getOrThrow())
+        assertContentEquals(bytes(22), client.read(attribute).getOrThrow())
+        assertContentEquals(bytes(100), client.readLong(attribute).getOrThrow())
     }
 
     @Test
     fun `read of a characteristic without read property fails`() = runTest {
         val manager = mockManager()
         val _ = manager.defineServices()
-        val central = manager.simulateCentral().also { it.connect() }
+        val client = manager.simulateClient().also { it.connect() }
 
-        val result = central.read(central.findCharacteristic(SERVICE_UUID, INDICATE_UUID)!!)
+        val result = client.read(client.findCharacteristic(SERVICE_UUID, INDICATE_UUID)!!)
 
         assertEquals(OperationStatus.ReadNotPermitted, result.statusOrNull() ?: OperationStatus.Success)
     }
@@ -198,9 +198,9 @@ class MockLocalServerTest {
     fun `read of an unknown attribute fails with invalid handle`() = runTest {
         val manager = mockManager()
         val _ = manager.defineServices()
-        val central = manager.simulateCentral().also { it.connect() }
+        val client = manager.simulateClient().also { it.connect() }
 
-        val result = central.read(9999)
+        val result = client.read(9999)
 
         assertEquals(ReadResult.Failure(OperationStatus.InvalidHandle), result)
     }
@@ -215,15 +215,15 @@ class MockLocalServerTest {
         val writes = mutableListOf<WriteRequest>()
         backgroundScope.launch { characteristic.writes.collect { writes += it } }
         testScheduler.runCurrent()
-        val central = manager.simulateCentral().also { it.connect() }
+        val client = manager.simulateClient().also { it.connect() }
 
-        val result = central.write(central.findCharacteristic(SERVICE_UUID, RW_UUID)!!, byteArrayOf(7, 8))
+        val result = client.write(client.findCharacteristic(SERVICE_UUID, RW_UUID)!!, byteArrayOf(7, 8))
         testScheduler.runCurrent()
 
         assertEquals(WriteResult.Success, result)
         assertContentEquals(byteArrayOf(7, 8), characteristic.value.value)
         assertEquals(1, writes.size)
-        assertSame(central, writes[0].central)
+        assertSame(client, writes[0].client)
         assertTrue(writes[0].withResponse)
         assertContentEquals(byteArrayOf(7, 8), writes[0].value)
     }
@@ -232,12 +232,12 @@ class MockLocalServerTest {
     fun `write without response is stored`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
-        val central = manager.simulateCentral().also { it.connect() }
+        val client = manager.simulateClient().also { it.connect() }
         val writes = mutableListOf<WriteRequest>()
         backgroundScope.launch { service.characteristic(RW_UUID).writes.collect { writes += it } }
         testScheduler.runCurrent()
 
-        val _ = central.write(central.findCharacteristic(SERVICE_UUID, RW_UUID)!!, byteArrayOf(9), withResponse = false)
+        val _ = client.write(client.findCharacteristic(SERVICE_UUID, RW_UUID)!!, byteArrayOf(9), withResponse = false)
         testScheduler.runCurrent()
 
         assertContentEquals(byteArrayOf(9), service.characteristic(RW_UUID).value.value)
@@ -253,11 +253,11 @@ class MockLocalServerTest {
         characteristic.onWrite {
             if (value.size == 1) WriteResponse.Success else WriteResponse.Failure(OperationStatus.InvalidAttributeLength)
         }
-        val central = manager.simulateCentral().also { it.connect() }
-        val attribute = central.findCharacteristic(SERVICE_UUID, RW_UUID)!!
+        val client = manager.simulateClient().also { it.connect() }
+        val attribute = client.findCharacteristic(SERVICE_UUID, RW_UUID)!!
 
-        val rejected = central.write(attribute, byteArrayOf(1, 2, 3))
-        val accepted = central.write(attribute, byteArrayOf(5))
+        val rejected = client.write(attribute, byteArrayOf(1, 2, 3))
+        val accepted = client.write(attribute, byteArrayOf(5))
 
         assertEquals(WriteResult.Failure(OperationStatus.InvalidAttributeLength), rejected)
         assertEquals(WriteResult.Success, accepted)
@@ -273,10 +273,10 @@ class MockLocalServerTest {
             received += value
             WriteResponse.Success
         }
-        val central = manager.simulateCentral().also { it.connect() }
-        val _ = central.simulateMtuChange(50)
+        val client = manager.simulateClient().also { it.connect() }
+        val _ = client.simulateMtuChange(50)
 
-        val result = central.writeLong(central.findCharacteristic(SERVICE_UUID, RW_UUID)!!, bytes(200))
+        val result = client.writeLong(client.findCharacteristic(SERVICE_UUID, RW_UUID)!!, bytes(200))
 
         assertEquals(WriteResult.Success, result)
         assertEquals(1, received.size)
@@ -288,9 +288,9 @@ class MockLocalServerTest {
     fun `value longer than MTU written with response is delivered whole`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
-        val central = manager.simulateCentral().also { it.connect() }
+        val client = manager.simulateClient().also { it.connect() }
 
-        val _ = central.write(central.findCharacteristic(SERVICE_UUID, RW_UUID)!!, bytes(60))
+        val _ = client.write(client.findCharacteristic(SERVICE_UUID, RW_UUID)!!, bytes(60))
 
         assertContentEquals(bytes(60), service.characteristic(RW_UUID).value.value)
     }
@@ -300,10 +300,10 @@ class MockLocalServerTest {
         val manager = mockManager()
         val service = manager.defineServices()
         val characteristic = service.characteristic(RW_UUID)
-        val central = manager.simulateCentral().also { it.connect() }
-        val attribute = central.findCharacteristic(SERVICE_UUID, RW_UUID)!!
+        val client = manager.simulateClient().also { it.connect() }
+        val attribute = client.findCharacteristic(SERVICE_UUID, RW_UUID)!!
 
-        val write = central.beginReliableWrite()
+        val write = client.beginReliableWrite()
         val _ = write.write(attribute, bytes(10))
         assertEquals(0, characteristic.value.value.size)
 
@@ -318,10 +318,10 @@ class MockLocalServerTest {
         val service = manager.defineServices()
         val characteristic = service.characteristic(RW_UUID)
         characteristic.setValue(byteArrayOf(1))
-        val central = manager.simulateCentral().also { it.connect() }
-        val attribute = central.findCharacteristic(SERVICE_UUID, RW_UUID)!!
+        val client = manager.simulateClient().also { it.connect() }
+        val attribute = client.findCharacteristic(SERVICE_UUID, RW_UUID)!!
 
-        val write = central.beginReliableWrite()
+        val write = client.beginReliableWrite()
         val _ = write.write(attribute, bytes(10))
         write.cancel()
 
@@ -329,12 +329,12 @@ class MockLocalServerTest {
     }
 
     @Test
-    fun `reliable writes of two centrals are independent`() = runTest {
+    fun `reliable writes of two clients are independent`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
         val characteristic = service.characteristic(RW_UUID)
-        val a = manager.simulateCentral("A").also { it.connect() }
-        val b = manager.simulateCentral("B").also { it.connect() }
+        val a = manager.simulateClient("A").also { it.connect() }
+        val b = manager.simulateClient("B").also { it.connect() }
         val attribute = a.findCharacteristic(SERVICE_UUID, RW_UUID)!!
 
         val writeA = a.beginReliableWrite()
@@ -350,17 +350,17 @@ class MockLocalServerTest {
     // ---- Subscriptions and updates ----
 
     @Test
-    fun `subscribed central receives a notification`() = runTest {
+    fun `subscribed client receives a notification`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
         val characteristic = service.characteristic(NOTIFY_UUID)
-        val central = manager.simulateCentral().also { it.connect() }
-        val updates = collectUpdates(central)
+        val client = manager.simulateClient().also { it.connect() }
+        val updates = collectUpdates(client)
 
-        central.subscribe(central.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!).getOrThrow()
+        client.subscribe(client.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!).getOrThrow()
         characteristic.update(byteArrayOf(1, 2, 3))
 
-        assertEquals(setOf(central), characteristic.subscribers.value)
+        assertEquals(setOf(client), characteristic.subscribers.value)
         assertEquals(1, updates.size)
         assertEquals(characteristic.instanceId, updates[0].attribute)
         assertContentEquals(byteArrayOf(1, 2, 3), updates[0].value)
@@ -369,25 +369,25 @@ class MockLocalServerTest {
     }
 
     @Test
-    fun `subscribed central receives an indication`() = runTest {
+    fun `subscribed client receives an indication`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
         val characteristic = service.characteristic(INDICATE_UUID)
-        val central = manager.simulateCentral().also { it.connect() }
-        val updates = collectUpdates(central)
+        val client = manager.simulateClient().also { it.connect() }
+        val updates = collectUpdates(client)
 
-        central.subscribe(central.findCharacteristic(SERVICE_UUID, INDICATE_UUID)!!, indications = true).getOrThrow()
+        client.subscribe(client.findCharacteristic(SERVICE_UUID, INDICATE_UUID)!!, indications = true).getOrThrow()
         characteristic.update(byteArrayOf(4))
 
         assertTrue(updates.single().isIndication)
     }
 
     @Test
-    fun `not subscribed central does not receive updates`() = runTest {
+    fun `not subscribed client does not receive updates`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
-        val central = manager.simulateCentral().also { it.connect() }
-        val updates = collectUpdates(central)
+        val client = manager.simulateClient().also { it.connect() }
+        val updates = collectUpdates(client)
 
         service.characteristic(NOTIFY_UUID).update(byteArrayOf(1))
 
@@ -396,17 +396,17 @@ class MockLocalServerTest {
     }
 
     @Test
-    fun `unsubscribed central stops receiving updates`() = runTest {
+    fun `unsubscribed client stops receiving updates`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
         val characteristic = service.characteristic(NOTIFY_UUID)
-        val central = manager.simulateCentral().also { it.connect() }
-        val updates = collectUpdates(central)
-        val attribute = central.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!
-        central.subscribe(attribute).getOrThrow()
+        val client = manager.simulateClient().also { it.connect() }
+        val updates = collectUpdates(client)
+        val attribute = client.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!
+        client.subscribe(attribute).getOrThrow()
         characteristic.update(byteArrayOf(1))
 
-        central.unsubscribe(attribute).getOrThrow()
+        client.unsubscribe(attribute).getOrThrow()
 
         assertTrue(characteristic.subscribers.value.isEmpty())
         assertEquals(1, updates.size)
@@ -416,9 +416,9 @@ class MockLocalServerTest {
     fun `subscribing for indications to a notify-only characteristic fails`() = runTest {
         val manager = mockManager()
         val _ = manager.defineServices()
-        val central = manager.simulateCentral().also { it.connect() }
+        val client = manager.simulateClient().also { it.connect() }
 
-        val result = central.subscribe(central.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!, indications = true)
+        val result = client.subscribe(client.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!, indications = true)
 
         assertEquals(
             WriteResult.Failure(OperationStatus.ClientCharacteristicConfigurationDescriptorImproperlyConfigured),
@@ -427,12 +427,12 @@ class MockLocalServerTest {
     }
 
     @Test
-    fun `several centrals subscribe independently`() = runTest {
+    fun `several clients subscribe independently`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
         val characteristic = service.characteristic(NOTIFY_UUID)
-        val a = manager.simulateCentral("A").also { it.connect() }
-        val b = manager.simulateCentral("B").also { it.connect() }
+        val a = manager.simulateClient("A").also { it.connect() }
+        val b = manager.simulateClient("B").also { it.connect() }
         val updatesA = collectUpdates(a)
         val updatesB = collectUpdates(b)
         val attribute = a.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!
@@ -449,12 +449,12 @@ class MockLocalServerTest {
     }
 
     @Test
-    fun `update to a single central reaches only that central`() = runTest {
+    fun `update to a single client reaches only that client`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
         val characteristic = service.characteristic(NOTIFY_UUID)
-        val a = manager.simulateCentral("A").also { it.connect() }
-        val b = manager.simulateCentral("B").also { it.connect() }
+        val a = manager.simulateClient("A").also { it.connect() }
+        val b = manager.simulateClient("B").also { it.connect() }
         val updatesA = collectUpdates(a)
         val updatesB = collectUpdates(b)
         val attribute = a.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!
@@ -472,9 +472,9 @@ class MockLocalServerTest {
         val manager = mockManager()
         val service = manager.defineServices()
         val characteristic = service.characteristic(NOTIFY_UUID)
-        val central = manager.simulateCentral().also { it.connect() }
-        val attribute = central.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!
-        central.subscribe(attribute).getOrThrow()
+        val client = manager.simulateClient().also { it.connect() }
+        val attribute = client.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!
+        client.subscribe(attribute).getOrThrow()
 
         assertFailsWith<IllegalArgumentException> { characteristic.update(bytes(21)) }
         characteristic.update(bytes(20))
@@ -485,11 +485,11 @@ class MockLocalServerTest {
         val manager = mockManager()
         val service = manager.defineServices()
         val characteristic = service.characteristic(NOTIFY_UUID)
-        val central = manager.simulateCentral().also { it.connect() }
-        val updates = collectUpdates(central)
-        central.subscribe(central.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!).getOrThrow()
+        val client = manager.simulateClient().also { it.connect() }
+        val updates = collectUpdates(client)
+        client.subscribe(client.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!).getOrThrow()
 
-        val _ = central.simulateMtuChange(185)
+        val _ = client.simulateMtuChange(185)
         characteristic.update(bytes(182))
 
         assertEquals(182, updates.single().value.size)
@@ -499,12 +499,12 @@ class MockLocalServerTest {
     // ---- Disconnection and lifecycle ----
 
     @Test
-    fun `disconnected central is removed from subscribers`() = runTest {
+    fun `disconnected client is removed from subscribers`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
         val characteristic = service.characteristic(NOTIFY_UUID)
-        val a = manager.simulateCentral("A").also { it.connect() }
-        val b = manager.simulateCentral("B").also { it.connect() }
+        val a = manager.simulateClient("A").also { it.connect() }
+        val b = manager.simulateClient("B").also { it.connect() }
         val attribute = a.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!
         a.subscribe(attribute).getOrThrow()
         b.subscribe(attribute).getOrThrow()
@@ -516,62 +516,62 @@ class MockLocalServerTest {
     }
 
     @Test
-    fun `link loss removes the central from subscribers`() = runTest {
+    fun `link loss removes the client from subscribers`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
         val characteristic = service.characteristic(NOTIFY_UUID)
-        val central = manager.simulateCentral().also { it.connect() }
-        central.subscribe(central.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!).getOrThrow()
+        val client = manager.simulateClient().also { it.connect() }
+        client.subscribe(client.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!).getOrThrow()
 
-        central.simulateLinkLoss()
+        client.simulateLinkLoss()
         testScheduler.runCurrent()
 
         assertTrue(characteristic.subscribers.value.isEmpty())
     }
 
     @Test
-    fun `reconnected central has to subscribe again`() = runTest {
+    fun `reconnected client has to subscribe again`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
         val characteristic = service.characteristic(NOTIFY_UUID)
-        val central = manager.simulateCentral().also { it.connect() }
-        val attribute = central.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!
-        central.subscribe(attribute).getOrThrow()
-        central.disconnect()
+        val client = manager.simulateClient().also { it.connect() }
+        val attribute = client.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!
+        client.subscribe(attribute).getOrThrow()
+        client.disconnect()
         testScheduler.runCurrent()
 
-        central.connect()
+        client.connect()
 
         assertTrue(characteristic.subscribers.value.isEmpty())
-        central.subscribe(attribute).getOrThrow()
-        assertEquals(setOf(central), characteristic.subscribers.value)
+        client.subscribe(attribute).getOrThrow()
+        assertEquals(setOf(client), characteristic.subscribers.value)
     }
 
     @Test
-    fun `turning Bluetooth off disconnects centrals and clears subscriptions`() = runTest {
+    fun `turning Bluetooth off disconnects clients and clears subscriptions`() = runTest {
         val environment = MockAndroidEnvironment.Api31()
         val manager = mockManager(environment)
         val service = manager.defineServices()
         val characteristic = service.characteristic(NOTIFY_UUID)
-        val central = manager.simulateCentral().also { it.connect() }
-        central.subscribe(central.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!).getOrThrow()
+        val client = manager.simulateClient().also { it.connect() }
+        client.subscribe(client.findCharacteristic(SERVICE_UUID, NOTIFY_UUID)!!).getOrThrow()
 
         environment.simulatePowerOff()
         testScheduler.runCurrent()
 
-        assertFalse(central.state.value.isConnected)
+        assertFalse(client.state.value.isConnected)
         assertTrue(characteristic.subscribers.value.isEmpty())
     }
 
     @Test
-    fun `closing the manager disconnects centrals and invalidates services`() = runTest {
+    fun `closing the manager disconnects clients and invalidates services`() = runTest {
         val manager = mockManager()
         val service = manager.defineServices()
-        val central = manager.simulateCentral().also { it.connect() }
+        val client = manager.simulateClient().also { it.connect() }
 
         manager.close()
 
-        assertFalse(central.state.value.isConnected)
+        assertFalse(client.state.value.isConnected)
         assertNull(service.manager)
         assertTrue(manager.services.value.isEmpty())
     }
@@ -580,20 +580,20 @@ class MockLocalServerTest {
     fun `request cannot be answered after the manager is closed`() = runTest {
         val manager = mockManager()
         val _ = manager.defineServices()
-        val central = manager.simulateCentral().also { it.connect() }
-        val attribute = central.findCharacteristic(SERVICE_UUID, RW_UUID)!!
+        val client = manager.simulateClient().also { it.connect() }
+        val attribute = client.findCharacteristic(SERVICE_UUID, RW_UUID)!!
 
         manager.close()
 
-        assertFailsWith<IllegalStateException> { central.read(attribute) }
+        assertFailsWith<IllegalStateException> { client.read(attribute) }
     }
 
     @Test
-    fun `connected centrals are reported by the manager`() = runTest {
+    fun `connected clients are reported by the manager`() = runTest {
         val manager = mockManager()
         val _ = manager.defineServices()
-        val central = manager.simulateCentral().also { it.connect() }
+        val client = manager.simulateClient().also { it.connect() }
 
-        assertEquals(listOf(central), manager.connectedCentrals.first())
+        assertEquals(listOf(client), manager.connectedClients.first())
     }
 }

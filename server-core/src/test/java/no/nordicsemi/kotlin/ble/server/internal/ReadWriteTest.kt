@@ -63,13 +63,13 @@ class ReadWriteTest {
         assertEquals(OperationStatus.Success, response.status)
         assertContentEquals(bytes(1, 2, 3), response.value)
         assertEquals(0, response.offset)
-        assertEquals(fixture.central, response.central)
+        assertEquals(fixture.client, response.client)
     }
 
     @Test
     fun read_echoesRequestId() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        fixture.emit(GattServerEvent.ReadRequested(fixture.central, 42, fixture.ro.instanceId, 0))
+        fixture.emit(GattServerEvent.ReadRequested(fixture.client, 42, fixture.ro.instanceId, 0))
 
         assertEquals(42, fixture.server.responses.last().requestId)
     }
@@ -157,12 +157,12 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_handlerSeesCentral() = runTest {
+    fun read_handlerSeesClient() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        fixture.ro.onRead { ReadResponse.Success(central.identifier.toString().encodeToByteArray()) }
+        fixture.ro.onRead { ReadResponse.Success(client.identifier.toString().encodeToByteArray()) }
 
         assertContentEquals("AA".encodeToByteArray(), fixture.read(fixture.ro.instanceId).value)
-        assertContentEquals("BB".encodeToByteArray(), fixture.read(fixture.ro.instanceId, from = fixture.central2).value)
+        assertContentEquals("BB".encodeToByteArray(), fixture.read(fixture.ro.instanceId, from = fixture.client2).value)
     }
 
     @Test
@@ -172,7 +172,7 @@ class ReadWriteTest {
             kotlinx.coroutines.delay(1000)
             ReadResponse.Success(bytes(7))
         }
-        fixture.emit(GattServerEvent.ReadRequested(fixture.central, 1, fixture.ro.instanceId, 0))
+        fixture.emit(GattServerEvent.ReadRequested(fixture.client, 1, fixture.ro.instanceId, 0))
         assertTrue(fixture.server.responses.isEmpty())
 
         testScheduler.advanceTimeBy(1001)
@@ -268,7 +268,7 @@ class ReadWriteTest {
         testScheduler.runCurrent()
         assertEquals(1, writes.size)
         assertContentEquals(bytes(1, 2), writes[0].value)
-        assertEquals(fixture.central, writes[0].central)
+        assertEquals(fixture.client, writes[0].client)
         assertTrue(writes[0].withResponse)
     }
 
@@ -416,14 +416,14 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_handlerSeesValueAndCentral() = runTest {
+    fun write_handlerSeesValueAndClient() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         var request: WriteRequest? = null
         fixture.rw.onWrite { request = this; WriteResponse.Success }
 
-        val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2, 3), from = fixture.central2)
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2, 3), from = fixture.client2)
 
-        assertSame(fixture.central2, request?.central)
+        assertSame(fixture.client2, request?.client)
         assertContentEquals(bytes(1, 2, 3), request?.value)
     }
 

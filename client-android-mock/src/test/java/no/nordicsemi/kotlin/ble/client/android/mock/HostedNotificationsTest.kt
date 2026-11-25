@@ -125,7 +125,7 @@ class HostedNotificationsTest {
     }
 
     @Test
-    fun `subscribing makes the central a subscriber`() = runTest {
+    fun `subscribing makes the client a subscriber`() = runTest {
         withTimeout(10.seconds) {
             val fixture = notifyingFixture()
             val values = mutableListOf<ByteArray>()
@@ -133,7 +133,7 @@ class HostedNotificationsTest {
 
             collect(fixture.remote(), values)
 
-            assertEquals(setOf(fixture.server.central), fixture.local().subscribers.value)
+            assertEquals(setOf(fixture.server.client), fixture.local().subscribers.value)
             assertTrue(fixture.local(HOSTED_CHAR_2_UUID).subscribers.value.isEmpty())
         }
     }
@@ -316,7 +316,7 @@ class HostedNotificationsTest {
             val values = mutableListOf<ByteArray>()
             collect(fixture.remote(), values)
 
-            assertEquals(20, fixture.server.central.maximumUpdateValueLength)
+            assertEquals(20, fixture.server.client.maximumUpdateValueLength)
             assertFailsWith<IllegalArgumentException> { fixture.local().update(gattBytes(21)) }
             fixture.local().update(gattBytes(20))
             hostedSettle()
@@ -333,8 +333,8 @@ class HostedNotificationsTest {
             collect(fixture.remote(), values)
             hostedSettle()
 
-            assertEquals(247, fixture.server.central.mtu.value)
-            assertEquals(244, fixture.server.central.maximumUpdateValueLength)
+            assertEquals(247, fixture.server.client.mtu.value)
+            assertEquals(244, fixture.server.client.maximumUpdateValueLength)
             fixture.local().update(gattBytes(244))
             hostedSettle()
 
@@ -344,34 +344,34 @@ class HostedNotificationsTest {
     }
 
     @Test
-    fun `central mtu follows the mtu negotiated by the client`() = runTest {
+    fun `client mtu follows the mtu negotiated by the client`() = runTest {
         withTimeout(10.seconds) {
             val fixture = notifyingFixture(maxAttMtu = 185)
             fixture.connect()
             hostedSettle()
 
             assertEquals(185, fixture.peripheral.mtu.value)
-            assertEquals(185, fixture.server.central.mtu.value)
+            assertEquals(185, fixture.server.client.mtu.value)
         }
     }
 
     // ---------------------------------------------------------------- Connection
 
     @Test
-    fun `central is connected as long as the client is`() = runTest {
+    fun `client is connected as long as the client is`() = runTest {
         withTimeout(10.seconds) {
             val fixture = notifyingFixture()
-            assertFalse(fixture.server.central.state.value.isConnected)
+            assertFalse(fixture.server.client.state.value.isConnected)
 
             fixture.connect()
             hostedSettle()
-            assertTrue(fixture.server.central.state.value.isConnected)
-            assertEquals(listOf(fixture.server.central), fixture.server.connectedCentrals.value)
+            assertTrue(fixture.server.client.state.value.isConnected)
+            assertEquals(listOf(fixture.server.client), fixture.server.connectedClients.value)
 
             fixture.peripheral.disconnect()
             hostedSettle()
-            assertFalse(fixture.server.central.state.value.isConnected)
-            assertTrue(fixture.server.connectedCentrals.value.isEmpty())
+            assertFalse(fixture.server.client.state.value.isConnected)
+            assertTrue(fixture.server.connectedClients.value.isEmpty())
         }
     }
 
@@ -400,7 +400,7 @@ class HostedNotificationsTest {
             hostedSettle()
 
             assertTrue(fixture.local().subscribers.value.isEmpty())
-            assertIs<ConnectionState.Disconnected>(fixture.server.central.state.value)
+            assertIs<ConnectionState.Disconnected>(fixture.server.client.state.value)
         }
     }
 
@@ -466,7 +466,7 @@ class HostedNotificationsTest {
     }
 
     @Test
-    fun `link loss disconnects the central`() = runTest {
+    fun `link loss disconnects the client`() = runTest {
         withTimeout(30.seconds) {
             val fixture = notifyingFixture()
             fixture.connect()
@@ -477,7 +477,7 @@ class HostedNotificationsTest {
             testScheduler.advanceTimeBy(5.seconds.inWholeMilliseconds)
             testScheduler.runCurrent()
 
-            assertFalse(fixture.server.central.state.value.isConnected)
+            assertFalse(fixture.server.client.state.value.isConnected)
         }
     }
 
@@ -508,13 +508,13 @@ class HostedNotificationsTest {
 
             assertContentEquals(byteArrayOf(0x42), first.single())
             assertContentEquals(byteArrayOf(0x42), second.single())
-            // The phone is connected to the peripheral once, so there is one central.
-            assertEquals(1, fixture.server.connectedCentrals.value.size)
+            // The phone is connected to the peripheral once, so there is one client.
+            assertEquals(1, fixture.server.connectedClients.value.size)
         }
     }
 
     @Test
-    fun `central stays connected until the last client disconnects`() = runTest {
+    fun `client stays connected until the last client disconnects`() = runTest {
         withTimeout(10.seconds) {
             val fixture = notifyingFixture()
             val secondManager = CentralManager.mock(scope = backgroundScope)
@@ -526,11 +526,11 @@ class HostedNotificationsTest {
 
             fixture.peripheral.disconnect()
             hostedSettle()
-            assertTrue(fixture.server.central.state.value.isConnected)
+            assertTrue(fixture.server.client.state.value.isConnected)
 
             secondPeripheral.disconnect()
             hostedSettle()
-            assertFalse(fixture.server.central.state.value.isConnected)
+            assertFalse(fixture.server.client.state.value.isConnected)
         }
     }
 
@@ -645,7 +645,7 @@ class HostedNotificationsTest {
                 .first { it.uuid == Service.GENERIC_ATTRIBUTE_UUID }
                 .characteristics
                 .single()
-            assertEquals(setOf(fixture.server.central), serviceChanged.subscribers.value)
+            assertEquals(setOf(fixture.server.client), serviceChanged.subscribers.value)
 
             fixture.spec.simulateServiceChange {
                 GenericAttributeService(initiallyEnabled = false)

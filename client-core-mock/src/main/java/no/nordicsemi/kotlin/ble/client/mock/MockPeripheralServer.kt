@@ -38,7 +38,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import no.nordicsemi.kotlin.ble.client.mock.internal.SimulatedCentralImpl
+import no.nordicsemi.kotlin.ble.client.mock.internal.SimulatedClientImpl
 import no.nordicsemi.kotlin.ble.core.Characteristic
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.Descriptor
@@ -48,7 +48,7 @@ import no.nordicsemi.kotlin.ble.core.internal.CCCD
 import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
 import no.nordicsemi.kotlin.ble.server.LocalCharacteristic
 import no.nordicsemi.kotlin.ble.server.internal.LocalServerImpl
-import no.nordicsemi.kotlin.ble.server.mock.MockCentral
+import no.nordicsemi.kotlin.ble.server.mock.MockClient
 import no.nordicsemi.kotlin.ble.server.mock.MockGattServer
 import no.nordicsemi.kotlin.ble.server.mock.ReadResult
 import no.nordicsemi.kotlin.ble.server.mock.WriteResult
@@ -123,7 +123,7 @@ import no.nordicsemi.kotlin.ble.server.mock.WriteResult
  * ### Limitations
  *
  * - One server can be used by one [PeripheralSpec] only.
- * - The only central is [central], the phone. It is the same for all the clients of the peripheral.
+ * - The only client is [client], the phone. It is the same for all the clients of the peripheral.
  * - [PeripheralSpec.simulateValueUpdate] sends a notification to the clients, but it bypasses the
  *   server. Use `update()` of the local characteristic instead.
  *
@@ -137,7 +137,7 @@ import no.nordicsemi.kotlin.ble.server.mock.WriteResult
 class MockPeripheralServer private constructor(
     scope: CoroutineScope,
     private val gatt: SimulatedGattServer,
-): LocalServerImpl<String, SimulatedCentral>(scope, gatt) {
+): LocalServerImpl<String, SimulatedClient>(scope, gatt) {
 
     /**
      * Creates a server that is not used by any peripheral yet.
@@ -147,8 +147,8 @@ class MockPeripheralServer private constructor(
      */
     constructor(scope: CoroutineScope): this(scope, SimulatedGattServer())
 
-    /** The central, which is also a [MockCentral] sending the requests of the clients. */
-    internal val simulatedCentral = SimulatedCentralImpl(gatt)
+    /** The client, which is also a [MockClient] sending the requests of the clients. */
+    internal val simulatedClient = SimulatedClientImpl(gatt)
 
     /**
      * Defines the services without suspending.
@@ -171,19 +171,19 @@ class MockPeripheralServer private constructor(
     private var peripheral: PeripheralSpec<*>? = null
 
     /** The reliable write, or a long write, which has been started, but not executed yet. */
-    private var reliableWrite: MockCentral<String, SimulatedCentral>.ReliableWrite? = null
+    private var reliableWrite: MockClient<String, SimulatedClient>.ReliableWrite? = null
 
     /**
-     * The central, that is the phone the mock peripheral is connected to.
+     * The client, that is the phone the mock peripheral is connected to.
      *
      * It is connected when the [PeripheralSpec] using this server is connected.
      */
-    val central: SimulatedCentral
-        get() = simulatedCentral
+    val client: SimulatedClient
+        get() = simulatedClient
 
-    /** The centrals that are connected: the [central] when the [PeripheralSpec] is connected. */
-    val connectedCentrals: StateFlow<List<SimulatedCentral>>
-        get() = gatt.connectedCentrals
+    /** The clients that are connected: the [client] when the [PeripheralSpec] is connected. */
+    val connectedClients: StateFlow<List<SimulatedClient>>
+        get() = gatt.connectedClients
 
     /** The definitions of the current services, which are discovered by the clients. */
     internal val definitions: List<ServiceDefinition>
@@ -210,19 +210,19 @@ class MockPeripheralServer private constructor(
      * Reads the whole value of the attribute, using the Read, and Read Blob requests when needed.
      */
     internal suspend fun read(attribute: Int): ReadResponse =
-        interceptor?.onRead(attribute) ?: when (val result = simulatedCentral.readLong(attribute)) {
+        interceptor?.onRead(attribute) ?: when (val result = simulatedClient.readLong(attribute)) {
             is ReadResult.Success -> ReadResponse.Success(result.value)
             is ReadResult.Failure -> ReadResponse.Failure(result.status)
         }
 
     /** Sends a single Write Request. The value must fit in a single request. */
     internal suspend fun write(attribute: Int, value: ByteArray): WriteResponse =
-        interceptor?.onWrite(attribute, value) ?: simulatedCentral.write(attribute, value, withResponse = true).toResponse()
+        interceptor?.onWrite(attribute, value) ?: simulatedClient.write(attribute, value, withResponse = true).toResponse()
 
     /** Sends a Write Command. The value must fit in a single command. */
     internal suspend fun writeCommand(attribute: Int, value: ByteArray) {
         interceptor?.onWriteCommand(attribute, value)?.let { return }
-        val _ = simulatedCentral.write(attribute, value, withResponse = false)
+        val _ = simulatedClient.write(attribute, value, withResponse = false)
     }
 
     /**
@@ -234,7 +234,7 @@ class MockPeripheralServer private constructor(
     internal suspend fun prepareWrite(attribute: Int, value: ByteArray, reliable: Boolean): PrepareWriteResponse {
         interceptor?.onPrepareWrite(attribute, value)?.let { return it }
         val write = reliableWrite
-            ?: simulatedCentral.beginReliableWrite().also { reliableWrite = it }
+            ?: simulatedClient.beginReliableWrite().also { reliableWrite = it }
         return when (val result = write.write(attribute, value)) {
             is WriteResult.Success -> PrepareWriteResponse.Success(value)
             is WriteResult.Failure -> {
@@ -272,25 +272,25 @@ class MockPeripheralServer private constructor(
      */
     internal fun onConnectionChanged(connected: Boolean, mtu: Int?) {
         if (connected) {
-            if (simulatedCentral.isConnected || gatt.isClosed) return
-            simulatedCentral.connect()
-            mtu?.let { simulatedCentral.exchangeMtu(it) }
+            if (simulatedClient.isConnected || gatt.isClosed) return
+            simulatedClient.connect()
+            mtu?.let { simulatedClient.exchangeMtu(it) }
             if (isServiceChangedEnabledByDefault()) {
                 subscribeToServiceChanged()
             }
-        } else if (simulatedCentral.isConnected) {
+        } else if (simulatedClient.isConnected) {
             reliableWrite = null
-            // The central is disconnected immediately, so that the peripheral may connect again.
+            // The client is disconnected immediately, so that the peripheral may connect again.
             runImmediately {
-                simulatedCentral.disconnect(ConnectionState.Disconnected.Reason.TerminatePeerUser)
+                simulatedClient.disconnect(ConnectionState.Disconnected.Reason.TerminatePeerUser)
             }
         }
     }
 
     /** Called when the ATT MTU of the connection changed. */
     internal fun onMtuChanged(mtu: Int) {
-        if (simulatedCentral.isConnected) {
-            val _ = simulatedCentral.exchangeMtu(mtu)
+        if (simulatedClient.isConnected) {
+            val _ = simulatedClient.exchangeMtu(mtu)
         }
     }
 
@@ -301,9 +301,9 @@ class MockPeripheralServer private constructor(
         ?.characteristics
         ?.firstOrNull { it.uuid == Characteristic.SERVICE_CHANGED }
 
-    /** Whether the central has enabled indications of the Service Changed characteristic. */
+    /** Whether the client has enabled indications of the Service Changed characteristic. */
     private fun isServiceChangedEnabled(): Boolean =
-        serviceChangedCharacteristic()?.subscribers?.value?.contains(simulatedCentral) == true
+        serviceChangedCharacteristic()?.subscribers?.value?.contains(simulatedClient) == true
 
     /**
      * Whether the Service Changed characteristic has been declared with its CCCD enabled, which
@@ -321,14 +321,14 @@ class MockPeripheralServer private constructor(
     private fun subscribeToServiceChanged() {
         val characteristic = serviceChangedCharacteristic()?.instanceId ?: return
         internalScope.launch {
-            if (simulatedCentral.isConnected) {
-                val _ = simulatedCentral.subscribe(characteristic, indications = true)
+            if (simulatedClient.isConnected) {
+                val _ = simulatedClient.subscribe(characteristic, indications = true)
             }
         }
     }
 
     /**
-     * Replaces the services, without suspending, and returns whether the central was subscribed to
+     * Replaces the services, without suspending, and returns whether the client was subscribed to
      * indications of the Service Changed characteristic.
      *
      * The subscription is kept, if the new services have the characteristic, as it is for
@@ -367,7 +367,7 @@ private fun runImmediately(block: suspend () -> Unit) {
  * The simulated GATT server, which sends the notifications and indications to the client with
  * the delay of the transfer.
  */
-internal class SimulatedGattServer: MockGattServer<String, SimulatedCentral>() {
+internal class SimulatedGattServer: MockGattServer<String, SimulatedClient>() {
 
     /**
      * Delivers the update to the clients of the peripheral, and suspends until it is sent
@@ -375,9 +375,9 @@ internal class SimulatedGattServer: MockGattServer<String, SimulatedCentral>() {
      */
     var updateSink: (suspend (attribute: Int, value: ByteArray, indication: Boolean) -> Unit)? = null
 
-    override suspend fun notify(central: SimulatedCentral, attribute: Int, value: ByteArray, confirm: Boolean) {
+    override suspend fun notify(client: SimulatedClient, attribute: Int, value: ByteArray, confirm: Boolean) {
         updateSink?.invoke(attribute, value, confirm)
-        super.notify(central, attribute, value, confirm)
+        super.notify(client, attribute, value, confirm)
     }
 }
 

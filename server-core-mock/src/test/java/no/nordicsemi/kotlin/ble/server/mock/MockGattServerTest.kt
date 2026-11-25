@@ -49,7 +49,7 @@ import kotlin.test.assertTrue
 
 class MockGattServerTest {
 
-    private fun TestServer.central(id: String = "AA") = TestCentral(id, this)
+    private fun TestServer.client(id: String = "AA") = TestClient(id, this)
 
     @Test
     fun `setServices stores definitions for inspection`() = runTest {
@@ -149,17 +149,17 @@ class MockGattServerTest {
     }
 
     @Test
-    fun `close disconnects all centrals and emits events`() = runTest {
+    fun `close disconnects all clients and emits events`() = runTest {
         val server = TestServer()
         val app = FakeApp(server, this)
-        val a = server.central("A").also { it.connect() }
-        val b = server.central("B").also { it.connect() }
+        val a = server.client("A").also { it.connect() }
+        val b = server.client("B").also { it.connect() }
 
         server.close()
 
         assertFalse(a.isConnected)
         assertFalse(b.isConnected)
-        assertTrue(server.connectedCentrals.value.isEmpty())
+        assertTrue(server.connectedClients.value.isEmpty())
         assertEquals(2, app.disconnects.size)
         assertTrue(server.isClosed)
     }
@@ -169,13 +169,13 @@ class MockGattServerTest {
         val server = TestServer()
         server.close()
 
-        assertFailsWith<IllegalStateException> { server.central().connect() }
+        assertFailsWith<IllegalStateException> { server.client().connect() }
     }
 
     @Test
     fun `disconnectAll disconnects with the given reason`() = runTest {
         val server = TestServer()
-        val a = server.central("A").also { it.connect() }
+        val a = server.client("A").also { it.connect() }
 
         server.disconnectAll(ConnectionState.Disconnected.Reason.LinkLoss)
 
@@ -183,12 +183,12 @@ class MockGattServerTest {
     }
 
     @Test
-    fun `notify delivers a notification to the central`() = runTest {
+    fun `notify delivers a notification to the client`() = runTest {
         val server = TestServer()
-        val central = server.central().also { it.connect() }
-        val updates = collectUpdates(central)
+        val client = server.client().also { it.connect() }
+        val updates = collectUpdates(client)
 
-        server.notify(central.asCentral, attribute = 7, value = byteArrayOf(1, 2, 3), confirm = false)
+        server.notify(client.asClient, attribute = 7, value = byteArrayOf(1, 2, 3), confirm = false)
 
         assertEquals(1, updates.size)
         assertEquals(7, updates[0].attribute)
@@ -199,23 +199,23 @@ class MockGattServerTest {
     @Test
     fun `notify with confirm delivers an indication`() = runTest {
         val server = TestServer()
-        val central = server.central().also { it.connect() }
-        val updates = collectUpdates(central)
+        val client = server.client().also { it.connect() }
+        val updates = collectUpdates(client)
 
-        server.notify(central.asCentral, attribute = 7, value = byteArrayOf(9), confirm = true)
+        server.notify(client.asClient, attribute = 7, value = byteArrayOf(9), confirm = true)
 
         assertTrue(updates.single().isIndication)
     }
 
     @Test
-    fun `notify only reaches the target central`() = runTest {
+    fun `notify only reaches the target client`() = runTest {
         val server = TestServer()
-        val a = server.central("A").also { it.connect() }
-        val b = server.central("B").also { it.connect() }
+        val a = server.client("A").also { it.connect() }
+        val b = server.client("B").also { it.connect() }
         val updatesA = collectUpdates(a)
         val updatesB = collectUpdates(b)
 
-        server.notify(b.asCentral, 1, byteArrayOf(1), false)
+        server.notify(b.asClient, 1, byteArrayOf(1), false)
 
         assertTrue(updatesA.isEmpty())
         assertEquals(1, updatesB.size)
@@ -224,23 +224,23 @@ class MockGattServerTest {
     @Test
     fun `notify copies the value`() = runTest {
         val server = TestServer()
-        val central = server.central().also { it.connect() }
-        val updates = collectUpdates(central)
+        val client = server.client().also { it.connect() }
+        val updates = collectUpdates(client)
         val value = byteArrayOf(1, 2)
 
-        server.notify(central.asCentral, 1, value, false)
+        server.notify(client.asClient, 1, value, false)
         value[0] = 100
 
         assertEquals(1, updates.single().value[0].toInt())
     }
 
     @Test
-    fun `notify to a disconnected central fails`() = runTest {
+    fun `notify to a disconnected client fails`() = runTest {
         val server = TestServer()
-        val central = server.central()
+        val client = server.client()
 
         val exception = assertFailsWith<GattOperationException> {
-            server.notify(central.asCentral, 1, byteArrayOf(1), false)
+            server.notify(client.asClient, 1, byteArrayOf(1), false)
         }
 
         assertEquals(OperationStatus.RequestFailed, exception.status)
@@ -249,21 +249,21 @@ class MockGattServerTest {
     @Test
     fun `respond to an unknown request is ignored`() = runTest {
         val server = TestServer()
-        val central = server.central().also { it.connect() }
+        val client = server.client().also { it.connect() }
 
-        server.respond(central.asCentral, 12345, OperationStatus.Success, 0, ByteArray(0))
+        server.respond(client.asClient, 12345, OperationStatus.Success, 0, ByteArray(0))
     }
 
     @Test
-    fun `connected centrals are exposed as the server sees them`() = runTest {
+    fun `connected clients are exposed as the server sees them`() = runTest {
         val server = TestServer()
-        val central = server.central().also { it.connect() }
+        val client = server.client().also { it.connect() }
 
-        assertSame(central, server.connectedCentrals.value.single())
-        assertSame(central, server.connectedMockCentrals.value.single())
+        assertSame(client, server.connectedClients.value.single())
+        assertSame(client, server.connectedMockClients.value.single())
 
-        central.disconnect()
+        client.disconnect()
 
-        assertTrue(server.connectedCentrals.value.isEmpty())
+        assertTrue(server.connectedClients.value.isEmpty())
     }
 }

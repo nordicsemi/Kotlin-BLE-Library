@@ -43,7 +43,7 @@ import no.nordicsemi.kotlin.ble.core.exception.GattException
 class GattOperationException(val status: OperationStatus): GattException("GATT operation failed: $status")
 
 /**
- * The result of a read request sent by a simulated central.
+ * The result of a read request sent by a simulated client.
  */
 sealed class ReadResult {
 
@@ -51,7 +51,7 @@ sealed class ReadResult {
      * The read succeeded.
      *
      * @property value The value received from the server. A single read request returns at most
-     * `mtu - 1` bytes, see [MockCentral.read] and [MockCentral.readLong].
+     * `mtu - 1` bytes, see [MockClient.read] and [MockClient.readLong].
      */
     class Success(val value: ByteArray): ReadResult() {
         override fun equals(other: Any?) = other is Success && value.contentEquals(other.value)
@@ -86,7 +86,7 @@ sealed class ReadResult {
 }
 
 /**
- * The result of a write request sent by a simulated central.
+ * The result of a write request sent by a simulated client.
  */
 sealed class WriteResult {
 
@@ -114,7 +114,7 @@ sealed class WriteResult {
 }
 
 /**
- * A notification or an indication received by a simulated central.
+ * A notification or an indication received by a simulated client.
  *
  * @property attribute The `instanceId` of the characteristic.
  * @property value The value.

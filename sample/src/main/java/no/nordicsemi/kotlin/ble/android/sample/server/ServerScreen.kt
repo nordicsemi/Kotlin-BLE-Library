@@ -64,7 +64,7 @@ fun ServerScreen() {
     val isLedOn by vm.isLedOn.collectAsStateWithLifecycle()
     val isButtonPressed by vm.isButtonPressed.collectAsStateWithLifecycle()
     val subscribersCount by vm.subscribersCount.collectAsStateWithLifecycle()
-    val centrals by vm.centrals.collectAsStateWithLifecycle()
+    val clients by vm.clients.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
 
     Column(
@@ -97,7 +97,7 @@ fun ServerScreen() {
                 isLedOn = isLedOn,
                 isButtonPressed = isButtonPressed,
                 subscribersCount = subscribersCount,
-                centrals = centrals,
+                clients = clients,
                 errorMessage = error,
                 onButtonPressedChanged = vm::onButtonPressedChanged,
             )

@@ -36,7 +36,7 @@ import kotlinx.coroutines.flow.StateFlow
 import no.nordicsemi.kotlin.ble.core.Manager
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
-import no.nordicsemi.kotlin.ble.server.Central
+import no.nordicsemi.kotlin.ble.server.Client
 
 /**
  * The platform layer of the local GATT server: a native one, or a mock.
@@ -48,13 +48,13 @@ import no.nordicsemi.kotlin.ble.server.Central
  * Attributes (services, characteristics and descriptors) are identified by the `instanceId`
  * of their [ServiceDefinition], which is unique within a GATT server.
  */
-interface GattServer<ID: Any, C: Central<ID>> {
+interface GattServer<ID: Any, C: Client<ID>> {
 
     /** The state of Bluetooth on the local device. */
     val state: StateFlow<Manager.State>
 
     /**
-     * Requests and events from centrals. A hot flow, buffered so that no event is lost while
+     * Requests and events from clients. A hot flow, buffered so that no event is lost while
      * the collector is busy.
      */
     val events: SharedFlow<GattServerEvent<C>>
@@ -74,27 +74,27 @@ interface GattServer<ID: Any, C: Central<ID>> {
      * Sends a response to a request received in [GattServerEvent.ReadRequested],
      * [GattServerEvent.WriteRequested] or [GattServerEvent.ExecuteWrite].
      *
-     * @param central The central that sent the request.
+     * @param client The client that sent the request.
      * @param requestId The request ID from the event.
      * @param status The status.
      * @param offset The offset from the event.
      * @param value The value of the attribute, starting from [offset], to be sent on success,
      * for read requests. Empty for write requests.
      */
-    fun respond(central: C, requestId: Int, status: OperationStatus, offset: Int, value: ByteArray)
+    fun respond(client: C, requestId: Int, status: OperationStatus, offset: Int, value: ByteArray)
 
     /**
-     * Sends a notification or an indication to a central.
+     * Sends a notification or an indication to a client.
      *
-     * The platform serializes calls to the same central. Suspends until the notification has been
+     * The platform serializes calls to the same client. Suspends until the notification has been
      * sent, or the indication confirmed.
      *
-     * @param central The central.
+     * @param client The client.
      * @param attribute The `instanceId` of the characteristic.
-     * @param value The value, no longer than [Central.maximumUpdateValueLength].
+     * @param value The value, no longer than [Client.maximumUpdateValueLength].
      * @param confirm `true` to send an indication, `false` for a notification.
      */
-    suspend fun notify(central: C, attribute: Int, value: ByteArray, confirm: Boolean)
+    suspend fun notify(client: C, attribute: Int, value: ByteArray, confirm: Boolean)
 
     /** Stops the server and releases its resources. Closes all connections. */
     fun close()
@@ -103,29 +103,29 @@ interface GattServer<ID: Any, C: Central<ID>> {
 /**
  * An event reported by the platform layer, [GattServer].
  */
-sealed class GattServerEvent<C: Central<*>> {
+sealed class GattServerEvent<C: Client<*>> {
 
     /**
-     * A central wants to read an attribute. Must be answered using [GattServer.respond].
+     * A client wants to read an attribute. Must be answered using [GattServer.respond].
      *
      * @property offset The offset for long reads, 0 for the first request.
      */
-    class ReadRequested<C: Central<*>>(
-        val central: C,
+    class ReadRequested<C: Client<*>>(
+        val client: C,
         val requestId: Int,
         val attribute: Int,
         val offset: Int,
     ): GattServerEvent<C>()
 
     /**
-     * A central wants to write an attribute, including Client Characteristic Configuration
+     * A client wants to write an attribute, including Client Characteristic Configuration
      * descriptors, which are handled by the [LocalServerImpl].
      *
      * If [responseNeeded], must be answered using [GattServer.respond]. If [prepared], the value
      * is a part of a long or reliable write, to be executed on [ExecuteWrite].
      */
-    class WriteRequested<C: Central<*>>(
-        val central: C,
+    class WriteRequested<C: Client<*>>(
+        val client: C,
         val requestId: Int,
         val attribute: Int,
         val offset: Int,
@@ -135,28 +135,28 @@ sealed class GattServerEvent<C: Central<*>> {
     ): GattServerEvent<C>()
 
     /**
-     * A central wants to execute or cancel the queued prepared writes. Must be answered using
+     * A client wants to execute or cancel the queued prepared writes. Must be answered using
      * [GattServer.respond].
      */
-    class ExecuteWrite<C: Central<*>>(
-        val central: C,
+    class ExecuteWrite<C: Client<*>>(
+        val client: C,
         val requestId: Int,
         val execute: Boolean,
     ): GattServerEvent<C>()
 
     /**
-     * A central enabled or disabled notifications or indications.
+     * A client enabled or disabled notifications or indications.
      *
      * For platforms that do not expose the Client Characteristic Configuration descriptor
      * (iOS). On Android and in the mock, the descriptor is written using [WriteRequested].
      */
-    class SubscriptionChanged<C: Central<*>>(
-        val central: C,
+    class SubscriptionChanged<C: Client<*>>(
+        val client: C,
         val attribute: Int,
         val notifications: Boolean,
         val indications: Boolean,
     ): GattServerEvent<C>()
 
-    /** A central disconnected, or is no longer reachable. Its state should be dropped. */
-    class CentralDisconnected<C: Central<*>>(val central: C): GattServerEvent<C>()
+    /** A client disconnected, or is no longer reachable. Its state should be dropped. */
+    class ClientDisconnected<C: Client<*>>(val client: C): GattServerEvent<C>()
 }

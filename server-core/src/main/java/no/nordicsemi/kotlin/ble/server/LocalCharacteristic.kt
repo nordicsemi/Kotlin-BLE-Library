@@ -40,13 +40,13 @@ import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.Peer
 
 /**
- * A characteristic hosted by the local GATT server, which remote centrals can read, write to and
+ * A characteristic hosted by the local GATT server, which remote clients can read, write to and
  * subscribe to.
  *
  * By default, read requests return [value], and write requests are stored and emitted in
  * [writes]. Use [onRead]
  * and [onWrite] to handle requests dynamically, for example to validate data or to return
- * a different value for each central.
+ * a different value for each client.
  *
  */
 interface LocalCharacteristic: Characteristic<LocalDescriptor> {
@@ -65,13 +65,13 @@ interface LocalCharacteristic: Characteristic<LocalDescriptor> {
     val value: StateFlow<ByteArray>
 
     /**
-     * Centrals that have enabled notifications or indications of this characteristic.
+     * Clients that have enabled notifications or indications of this characteristic.
      *
      * Always empty if the characteristic does not have the [CharacteristicProperty.NOTIFY] or
      * [CharacteristicProperty.INDICATE] property. The Client Characteristic Configuration
      * descriptor is handled by the library.
      */
-    val subscribers: StateFlow<Set<Central<*>>>
+    val subscribers: StateFlow<Set<Client<*>>>
 
     /**
      * Write requests accepted by the characteristic, that is requests for which the handler set with
@@ -123,10 +123,10 @@ interface LocalCharacteristic: Characteristic<LocalDescriptor> {
 
     /**
      * Sets the value of the characteristic and sends a notification, or an indication, to
-     * subscribed centrals.
+     * subscribed clients.
      *
      * The services of [LocalServer.services] notify all [subscribers]. The services returned by
-     * [LocalServer.services] for a given central notify only that central, which must be
+     * [LocalServer.services] for a given client notify only that client, which must be
      * subscribed.
      *
      * A notification is used if the characteristic has the [CharacteristicProperty.NOTIFY]
@@ -135,9 +135,9 @@ interface LocalCharacteristic: Characteristic<LocalDescriptor> {
      *
      * @param value The new value.
      * @throws IllegalArgumentException if the value is longer than the maximum update value length
-     * of any of the targets, see [Central.maximumUpdateValueLength].
+     * of any of the targets, see [Client.maximumUpdateValueLength].
      * @throws IllegalStateException if the characteristic does not support notifications or
-     * indications, or the characteristic belongs to the services of a central that is not
+     * indications, or the characteristic belongs to the services of a client that is not
      * subscribed.
      */
     suspend fun update(value: ByteArray)

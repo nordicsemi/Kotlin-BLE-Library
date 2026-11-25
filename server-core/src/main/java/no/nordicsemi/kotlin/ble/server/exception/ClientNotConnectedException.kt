@@ -29,27 +29,11 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package no.nordicsemi.kotlin.ble.server
+package no.nordicsemi.kotlin.ble.server.exception
 
-import no.nordicsemi.kotlin.ble.core.Peer
+import no.nordicsemi.kotlin.ble.core.exception.BluetoothException
 
 /**
- * A remote central device that is using the local GATT server.
- *
- * A central is known to the [LocalServer] when it sends a request or subscribes to
- * a characteristic. Platform-specific modules may provide more information, like the connection
- * state, MTU or PHY.
- *
- * @param ID The type of the central identifier.
+ * Thrown when the client is not connected, or has disconnected during the operation.
  */
-interface Central<ID: Any>: Peer<ID> {
-
-    /**
-     * The maximum amount of data, in bytes, that the central can receive in a single
-     * notification or indication.
-     *
-     * This is equal to the ATT MTU minus 3 bytes, which are used for the ATT opcode and
-     * the attribute handle by the GATT layer.
-     */
-    val maximumUpdateValueLength: Int
-}
+class ClientNotConnectedException: BluetoothException("Client is not connected")

@@ -102,7 +102,7 @@ fun ServerScope.GenericAccessService(builder: ServiceScope.() -> Unit = {}) = ad
  * The Service Changed characteristic is handled automatically. Use
  * [PeripheralSpec.simulateServiceChange] to simulate a service change.
  *
- * @param initiallyEnabled If true, the central is subscribed to indications of the Service Changed
+ * @param initiallyEnabled If true, the client is subscribed to indications of the Service Changed
  * characteristic whenever it connects.
  */
 @Suppress("FunctionName")

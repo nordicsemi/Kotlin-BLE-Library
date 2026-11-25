@@ -36,7 +36,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import no.nordicsemi.kotlin.ble.server.exception.CentralNotConnectedException
+import no.nordicsemi.kotlin.ble.server.exception.ClientNotConnectedException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -142,18 +142,18 @@ class NotificationGateTest {
         val second = async { runCatching { gate.send(10.seconds) { } } }
         runCurrent()
 
-        gate.close(CentralNotConnectedException())
+        gate.close(ClientNotConnectedException())
 
-        assertTrue(first.await().exceptionOrNull() is CentralNotConnectedException)
-        assertTrue(second.await().exceptionOrNull() is CentralNotConnectedException)
+        assertTrue(first.await().exceptionOrNull() is ClientNotConnectedException)
+        assertTrue(second.await().exceptionOrNull() is ClientNotConnectedException)
     }
 
     @Test
     fun `send after close fails`() = runTest {
         val gate = NotificationGate()
-        gate.close(CentralNotConnectedException())
+        gate.close(ClientNotConnectedException())
 
-        assertFailsWith<CentralNotConnectedException> { gate.send(10.seconds) { } }
+        assertFailsWith<ClientNotConnectedException> { gate.send(10.seconds) { } }
     }
 
     @Test

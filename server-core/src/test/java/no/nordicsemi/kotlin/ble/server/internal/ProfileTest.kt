@@ -46,7 +46,7 @@ import kotlin.uuid.Uuid
 
 private class LocalProfile(
     uuid: Uuid,
-): Profile<LocalServer<String, FakeCentral>, Nothing, LocalService>(
+): Profile<LocalServer<String, FakeClient>, Nothing, LocalService>(
     localServiceUuids = listOf(uuid),
 ) {
     var prepared = 0
@@ -57,7 +57,7 @@ private class LocalProfile(
     var reject = false
 
     override fun prepare(
-        target: LocalServer<String, FakeCentral>,
+        target: LocalServer<String, FakeClient>,
         remoteServices: List<Nothing>,
         localServices: List<LocalService>,
     ) {
@@ -66,7 +66,7 @@ private class LocalProfile(
         services = localServices
     }
 
-    override suspend fun CoroutineScope.initialize(target: LocalServer<String, FakeCentral>) {
+    override suspend fun CoroutineScope.initialize(target: LocalServer<String, FakeClient>) {
         initialized++
         try {
             kotlinx.coroutines.awaitCancellation()
@@ -75,7 +75,7 @@ private class LocalProfile(
         }
     }
 
-    override suspend fun unsupported(target: LocalServer<String, FakeCentral>) {
+    override suspend fun unsupported(target: LocalServer<String, FakeClient>) {
         unsupported++
     }
 }

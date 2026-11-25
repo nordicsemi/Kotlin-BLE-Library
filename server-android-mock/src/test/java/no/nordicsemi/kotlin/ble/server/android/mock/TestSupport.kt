@@ -76,12 +76,12 @@ suspend fun MockLocalServer.defineServices(): LocalService = setup {
 
 fun LocalService.characteristic(uuid: Uuid): LocalCharacteristic = characteristics.first { it.uuid == uuid }
 
-/** Collects the updates received by a central. */
+/** Collects the updates received by a client. */
 @OptIn(ExperimentalCoroutinesApi::class)
-fun TestScope.collectUpdates(central: MockAndroidCentral): List<MockUpdate> {
+fun TestScope.collectUpdates(client: MockAndroidClient): List<MockUpdate> {
     val list = mutableListOf<MockUpdate>()
     backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-        central.updates.collect { list += it }
+        client.updates.collect { list += it }
     }
     return list
 }

@@ -84,7 +84,7 @@ fun ServerView(
     isLedOn: Boolean,
     isButtonPressed: Boolean,
     subscribersCount: Int,
-    centrals: List<CentralInfo>,
+    clients: List<ClientInfo>,
     errorMessage: String?,
     onButtonPressedChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -169,11 +169,11 @@ fun ServerView(
         }
 
         Text(
-            text = "Connected centrals",
+            text = "Connected clients",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = 4.dp),
         )
-        if (centrals.isEmpty()) {
+        if (clients.isEmpty()) {
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.elevatedCardColors(
@@ -181,32 +181,32 @@ fun ServerView(
                 ),
             ) {
                 Text(
-                    text = "No centrals connected",
+                    text = "No clients connected",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(16.dp),
                 )
             }
         }
-        centrals.forEach { central ->
-            CentralItem(central)
+        clients.forEach { client ->
+            ClientItem(client)
         }
     }
 }
 
-/** A card with the address of a central, its connection state and the parameters of the connection. */
+/** A card with the address of a client, its connection state and the parameters of the connection. */
 @Composable
-private fun CentralItem(
-    central: CentralInfo,
+private fun ClientItem(
+    client: ClientInfo,
     modifier: Modifier = Modifier,
 ) {
     val color by animateColorAsState(
         animationSpec = tween(durationMillis = 500),
-        targetValue = when (central.state) {
+        targetValue = when (client.state) {
             is ConnectionState.Connected -> Nordic.Color.Lake
             is ConnectionState.Connecting -> Nordic.Color.Blue
             else -> Nordic.Color.MiddleGrey
         },
-        label = "central color animation",
+        label = "client color animation",
     )
     Column(modifier = modifier.fillMaxWidth()) {
         ElevatedCard(
@@ -217,12 +217,12 @@ private fun CentralItem(
         ) {
             ListItem(
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                headlineContent = { Text(text = central.address) },
-                supportingContent = { Text(text = central.state.toString()) },
+                headlineContent = { Text(text = client.address) },
+                supportingContent = { Text(text = client.state.toString()) },
                 leadingContent = {
                     Icon(
                         imageVector = Nordic.Icons.Bluetooth,
-                        contentDescription = "Central Icon",
+                        contentDescription = "Client Icon",
                         tint = Color.White,
                         modifier = Modifier
                             .size(32.dp)
@@ -249,9 +249,9 @@ private fun CentralItem(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val parameters = central.connectionParameters
-                InfoChip("MTU", central.mtu?.let { "$it bytes" })
-                InfoChip("PHY", central.phy?.format())
+                val parameters = client.connectionParameters
+                InfoChip("MTU", client.mtu?.let { "$it bytes" })
+                InfoChip("PHY", client.phy?.format())
                 InfoChip("Interval", parameters?.let { "${it.connectionIntervalMillis} ms" })
                 InfoChip("Latency", parameters?.latency?.toString())
                 InfoChip("Timeout", parameters?.let { "${it.supervisionTimeoutMillis} ms" })
@@ -350,8 +350,8 @@ private fun ServerViewPreview() {
             isLedOn = true,
             isButtonPressed = false,
             subscribersCount = 1,
-            centrals = listOf(
-                CentralInfo(
+            clients = listOf(
+                ClientInfo(
                     address = "AA:BB:CC:DD:EE:FF",
                     state = ConnectionState.Connected,
                     mtu = 247,
@@ -379,7 +379,7 @@ private fun ServerViewStoppedPreview() {
             isLedOn = false,
             isButtonPressed = false,
             subscribersCount = 0,
-            centrals = emptyList(),
+            clients = emptyList(),
             errorMessage = "Bluetooth is turned off",
             onButtonPressedChanged = { },
         )

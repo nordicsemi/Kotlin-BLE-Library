@@ -49,14 +49,14 @@ val READ_WRITE_UUID = Uuid.parse("00002a00-0000-1000-8000-00805f9b34fb")
 val NOTIFY_UUID = Uuid.parse("00002a01-0000-1000-8000-00805f9b34fb")
 val DESCRIPTOR_UUID = Uuid.parse("00002a02-0000-1000-8000-00805f9b34fb")
 
-/** A central type used in tests, which is its own GATT server-side representation. */
-class TestCentral(
+/** A client type used in tests, which is its own GATT server-side representation. */
+class TestClient(
     identifier: String,
-    server: MockGattServer<String, TestCentral>,
+    server: MockGattServer<String, TestClient>,
     maxMtu: Int = 517,
-): MockCentral<String, TestCentral>(identifier, server, maxMtu)
+): MockClient<String, TestClient>(identifier, server, maxMtu)
 
-typealias TestServer = MockGattServer<String, TestCentral>
+typealias TestServer = MockGattServer<String, TestClient>
 
 fun buildServices(): List<ServiceDefinition> = ServerScopeImpl()
     .apply {
@@ -82,21 +82,21 @@ fun buildServices(): List<ServiceDefinition> = ServerScopeImpl()
 
 /**
  * A minimal fake of the server logic: stores values, serves reads with offsets, queues prepared
- * writes per central, executes them, and records all events.
+ * writes per client, executes them, and records all events.
  *
  * Attributes can be made to fail using [failing].
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class FakeApp(server: TestServer, scope: TestScope) {
     val values = mutableMapOf<Int, ByteArray>()
-    val events = mutableListOf<GattServerEvent<TestCentral>>()
+    val events = mutableListOf<GattServerEvent<TestClient>>()
     val failing = mutableMapOf<Int, OperationStatus>()
-    private val queues = mutableMapOf<TestCentral, MutableList<GattServerEvent.WriteRequested<TestCentral>>>()
+    private val queues = mutableMapOf<TestClient, MutableList<GattServerEvent.WriteRequested<TestClient>>>()
 
-    val reads get() = events.filterIsInstance<GattServerEvent.ReadRequested<TestCentral>>()
-    val writes get() = events.filterIsInstance<GattServerEvent.WriteRequested<TestCentral>>()
-    val executes get() = events.filterIsInstance<GattServerEvent.ExecuteWrite<TestCentral>>()
-    val disconnects get() = events.filterIsInstance<GattServerEvent.CentralDisconnected<TestCentral>>()
+    val reads get() = events.filterIsInstance<GattServerEvent.ReadRequested<TestClient>>()
+    val writes get() = events.filterIsInstance<GattServerEvent.WriteRequested<TestClient>>()
+    val executes get() = events.filterIsInstance<GattServerEvent.ExecuteWrite<TestClient>>()
+    val disconnects get() = events.filterIsInstance<GattServerEvent.ClientDisconnected<TestClient>>()
 
     init {
         scope.backgroundScope.launch(UnconfinedTestDispatcher(scope.testScheduler)) {
@@ -106,11 +106,11 @@ class FakeApp(server: TestServer, scope: TestScope) {
                     is GattServerEvent.ReadRequested -> {
                         val error = failing[event.attribute]
                         if (error != null) {
-                            server.respond(event.central, event.requestId, error, event.offset, ByteArray(0))
+                            server.respond(event.client, event.requestId, error, event.offset, ByteArray(0))
                         } else {
                             val value = values[event.attribute] ?: ByteArray(0)
                             server.respond(
-                                event.central, event.requestId, OperationStatus.Success, event.offset,
+                                event.client, event.requestId, OperationStatus.Success, event.offset,
                                 value.copyOfRange(minOf(event.offset, value.size), value.size),
                             )
                         }
@@ -119,43 +119,43 @@ class FakeApp(server: TestServer, scope: TestScope) {
                         val error = failing[event.attribute]
                         when {
                             error != null && event.responseNeeded ->
-                                server.respond(event.central, event.requestId, error, event.offset, ByteArray(0))
+                                server.respond(event.client, event.requestId, error, event.offset, ByteArray(0))
                             event.prepared -> {
-                                queues.getOrPut(event.central) { mutableListOf() } += event
-                                server.respond(event.central, event.requestId, OperationStatus.Success, event.offset, event.value)
+                                queues.getOrPut(event.client) { mutableListOf() } += event
+                                server.respond(event.client, event.requestId, OperationStatus.Success, event.offset, event.value)
                             }
                             else -> {
                                 if (error == null) values[event.attribute] = event.value
                                 if (event.responseNeeded) {
-                                    server.respond(event.central, event.requestId, OperationStatus.Success, 0, ByteArray(0))
+                                    server.respond(event.client, event.requestId, OperationStatus.Success, 0, ByteArray(0))
                                 }
                             }
                         }
                     }
                     is GattServerEvent.ExecuteWrite -> {
-                        val queue = queues.remove(event.central).orEmpty()
+                        val queue = queues.remove(event.client).orEmpty()
                         if (event.execute) {
                             queue.groupBy { it.attribute }.forEach { (attribute, parts) ->
                                 values[attribute] = parts.sortedBy { it.offset }
                                     .fold(ByteArray(0)) { acc, part -> acc + part.value }
                             }
                         }
-                        server.respond(event.central, event.requestId, OperationStatus.Success, 0, ByteArray(0))
+                        server.respond(event.client, event.requestId, OperationStatus.Success, 0, ByteArray(0))
                     }
                     is GattServerEvent.SubscriptionChanged -> Unit
-                    is GattServerEvent.CentralDisconnected -> queues.remove(event.central)
+                    is GattServerEvent.ClientDisconnected -> queues.remove(event.client)
                 }
             }
         }
     }
 }
 
-/** Collects the updates received by a central. */
+/** Collects the updates received by a client. */
 @OptIn(ExperimentalCoroutinesApi::class)
-fun TestScope.collectUpdates(central: MockCentral<*, *>): List<MockUpdate> {
+fun TestScope.collectUpdates(client: MockClient<*, *>): List<MockUpdate> {
     val list = mutableListOf<MockUpdate>()
     backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-        central.updates.collect { list += it }
+        client.updates.collect { list += it }
     }
     return list
 }

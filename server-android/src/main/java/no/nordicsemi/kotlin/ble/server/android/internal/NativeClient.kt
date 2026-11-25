@@ -46,8 +46,8 @@ import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PhyInUse
 import no.nordicsemi.kotlin.ble.core.PhyOption
 import no.nordicsemi.kotlin.ble.core.log.Layer
-import no.nordicsemi.kotlin.ble.server.android.Central
-import no.nordicsemi.kotlin.ble.server.exception.CentralNotConnectedException
+import no.nordicsemi.kotlin.ble.server.android.Client
+import no.nordicsemi.kotlin.ble.server.exception.ClientNotConnectedException
 import no.nordicsemi.kotlin.log.Log
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -59,18 +59,18 @@ private val DISCONNECT_TIMEOUT = 10.seconds
 private const val NOTIFICATION_HEADER_SIZE = 3
 
 /**
- * A native implementation of [Central] for Android.
+ * A native implementation of [Client] for Android.
  *
- * It is created by the [NativeGattServer] when a central connects, and its state is updated
+ * It is created by the [NativeGattServer] when a client connects, and its state is updated
  * from the callbacks of the server.
  *
  * @param device The native device.
- * @param server The server which the central is connected to.
+ * @param server The server which the client is connected to.
  */
-internal class NativeCentral(
+internal class NativeClient(
     val device: BluetoothDevice,
     private val server: NativeGattServer,
-): Central {
+): Client {
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
     override val identifier: String = device.address
 
@@ -89,7 +89,7 @@ internal class NativeCentral(
     override val maximumUpdateValueLength: Int
         get() = (mtu.value ?: ATT_MTU_DEFAULT) - NOTIFICATION_HEADER_SIZE
 
-    /** Serializes notifications sent to this central. */
+    /** Serializes notifications sent to this client. */
     val notifications = NotificationGate()
 
     /** Whether the disconnection was requested by the app. */
@@ -110,13 +110,13 @@ internal class NativeCentral(
             throw UnsupportedOperationException("Changing PHY requires Android 8 (Oreo) or newer")
         }
         if (!state.value.isConnected) {
-            throw CentralNotConnectedException()
+            throw ClientNotConnectedException()
         }
         val request = CompletableDeferred<PhyInUse>()
         phyRequest = request
         try {
             return withTimeout(timeout) {
-                server.setPreferredPhy(this@NativeCentral, txPhy, rxPhy, phyOptions)
+                server.setPreferredPhy(this@NativeClient, txPhy, rxPhy, phyOptions)
                 request.await()
             }
         } finally {
@@ -143,19 +143,19 @@ internal class NativeCentral(
 
     // Updates from the server callbacks.
 
-    /** Called when the link state changed, but the central did not disconnect. */
+    /** Called when the link state changed, but the client did not disconnect. */
     fun onStateChanged(newState: ConnectionState) {
         state.value = newState
     }
 
-    /** Called when the central disconnected. */
+    /** Called when the client disconnected. */
     fun onDisconnected(status: Int) {
         val reason = status.toDisconnectionReason(userInitiated = disconnectRequested)
         state.value = ConnectionState.Disconnected(reason)
         mtu.value = null
         phy.value = null
         connectionParameters.value = null
-        val exception = CentralNotConnectedException()
+        val exception = ClientNotConnectedException()
         notifications.close(exception)
         phyRequest?.completeExceptionally(exception)
     }
@@ -183,5 +183,5 @@ internal class NativeCentral(
         }
     }
 
-    override fun toString() = "Central(address=$identifier)"
+    override fun toString() = "Client(address=$identifier)"
 }

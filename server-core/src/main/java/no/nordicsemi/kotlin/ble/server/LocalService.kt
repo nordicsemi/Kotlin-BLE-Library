@@ -41,7 +41,7 @@ import no.nordicsemi.kotlin.ble.core.PrimaryService
 /**
  * A GATT service hosted by the local GATT server.
  *
- * There is a single instance of each service, shared by all centrals. Requests carry the central
+ * There is a single instance of each service, shared by all clients. Requests carry the client
  * that sent them.
  *
  */

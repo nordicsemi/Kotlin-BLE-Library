@@ -44,7 +44,7 @@ import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.client.mock.GenericAccessService
 import no.nordicsemi.kotlin.ble.client.mock.GenericAttributeService
 import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
-import no.nordicsemi.kotlin.ble.client.mock.SimulatedCentral
+import no.nordicsemi.kotlin.ble.client.mock.SimulatedClient
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.Permission
@@ -157,17 +157,17 @@ class HostedGattTest {
     }
 
     @Test
-    fun `read handler provides the value and receives the central`() = runTest {
+    fun `read handler provides the value and receives the client`() = runTest {
         withTimeout(10.seconds) {
             val fixture = readWriteFixture()
-            var requester: no.nordicsemi.kotlin.ble.server.Central<*>? = null
+            var requester: no.nordicsemi.kotlin.ble.server.Client<*>? = null
             fixture.local().onRead {
-                requester = central
+                requester = client
                 ReadResponse.Success(byteArrayOf(0x42))
             }
 
             assertContentEquals(byteArrayOf(0x42), fixture.remote().read())
-            assertSame(fixture.server.central, requester)
+            assertSame(fixture.server.client, requester)
         }
     }
 
@@ -212,7 +212,7 @@ class HostedGattTest {
             hostedSettle()
 
             assertContentEquals(value, characteristic.read())
-            assertEquals(247, fixture.server.central.mtu.value)
+            assertEquals(247, fixture.server.client.mtu.value)
         }
     }
 
@@ -317,7 +317,7 @@ class HostedGattTest {
             assertContentEquals(byteArrayOf(0x01, 0x02), fixture.local().value.value)
             assertContentEquals(byteArrayOf(0x01, 0x02), writes.single().value)
             assertTrue(writes.single().withResponse)
-            assertSame(fixture.server.central, writes.single().central)
+            assertSame(fixture.server.client, writes.single().client)
         }
     }
 
@@ -800,7 +800,7 @@ class HostedGattTest {
             )
 
             assertTrue(fixture.spec.isConnected)
-            assertTrue(fixture.server.central.state.value.isConnected)
+            assertTrue(fixture.server.client.state.value.isConnected)
         }
     }
 

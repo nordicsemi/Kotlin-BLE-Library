@@ -46,38 +46,38 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Simulates a central running the LED Button client (the Connection screen of another phone).
+ * Simulates a client running the LED Button client (the Connection screen of another phone).
  *
- * Whenever the LED Button Service is available in the manager, the central connects, negotiates
+ * Whenever the LED Button Service is available in the manager, the client connects, negotiates
  * a larger MTU and subscribes to the Button characteristic. Then it toggles the LED every
  * few seconds and, in between, the button is pressed and released, which sends notifications
- * to the central. When the service is removed, the central disconnects.
+ * to the client. When the service is removed, the client disconnects.
  */
-fun MockLocalServer.simulateLedButtonCentral(scope: CoroutineScope) {
-    val central = simulateCentral(address = "AA:BB:CC:DD:EE:01")
+fun MockLocalServer.simulateLedButtonClient(scope: CoroutineScope) {
+    val client = simulateClient(address = "AA:BB:CC:DD:EE:01")
     scope.launch {
         services
             .map { services -> services.any { it.uuid == LedButtonProfile.SERVICE_UUID } }
             .distinctUntilChanged()
             .collectLatest { available ->
                 if (!available) {
-                    central.disconnect()
+                    client.disconnect()
                     return@collectLatest
                 }
                 try {
                     delay(1.seconds)
-                    central.connect()
-                    val _ = central.simulateMtuChange(247)
+                    client.connect()
+                    val _ = client.simulateMtuChange(247)
 
-                    val led = central.findCharacteristic(
+                    val led = client.findCharacteristic(
                         LedButtonProfile.SERVICE_UUID,
                         LedButtonProfile.LED_CHARACTERISTIC_UUID,
                     ) ?: return@collectLatest
-                    val button = central.findCharacteristic(
+                    val button = client.findCharacteristic(
                         LedButtonProfile.SERVICE_UUID,
                         LedButtonProfile.BUTTON_CHARACTERISTIC_UUID,
                     ) ?: return@collectLatest
-                    val _ = central.subscribe(button)
+                    val _ = client.subscribe(button)
 
                     // The characteristic of the local GATT server, to simulate button presses.
                     val buttonCharacteristic = services.value
@@ -91,7 +91,7 @@ fun MockLocalServer.simulateLedButtonCentral(scope: CoroutineScope) {
                             while (true) {
                                 delay(4.seconds)
                                 on = !on
-                                val _ = central.write(led, byteArrayOf(if (on) 1 else 0))
+                                val _ = client.write(led, byteArrayOf(if (on) 1 else 0))
                             }
                         }
                         launch {
@@ -106,7 +106,7 @@ fun MockLocalServer.simulateLedButtonCentral(scope: CoroutineScope) {
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    Timber.w(e, "Simulated central failed")
+                    Timber.w(e, "Simulated client failed")
                 }
             }
     }

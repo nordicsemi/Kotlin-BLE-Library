@@ -56,7 +56,7 @@ import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
 
 /**
- * Tests of a [PeripheralSpec] hosting a [MockPeripheralServer]: building, the state of the central
+ * Tests of a [PeripheralSpec] hosting a [MockPeripheralServer]: building, the state of the client
  * which follows the connection, and the services.
  */
 class HostedServerSpecTest {
@@ -181,67 +181,67 @@ class HostedServerSpecTest {
         assertFalse(spec.isServiceCacheValid)
     }
 
-    // The central
+    // The client
 
     @Test
-    fun `central is not connected until the peripheral is`() = runTest {
+    fun `client is not connected until the peripheral is`() = runTest {
         val (server, _) = hostedServer()
         val _ = hostedSpec(server)
 
-        assertFalse(server.central.state.value.isConnected)
-        assertTrue(server.connectedCentrals.value.isEmpty())
+        assertFalse(server.client.state.value.isConnected)
+        assertTrue(server.connectedClients.value.isEmpty())
     }
 
     @Test
-    fun `connecting the peripheral connects the central`() = runTest {
+    fun `connecting the peripheral connects the client`() = runTest {
         val (server, _) = hostedServer()
         val spec = hostedSpec(server)
 
         spec.simulateConnection(mtu = 23)
 
         assertTrue(spec.isConnected)
-        assertTrue(server.central.state.value.isConnected)
-        assertEquals(listOf(server.central), server.connectedCentrals.value)
-        assertEquals(23, server.central.mtu.value)
-        assertEquals(20, server.central.maximumUpdateValueLength)
+        assertTrue(server.client.state.value.isConnected)
+        assertEquals(listOf(server.client), server.connectedClients.value)
+        assertEquals(23, server.client.mtu.value)
+        assertEquals(20, server.client.maximumUpdateValueLength)
     }
 
     @Test
-    fun `peripheral created as connected has the central connected`() = runTest {
+    fun `peripheral created as connected has the client connected`() = runTest {
         val (server, _) = hostedServer()
         val spec = hostedSpec(server) {
             connected(name = "Hosted", maxAttMtu = 247, server = server)
         }
 
         assertTrue(spec.isConnected)
-        assertTrue(server.central.state.value.isConnected)
+        assertTrue(server.client.state.value.isConnected)
         assertTrue(spec.isServiceCacheValid)
     }
 
     @Test
-    fun `central mtu follows the mtu of the connection`() = runTest {
+    fun `client mtu follows the mtu of the connection`() = runTest {
         val (server, _) = hostedServer()
         val spec = hostedSpec(server)
 
         spec.simulateConnection(mtu = 100)
 
         assertEquals(100, spec.mtu)
-        assertEquals(100, server.central.mtu.value)
-        assertEquals(97, server.central.maximumUpdateValueLength)
+        assertEquals(100, server.client.mtu.value)
+        assertEquals(97, server.client.maximumUpdateValueLength)
     }
 
     @Test
-    fun `central mtu is limited to the maximum mtu of the peripheral`() = runTest {
+    fun `client mtu is limited to the maximum mtu of the peripheral`() = runTest {
         val (server, _) = hostedServer()
         val spec = hostedSpec(server, maxAttMtu = 50)
 
         spec.simulateConnection(mtu = 247)
 
-        assertEquals(50, server.central.mtu.value)
+        assertEquals(50, server.client.mtu.value)
     }
 
     @Test
-    fun `disconnecting the peripheral disconnects the central`() = runTest {
+    fun `disconnecting the peripheral disconnects the client`() = runTest {
         val (server, _) = hostedServer()
         val spec = hostedSpec(server)
         spec.simulateConnection()
@@ -249,8 +249,8 @@ class HostedServerSpecTest {
         spec.simulateDisconnection()
 
         assertFalse(spec.isConnected)
-        assertIs<ConnectionState.Disconnected>(server.central.state.value)
-        assertTrue(server.connectedCentrals.value.isEmpty())
+        assertIs<ConnectionState.Disconnected>(server.client.state.value)
+        assertTrue(server.connectedClients.value.isEmpty())
     }
 
     @Test
@@ -262,9 +262,9 @@ class HostedServerSpecTest {
 
         spec.simulateConnection(mtu = 23)
 
-        assertTrue(server.central.state.value.isConnected)
+        assertTrue(server.client.state.value.isConnected)
         // The MTU is negotiated again for each connection.
-        assertEquals(23, server.central.mtu.value)
+        assertEquals(23, server.client.mtu.value)
     }
 
     @Test
@@ -277,14 +277,14 @@ class HostedServerSpecTest {
         }.single().characteristics.single()
         val spec = hostedSpec(server)
         spec.simulateConnection()
-        val cccd = server.simulatedCentral.findDescriptor(
+        val cccd = server.simulatedClient.findDescriptor(
             serviceUuid,
             characteristicUuid,
             no.nordicsemi.kotlin.ble.core.Descriptor.CLIENT_CHAR_CONF_UUID,
         )
         assertNotNull(cccd)
-        assertTrue(server.simulatedCentral.write(cccd, byteArrayOf(1, 0)).isSuccess)
-        assertEquals(setOf<SimulatedCentral>(server.central), characteristic.subscribers.value)
+        assertTrue(server.simulatedClient.write(cccd, byteArrayOf(1, 0)).isSuccess)
+        assertEquals(setOf<SimulatedClient>(server.client), characteristic.subscribers.value)
 
         spec.simulateDisconnection()
         runCurrent()
@@ -297,18 +297,18 @@ class HostedServerSpecTest {
     // Service Changed
 
     @Test
-    fun `central subscribes to Service Changed when it was declared as enabled`() = runTest {
+    fun `client subscribes to Service Changed when it was declared as enabled`() = runTest {
         val (server, services) = hostedServer(initiallyEnabled = true)
         val spec = hostedSpec(server)
 
         spec.simulateConnection()
         runCurrent()
 
-        assertTrue(server.central in services.serviceChanged().subscribers.value)
+        assertTrue(server.client in services.serviceChanged().subscribers.value)
     }
 
     @Test
-    fun `central does not subscribe to Service Changed when it was declared as disabled`() = runTest {
+    fun `client does not subscribe to Service Changed when it was declared as disabled`() = runTest {
         val (server, services) = hostedServer(initiallyEnabled = false)
         val spec = hostedSpec(server)
 
@@ -352,11 +352,11 @@ class HostedServerSpecTest {
         }
         runCurrent()
 
-        assertTrue(server.central in server.services.value.serviceChanged().subscribers.value)
+        assertTrue(server.client in server.services.value.serviceChanged().subscribers.value)
     }
 
     @Test
-    fun `service change of a disconnected peripheral does not subscribe the central`() = runTest {
+    fun `service change of a disconnected peripheral does not subscribe the client`() = runTest {
         val (server, _) = hostedServer()
         val spec = hostedSpec(server)
 
@@ -398,16 +398,16 @@ class HostedServerSpecTest {
     }
 
     @Test
-    fun `reading the central directly reads the value of the hosted characteristic`() = runTest {
+    fun `reading the client directly reads the value of the hosted characteristic`() = runTest {
         val (server, services) = hostedServer()
         val characteristic = services.first { it.uuid == serviceUuid }.characteristics.single()
         characteristic.setValue(byteArrayOf(1, 2, 3))
         val spec = hostedSpec(server)
         spec.simulateConnection()
 
-        val handle = server.simulatedCentral.findCharacteristic(serviceUuid, characteristicUuid)
+        val handle = server.simulatedClient.findCharacteristic(serviceUuid, characteristicUuid)
         assertNotNull(handle)
-        val result = server.simulatedCentral.read(handle)
+        val result = server.simulatedClient.read(handle)
 
         assertContentEquals(byteArrayOf(1, 2, 3), result.getOrThrow())
     }

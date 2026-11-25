@@ -91,7 +91,7 @@ class PreparedWriteTest {
         assertEquals(1, requests.size)
         assertContentEquals(bytes(1, 2, 3), requests[0].value)
         assertTrue(requests[0].withResponse)
-        assertSame(fixture.central, requests[0].central)
+        assertSame(fixture.client, requests[0].client)
     }
 
     @Test
@@ -220,15 +220,15 @@ class PreparedWriteTest {
     }
 
     @Test
-    fun prepared_queuesAreIndependentPerCentral() = runTest {
+    fun prepared_queuesAreIndependentPerClient() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, from = fixture.central)
-        val _ = fixture.write(fixture.rw.instanceId, bytes(9), prepared = true, from = fixture.central2)
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, from = fixture.client)
+        val _ = fixture.write(fixture.rw.instanceId, bytes(9), prepared = true, from = fixture.client2)
 
-        val _ = fixture.execute(from = fixture.central)
+        val _ = fixture.execute(from = fixture.client)
         assertContentEquals(bytes(1, 2), fixture.rw.value.value)
 
-        val _ = fixture.execute(from = fixture.central2)
+        val _ = fixture.execute(from = fixture.client2)
         assertContentEquals(bytes(9), fixture.rw.value.value)
     }
 
@@ -258,7 +258,7 @@ class PreparedWriteTest {
 
         assertEquals(OperationStatus.Success, fixture.execute().status)
 
-        assertEquals(setOf(fixture.central), fixture.notify.subscribers.value)
+        assertEquals(setOf(fixture.client), fixture.notify.subscribers.value)
     }
 
     @Test

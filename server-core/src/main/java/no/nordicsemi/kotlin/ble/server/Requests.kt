@@ -34,31 +34,31 @@ package no.nordicsemi.kotlin.ble.server
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 
 /**
- * A request from a central to read the value of a characteristic or a descriptor.
+ * A request from a client to read the value of a characteristic or a descriptor.
  *
  * Long reads are handled by the library: the handler provides the whole value.
  *
- * @property central The central that sent the request.
+ * @property client The client that sent the request.
  */
-class ReadRequest(val central: Central<*>)
+class ReadRequest(val client: Client<*>)
 
 /**
- * A request from a central to write the value of a characteristic or a descriptor.
+ * A request from a client to write the value of a characteristic or a descriptor.
  *
  * Long write and reliable write operations are handled by the library: the whole value is delivered
  * once, after the write operation has been executed.
  *
- * @property central The central that sent the request.
+ * @property client The client that sent the request.
  * @property value The written value.
- * @property withResponse `true` if the central expects a response, `false` for a write command
+ * @property withResponse `true` if the client expects a response, `false` for a write command
  * (write without response). A response from the handler is ignored for commands.
  */
 class WriteRequest(
-    val central: Central<*>,
+    val client: Client<*>,
     val value: ByteArray,
     val withResponse: Boolean,
 ) {
-    override fun toString(): String = "WriteRequest(central=$central, value=${value.size} bytes, withResponse=$withResponse)"
+    override fun toString(): String = "WriteRequest(client=$client, value=${value.size} bytes, withResponse=$withResponse)"
 }
 
 /**
@@ -78,9 +78,9 @@ sealed class ReadResponse {
     }
 
     /**
-     * The read failed, and the central will receive the given status.
+     * The read failed, and the client will receive the given status.
      *
-     * @property status The status to be sent to the central. Should not be
+     * @property status The status to be sent to the client. Should not be
      * [OperationStatus.Success].
      */
     data class Failure(val status: OperationStatus): ReadResponse()
@@ -95,9 +95,9 @@ sealed class WriteResponse {
     data object Success: WriteResponse()
 
     /**
-     * The write request was rejected, and the central will receive the given status. The value is not stored.
+     * The write request was rejected, and the client will receive the given status. The value is not stored.
      *
-     * @property status The status to be sent to the central. Should not be
+     * @property status The status to be sent to the client. Should not be
      * [OperationStatus.Success].
      */
     data class Failure(val status: OperationStatus): WriteResponse()

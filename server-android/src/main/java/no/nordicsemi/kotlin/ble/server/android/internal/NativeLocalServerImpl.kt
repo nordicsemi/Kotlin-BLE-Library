@@ -35,7 +35,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import no.nordicsemi.kotlin.ble.core.log.Layer
 import no.nordicsemi.kotlin.ble.environment.android.NativeAndroidEnvironment
-import no.nordicsemi.kotlin.ble.server.android.Central
+import no.nordicsemi.kotlin.ble.server.android.Client
 import no.nordicsemi.kotlin.ble.server.android.LocalServer
 import no.nordicsemi.kotlin.ble.server.internal.LocalServerImpl
 import no.nordicsemi.kotlin.log.Log
@@ -43,7 +43,7 @@ import no.nordicsemi.kotlin.log.Log
 /**
  * A native implementation of [LocalServer] for Android.
  *
- * All the logic is in the [LocalServerImpl]. This class adds the list of connected centrals
+ * All the logic is in the [LocalServerImpl]. This class adds the list of connected clients
  * and passes the logger to the [NativeGattServer].
  *
  * @param scope The coroutine scope.
@@ -52,7 +52,7 @@ import no.nordicsemi.kotlin.log.Log
 internal class NativeLocalServerImpl private constructor(
     scope: CoroutineScope,
     private val nativeServer: NativeGattServer,
-): LocalServerImpl<String, Central>(scope, nativeServer), LocalServer {
+): LocalServerImpl<String, Client>(scope, nativeServer), LocalServer {
 
     /**
      * Creates the manager.
@@ -71,8 +71,8 @@ internal class NativeLocalServerImpl private constructor(
             nativeServer.logger = value
         }
 
-    override val connectedCentrals: StateFlow<List<Central>>
-        get() = nativeServer.connectedCentrals
+    override val connectedClients: StateFlow<List<Client>>
+        get() = nativeServer.connectedClients
 
     init {
         // The setter is not called for the initial value.

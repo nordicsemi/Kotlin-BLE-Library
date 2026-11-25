@@ -37,7 +37,7 @@ import no.nordicsemi.kotlin.ble.server.android.internal.NativeLocalServerImpl
 
 /**
  * Creates a [LocalServer] implementation which is using native Android API to
- * host a GATT server, serving physical Bluetooth LE devices (centrals).
+ * host a GATT server, serving physical Bluetooth LE devices (clients).
  *
  * To make the device discoverable, use the advertiser.
  *

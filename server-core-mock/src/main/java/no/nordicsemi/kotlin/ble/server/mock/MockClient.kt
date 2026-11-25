@@ -44,13 +44,13 @@ import no.nordicsemi.kotlin.ble.core.ATT_MTU_MAX
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.log.Layer
-import no.nordicsemi.kotlin.ble.server.Central
+import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.internal.GattServerEvent
 import no.nordicsemi.kotlin.log.Log
 import kotlin.uuid.Uuid
 
 /**
- * A simulated central device, which talks to a [MockGattServer].
+ * A simulated client device, which talks to a [MockGattServer].
  *
  * It behaves like a real GATT client: it can read and write attributes using single requests, or
  * using the long read, long write and reliable write procedures, which are fragmented according to
@@ -61,25 +61,25 @@ import kotlin.uuid.Uuid
  * with the virtual time of `runTest`. Attributes are identified by their `instanceId`; use
  * [findCharacteristic] and similar methods to find them by UUIDs.
  *
- * A central has to be connected using [connect] before sending requests. Requests are executed one
+ * A client has to be connected using [connect] before sending requests. Requests are executed one
  * at a time, like in a real ATT bearer.
  *
- * This class is meant to be extended by platform-specific mock centrals, which also implement
- * the platform-specific [Central] interface.
+ * This class is meant to be extended by platform-specific mock clients, which also implement
+ * the platform-specific [Client] interface.
  *
- * @param ID The type of the central identifier.
- * @param C The type of the central as seen by the GATT server. The simulated central **must** be
+ * @param ID The type of the client identifier.
+ * @param C The type of the client as seen by the GATT server. The simulated client **must** be
  * an instance of this type, as it is given to the GATT server in events.
- * @property identifier The central identifier.
+ * @property identifier The client identifier.
  * @property server The GATT server to connect to.
- * @property maxMtu The maximum ATT MTU supported by the simulated central (and the simulated local
+ * @property maxMtu The maximum ATT MTU supported by the simulated client (and the simulated local
  * device), 23 to 517.
  */
-abstract class MockCentral<ID: Any, C: Central<ID>>(
+abstract class MockClient<ID: Any, C: Client<ID>>(
     final override val identifier: ID,
     protected val server: MockGattServer<ID, C>,
     val maxMtu: Int = ATT_MTU_MAX,
-): Central<ID> {
+): Client<ID> {
 
     init {
         require(maxMtu in ATT_MTU_DEFAULT..ATT_MTU_MAX) {
@@ -91,7 +91,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected())
 
-    /** The connection state of the simulated central. Initially disconnected. */
+    /** The connection state of the simulated client. Initially disconnected. */
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
     private val _attMtu = MutableStateFlow(ATT_MTU_DEFAULT)
@@ -108,7 +108,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
     private val _updates = MutableSharedFlow<MockUpdate>(extraBufferCapacity = UPDATES_BUFFER_CAPACITY)
 
     /**
-     * Notifications and indications received by the simulated central.
+     * Notifications and indications received by the simulated client.
      *
      * A hot flow with no replay: collect it before triggering the update. Indications are
      * confirmed automatically.
@@ -118,13 +118,13 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
     private val procedureLock = Mutex()
 
     /**
-     * Returns this central as seen by the GATT server.
+     * Returns this client as seen by the GATT server.
      */
     @Suppress("UNCHECKED_CAST")
-    val asCentral: C
+    val asClient: C
         get() = this as C
 
-    /** `true` if the central is connected. */
+    /** `true` if the client is connected. */
     val isConnected: Boolean
         get() = _connectionState.value.isConnected
 
@@ -144,9 +144,9 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
     }
 
     /**
-     * Disconnects from the GATT server, as if the central terminated the connection.
+     * Disconnects from the GATT server, as if the client terminated the connection.
      *
-     * Emits [GattServerEvent.CentralDisconnected]. Does nothing if not connected.
+     * Emits [GattServerEvent.ClientDisconnected]. Does nothing if not connected.
      */
     open suspend fun disconnect() {
         disconnect(ConnectionState.Disconnected.Reason.TerminatePeerUser)
@@ -155,25 +155,25 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
     /**
      * Disconnects from the GATT server with the given reason.
      *
-     * Emits [GattServerEvent.CentralDisconnected]. Requests that were waiting for a response fail.
+     * Emits [GattServerEvent.ClientDisconnected]. Requests that were waiting for a response fail.
      * Does nothing if not connected.
      *
      * @param reason The reason of disconnection.
      */
     suspend fun disconnect(reason: ConnectionState.Disconnected.Reason) {
         if (markDisconnected(reason)) {
-            server.emit(GattServerEvent.CentralDisconnected(asCentral))
+            server.emit(GattServerEvent.ClientDisconnected(asClient))
         }
     }
 
     /**
-     * Simulates losing the link, for example when the central went out of range.
+     * Simulates losing the link, for example when the client went out of range.
      */
     suspend fun simulateLinkLoss() = disconnect(ConnectionState.Disconnected.Reason.LinkLoss)
 
     internal fun terminate(reason: ConnectionState.Disconnected.Reason) {
         if (markDisconnected(reason)) {
-            server.tryEmit(GattServerEvent.CentralDisconnected(asCentral))
+            server.tryEmit(GattServerEvent.ClientDisconnected(asClient))
         }
     }
 
@@ -186,12 +186,12 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
     }
 
     /**
-     * Called after the central connected. Platform-specific subclasses can set up their state here.
+     * Called after the client connected. Platform-specific subclasses can set up their state here.
      */
     protected open fun onConnected() {}
 
     /**
-     * Called after the central disconnected.
+     * Called after the client disconnected.
      */
     protected open fun onDisconnected() {}
 
@@ -203,11 +203,11 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
     protected open fun onMtuChanged(mtu: Int) {}
 
     /**
-     * Simulates the MTU exchange procedure, initiated by the central.
+     * Simulates the MTU exchange procedure, initiated by the client.
      *
-     * @param requested The MTU requested by the central. The result is limited to [maxMtu].
+     * @param requested The MTU requested by the client. The result is limited to [maxMtu].
      * @return The new MTU, which is the lower of the requested MTU and [maxMtu], at least 23.
-     * @throws IllegalStateException if the central is not connected.
+     * @throws IllegalStateException if the client is not connected.
      */
     fun exchangeMtu(requested: Int): Int {
         check(isConnected) { "Not connected" }
@@ -248,7 +248,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
      * [readLong] to read longer values.
      *
      * @param attribute The `instanceId` of the characteristic or descriptor.
-     * @throws IllegalStateException if the central is not connected.
+     * @throws IllegalStateException if the client is not connected.
      */
     suspend fun read(attribute: Int): ReadResult = procedure {
         readRequest(attribute, offset = 0)
@@ -259,7 +259,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
      *
      * @param attribute The `instanceId` of the characteristic or descriptor.
      * @param offset The offset from which the value is read.
-     * @throws IllegalStateException if the central is not connected.
+     * @throws IllegalStateException if the client is not connected.
      */
     suspend fun readBlob(attribute: Int, offset: Int): ReadResult = procedure {
         readRequest(attribute, offset)
@@ -271,7 +271,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
      *
      * @param attribute The `instanceId` of the characteristic or descriptor.
      * @return The whole value, or the first error.
-     * @throws IllegalStateException if the central is not connected.
+     * @throws IllegalStateException if the client is not connected.
      */
     suspend fun readLong(attribute: Int): ReadResult = procedure {
         var value = ByteArray(0)
@@ -296,7 +296,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
 
     private suspend fun readRequest(attribute: Int, offset: Int): ReadResult {
         val response = server.request(this) { requestId ->
-            GattServerEvent.ReadRequested(asCentral, requestId, attribute, offset)
+            GattServerEvent.ReadRequested(asClient, requestId, attribute, offset)
         }
         return if (response.status.isSuccess) {
             ReadResult.Success(response.value.copyOf(minOf(response.value.size, _attMtu.value - 1)))
@@ -317,7 +317,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
      * @param attribute The `instanceId` of the characteristic or descriptor.
      * @param value The value to write.
      * @param withResponse `true` for a write request, `false` for a write command.
-     * @throws IllegalStateException if the central is not connected.
+     * @throws IllegalStateException if the client is not connected.
      * @throws IllegalArgumentException if [withResponse] is `false` and the value does not fit in
      * `mtu - 3` bytes.
      */
@@ -342,7 +342,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
      * @param attribute The `instanceId` of the characteristic or descriptor.
      * @param value The value to write.
      * @return The result of the Execute Write, or the first error.
-     * @throws IllegalStateException if the central is not connected.
+     * @throws IllegalStateException if the client is not connected.
      */
     suspend fun writeLong(attribute: Int, value: ByteArray): WriteResult = procedure {
         val result = prepareWrites(attribute, value)
@@ -358,7 +358,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
      * Starts a Reliable Write procedure, in which one or more values are queued using
      * [ReliableWrite.write], and then executed, or cancelled.
      *
-     * @throws IllegalStateException if the central is not connected.
+     * @throws IllegalStateException if the client is not connected.
      */
     fun beginReliableWrite(): ReliableWrite {
         check(isConnected) { "Not connected" }
@@ -373,7 +373,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
      *
      * @param block The block queuing write requests.
      * @return The result of the Execute Write, or the first error of a queued write request.
-     * @throws IllegalStateException if the central is not connected.
+     * @throws IllegalStateException if the client is not connected.
      */
     suspend fun reliableWrite(block: suspend ReliableWrite.() -> Unit): WriteResult {
         val write = beginReliableWrite()
@@ -464,19 +464,19 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
     ): WriteResult {
         if (!withResponse) {
             server.emit(
-                GattServerEvent.WriteRequested(asCentral, server.newRequestId(), attribute, offset, value.copyOf(), prepared, false)
+                GattServerEvent.WriteRequested(asClient, server.newRequestId(), attribute, offset, value.copyOf(), prepared, false)
             )
             return WriteResult.Success
         }
         val response = server.request(this) { requestId ->
-            GattServerEvent.WriteRequested(asCentral, requestId, attribute, offset, value.copyOf(), prepared, true)
+            GattServerEvent.WriteRequested(asClient, requestId, attribute, offset, value.copyOf(), prepared, true)
         }
         return response.status.toWriteResult()
     }
 
     private suspend fun executeWriteRequest(execute: Boolean): WriteResult {
         val response = server.request(this) { requestId ->
-            GattServerEvent.ExecuteWrite(asCentral, requestId, execute)
+            GattServerEvent.ExecuteWrite(asClient, requestId, execute)
         }
         return response.status.toWriteResult()
     }
@@ -493,7 +493,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
      * @param indications `true` to enable indications, `false` to enable notifications.
      * @return The result of the write operation, or [OperationStatus.SubscribeNotPermitted] failure if the
      * characteristic has no Client Characteristic Configuration descriptor.
-     * @throws IllegalStateException if the central is not connected.
+     * @throws IllegalStateException if the client is not connected.
      */
     suspend fun subscribe(characteristic: Int, indications: Boolean = false): WriteResult {
         val cccd = server.findCccd(characteristic)
@@ -508,7 +508,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
      * @param characteristic The `instanceId` of the characteristic.
      * @return The result of the write operation, or [OperationStatus.SubscribeNotPermitted] failure if the
      * characteristic has no Client Characteristic Configuration descriptor.
-     * @throws IllegalStateException if the central is not connected.
+     * @throws IllegalStateException if the client is not connected.
      */
     suspend fun unsubscribe(characteristic: Int): WriteResult {
         val cccd = server.findCccd(characteristic)
@@ -528,7 +528,7 @@ abstract class MockCentral<ID: Any, C: Central<ID>>(
         }
     }
 
-    override fun toString() = "MockCentral(identifier=$identifier, state=${_connectionState.value}, mtu=${_attMtu.value})"
+    override fun toString() = "MockClient(identifier=$identifier, state=${_connectionState.value}, mtu=${_attMtu.value})"
 
     private companion object {
         const val UPDATES_BUFFER_CAPACITY = 256

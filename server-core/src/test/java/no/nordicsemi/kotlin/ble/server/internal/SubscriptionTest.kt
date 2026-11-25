@@ -47,7 +47,7 @@ class SubscriptionTest {
         val response = fixture.writeCccd(fixture.notify, 0x0001)
 
         assertEquals(OperationStatus.Success, response.status)
-        assertEquals(setOf(fixture.central), fixture.notify.subscribers.value)
+        assertEquals(setOf(fixture.client), fixture.notify.subscribers.value)
     }
 
     @Test
@@ -57,7 +57,7 @@ class SubscriptionTest {
         val response = fixture.writeCccd(fixture.indicate, 0x0002)
 
         assertEquals(OperationStatus.Success, response.status)
-        assertEquals(setOf(fixture.central), fixture.indicate.subscribers.value)
+        assertEquals(setOf(fixture.client), fixture.indicate.subscribers.value)
     }
 
     @Test
@@ -77,7 +77,7 @@ class SubscriptionTest {
 
         assertEquals(OperationStatus.Success, fixture.writeCccd(fixture.both, 0x0001).status)
         assertEquals(OperationStatus.Success, fixture.writeCccd(fixture.both, 0x0002).status)
-        assertEquals(setOf(fixture.central), fixture.both.subscribers.value)
+        assertEquals(setOf(fixture.client), fixture.both.subscribers.value)
     }
 
     @Test
@@ -131,7 +131,7 @@ class SubscriptionTest {
     }
 
     @Test
-    fun cccd_readReturnsCentralsValue() = runTest {
+    fun cccd_readReturnsClientsValue() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val cccd = fixture.cccd(BOTH_UUID)
 
@@ -143,27 +143,27 @@ class SubscriptionTest {
     }
 
     @Test
-    fun cccd_isPerCentral() = runTest {
+    fun cccd_isPerClient() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val cccd = fixture.cccd(NOTIFY_UUID)
 
-        fixture.subscribe(fixture.notify, 1, fixture.central)
+        fixture.subscribe(fixture.notify, 1, fixture.client)
 
-        assertContentEquals(bytes(1, 0), fixture.read(cccd.instanceId, from = fixture.central).value)
-        assertContentEquals(bytes(0, 0), fixture.read(cccd.instanceId, from = fixture.central2).value)
-        assertEquals(setOf(fixture.central), fixture.notify.subscribers.value)
+        assertContentEquals(bytes(1, 0), fixture.read(cccd.instanceId, from = fixture.client).value)
+        assertContentEquals(bytes(0, 0), fixture.read(cccd.instanceId, from = fixture.client2).value)
+        assertEquals(setOf(fixture.client), fixture.notify.subscribers.value)
     }
 
     @Test
     fun cccd_multipleSubscribers() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
-        fixture.subscribe(fixture.notify, 1, fixture.central)
-        fixture.subscribe(fixture.notify, 1, fixture.central2)
-        assertEquals(setOf(fixture.central, fixture.central2), fixture.notify.subscribers.value)
+        fixture.subscribe(fixture.notify, 1, fixture.client)
+        fixture.subscribe(fixture.notify, 1, fixture.client2)
+        assertEquals(setOf(fixture.client, fixture.client2), fixture.notify.subscribers.value)
 
-        val _ = fixture.writeCccd(fixture.notify, 0, fixture.central)
-        assertEquals(setOf(fixture.central2), fixture.notify.subscribers.value)
+        val _ = fixture.writeCccd(fixture.notify, 0, fixture.client)
+        assertEquals(setOf(fixture.client2), fixture.notify.subscribers.value)
     }
 
     @Test
@@ -190,10 +190,10 @@ class SubscriptionTest {
     fun subscriptionChanged_updatesSubscribers() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
-        fixture.emit(GattServerEvent.SubscriptionChanged(fixture.central, fixture.notify.instanceId, true, false))
-        assertEquals(setOf(fixture.central), fixture.notify.subscribers.value)
+        fixture.emit(GattServerEvent.SubscriptionChanged(fixture.client, fixture.notify.instanceId, true, false))
+        assertEquals(setOf(fixture.client), fixture.notify.subscribers.value)
 
-        fixture.emit(GattServerEvent.SubscriptionChanged(fixture.central, fixture.notify.instanceId, false, false))
+        fixture.emit(GattServerEvent.SubscriptionChanged(fixture.client, fixture.notify.instanceId, false, false))
         assertTrue(fixture.notify.subscribers.value.isEmpty())
     }
 
@@ -201,18 +201,18 @@ class SubscriptionTest {
     fun subscriptionChanged_indications() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
-        fixture.emit(GattServerEvent.SubscriptionChanged(fixture.central, fixture.indicate.instanceId, false, true))
+        fixture.emit(GattServerEvent.SubscriptionChanged(fixture.client, fixture.indicate.instanceId, false, true))
 
-        assertEquals(setOf(fixture.central), fixture.indicate.subscribers.value)
+        assertEquals(setOf(fixture.client), fixture.indicate.subscribers.value)
     }
 
     @Test
     fun subscriptionChanged_unsupportedIgnored() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
-        fixture.emit(GattServerEvent.SubscriptionChanged(fixture.central, fixture.notify.instanceId, false, true))
-        fixture.emit(GattServerEvent.SubscriptionChanged(fixture.central, fixture.ro.instanceId, true, false))
-        fixture.emit(GattServerEvent.SubscriptionChanged(fixture.central, 9999, true, false))
+        fixture.emit(GattServerEvent.SubscriptionChanged(fixture.client, fixture.notify.instanceId, false, true))
+        fixture.emit(GattServerEvent.SubscriptionChanged(fixture.client, fixture.ro.instanceId, true, false))
+        fixture.emit(GattServerEvent.SubscriptionChanged(fixture.client, 9999, true, false))
 
         assertTrue(fixture.notify.subscribers.value.isEmpty())
         assertTrue(fixture.ro.subscribers.value.isEmpty())
@@ -221,7 +221,7 @@ class SubscriptionTest {
     @Test
     fun subscriptionChanged_isVisibleInCccd() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        fixture.emit(GattServerEvent.SubscriptionChanged(fixture.central, fixture.notify.instanceId, true, false))
+        fixture.emit(GattServerEvent.SubscriptionChanged(fixture.client, fixture.notify.instanceId, true, false))
 
         assertContentEquals(bytes(1, 0), fixture.read(fixture.cccd(NOTIFY_UUID).instanceId).value)
     }
@@ -229,13 +229,13 @@ class SubscriptionTest {
     @Test
     fun disconnect_removesSubscriptions() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
-        fixture.subscribe(fixture.notify, 1, fixture.central)
-        fixture.subscribe(fixture.notify, 1, fixture.central2)
-        fixture.subscribe(fixture.both, 2, fixture.central)
+        fixture.subscribe(fixture.notify, 1, fixture.client)
+        fixture.subscribe(fixture.notify, 1, fixture.client2)
+        fixture.subscribe(fixture.both, 2, fixture.client)
 
-        fixture.emit(GattServerEvent.CentralDisconnected(fixture.central))
+        fixture.emit(GattServerEvent.ClientDisconnected(fixture.client))
 
-        assertEquals(setOf(fixture.central2), fixture.notify.subscribers.value)
+        assertEquals(setOf(fixture.client2), fixture.notify.subscribers.value)
         assertTrue(fixture.both.subscribers.value.isEmpty())
     }
 
@@ -244,7 +244,7 @@ class SubscriptionTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
 
-        fixture.emit(GattServerEvent.CentralDisconnected(fixture.central))
+        fixture.emit(GattServerEvent.ClientDisconnected(fixture.client))
 
         assertContentEquals(bytes(0, 0), fixture.read(fixture.cccd(NOTIFY_UUID).instanceId).value)
     }
@@ -254,7 +254,7 @@ class SubscriptionTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true)
 
-        fixture.emit(GattServerEvent.CentralDisconnected(fixture.central))
+        fixture.emit(GattServerEvent.ClientDisconnected(fixture.client))
         val response = fixture.execute()
 
         assertEquals(OperationStatus.Success, response.status)
@@ -262,13 +262,13 @@ class SubscriptionTest {
     }
 
     @Test
-    fun disconnect_unknownCentral_isIgnored() = runTest {
+    fun disconnect_unknownClient_isIgnored() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
 
-        fixture.emit(GattServerEvent.CentralDisconnected(FakeCentral("CC")))
+        fixture.emit(GattServerEvent.ClientDisconnected(FakeClient("CC")))
 
-        assertEquals(setOf(fixture.central), fixture.notify.subscribers.value)
+        assertEquals(setOf(fixture.client), fixture.notify.subscribers.value)
     }
 
     @Test

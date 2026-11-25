@@ -38,12 +38,19 @@ import no.nordicsemi.kotlin.ble.core.Manager
 import no.nordicsemi.kotlin.ble.core.ServerScope
 
 /**
- * The GATT server of this device, which serves the connected centrals.
+ * The GATT server of this device, which serves the remote devices that are connected to it.
  *
- * Define the services using [setup]. They are shared by all centrals: each request carries the
- * [Central] that sent it. Advertising is not a part of the local server, use the advertiser module.
+ * Both sides of a connection can have a GATT server and use the server of the other side as
+ * a client, so the remote device is a client of this server regardless of its role (central or
+ * peripheral) in the connection. It is represented by a [Client].
  *
- * Sample code:
+ * Define the services using [setup]. They are shared by all remote devices: each request carries
+ * the [Client] that sent it.
+ *
+ * ### Advertising
+ * Advertising is not a part of the local server, use the `advertiser` module.
+ *
+ * ### Sample
  * ```kotlin
  * val services = localServer.setup {
  *     Service(SERVICE_UUID) {
@@ -58,10 +65,10 @@ import no.nordicsemi.kotlin.ble.core.ServerScope
  * led.writes.onEach { println("LED: ${it.value.first()}") }.launchIn(scope)
  * ```
  *
- * @param ID The type of the central identifier.
- * @param C The type of the central.
+ * @param ID The type of the client identifier.
+ * @param C The type of the client.
  */
-interface LocalServer<ID: Any, C: Central<ID>>: Manager {
+interface LocalServer<ID: Any, C: Client<ID>>: Manager {
 
     /**
      * The services currently hosted by the local GATT server.
@@ -70,7 +77,7 @@ interface LocalServer<ID: Any, C: Central<ID>>: Manager {
 
     /**
      * Defines the services of the local GATT server using the [ServerScope] DSL and makes them
-     * available to centrals.
+     * available to clients.
      *
      * Calling it again replaces the previous services, which are then invalidated
      * ([AnyLocalService.manager] becomes `null`).
@@ -78,7 +85,7 @@ interface LocalServer<ID: Any, C: Central<ID>>: Manager {
      * Handlers and collectors of [LocalCharacteristic.writes] should be set up right after this
      * returns. Until then, read requests return an empty value and write requests are accepted and stored.
      *
-     * @param builder The services definition.
+     * @param builder The builder for the local services.
      * @return The services that have been added.
      * @throws no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException if the manager is closed.
      * @throws SecurityException if the required permission is denied.
@@ -88,26 +95,26 @@ interface LocalServer<ID: Any, C: Central<ID>>: Manager {
     suspend fun setup(builder: ServerScope.() -> Unit): List<LocalService>
 
     /**
-     * The local services, as seen by the central with the given identifier.
+     * The local services, as seen by the client with the given identifier.
      *
      * The services are the same as in [services], they share the values and the handlers, but
      * the requests and the subscribers of the characteristics and descriptors are limited to
-     * the central. For example, `writes` only emits the write requests sent by this central, and
-     * `update` sends the value to this central only.
+     * the client. For example, `writes` only emits the write requests sent by this client, and
+     * `update` sends the value to this client only.
      *
-     * The central does not have to be connected yet.
+     * The client does not have to be connected yet.
      *
-     * @param identifier The identifier of the central.
+     * @param identifier The identifier of the client.
      */
     fun services(identifier: ID): StateFlow<List<LocalService>>
 
     /**
-     * The local services, as seen by the given central.
+     * The local services, as seen by the given client.
      *
-     * @param central The central.
+     * @param client The client.
      * @see services
      */
-    fun services(central: C): StateFlow<List<LocalService>> = services(central.identifier)
+    fun services(client: C): StateFlow<List<LocalService>> = services(client.identifier)
 
     companion object Factory
 }

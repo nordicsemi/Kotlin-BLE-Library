@@ -37,43 +37,43 @@ import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PhyInUse
 import no.nordicsemi.kotlin.ble.core.PhyOption
-import no.nordicsemi.kotlin.ble.server.Central
+import no.nordicsemi.kotlin.ble.server.Client
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * A central device connected to the local GATT server on Android.
+ * A client device connected to the local GATT server on Android.
  *
- * The identifier of the central is its MAC address.
+ * The identifier of the client is its MAC address.
  */
-interface Central: Central<String> {
+interface Client: Client<String> {
 
-    /** The MAC address of the central. */
+    /** The MAC address of the client. */
     val address: String
         get() = identifier
 
     /**
-     * The connection state of the central.
+     * The connection state of the client.
      *
-     * Android reports connections of every central that connects to this device, even if
+     * Android reports connections of every client that connects to this device, even if
      * the connection was not initiated by the app's advertising.
      */
     val state: StateFlow<ConnectionState>
 
     /**
-     * The current ATT MTU, or `null` when the central is not connected. The value is 23 until
-     * the central requests a larger MTU.
+     * The current ATT MTU, or `null` when the client is not connected. The value is 23 until
+     * the client requests a larger MTU.
      */
     val mtu: StateFlow<Int?>
 
     /**
-     * The current PHY in use, or `null` when the central is not connected or the PHY is not known
+     * The current PHY in use, or `null` when the client is not connected or the PHY is not known
      * (Android 8+).
      */
     val phy: StateFlow<PhyInUse?>
 
     /**
-     * The current connection parameters, or `null` when the central is not connected.
+     * The current connection parameters, or `null` when the client is not connected.
      * They are [ConnectionParameters.Unknown] until they change (Android 8+).
      */
     val connectionParameters: StateFlow<ConnectionParameters?>
@@ -91,7 +91,7 @@ interface Central: Central<String> {
     ): PhyInUse
 
     /**
-     * Disconnects the central, if it is connected. Does nothing otherwise.
+     * Disconnects the client, if it is connected. Does nothing otherwise.
      */
     suspend fun disconnect()
 }

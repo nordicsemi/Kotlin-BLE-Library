@@ -55,7 +55,7 @@ import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
 import no.nordicsemi.kotlin.ble.core.internal.ServerScopeImpl
 import no.nordicsemi.kotlin.ble.core.log.Layer
 import no.nordicsemi.kotlin.ble.server.AnyLocalService
-import no.nordicsemi.kotlin.ble.server.Central
+import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.LocalService
 import no.nordicsemi.kotlin.ble.server.LocalServer
 import no.nordicsemi.kotlin.ble.server.ReadRequest
@@ -73,14 +73,14 @@ import no.nordicsemi.kotlin.log.Log
  * and subscriptions.
  *
  * Handlers set using `onRead` and `onWrite` are called from the event loop, so a handler that
- * suspends for a long time delays processing of requests from other centrals.
+ * suspends for a long time delays processing of requests from other clients.
  *
- * @param ID The type of the central identifier.
- * @param C The type of the central.
+ * @param ID The type of the client identifier.
+ * @param C The type of the client.
  * @property scope The coroutine scope.
  * @property server The platform layer.
  */
-open class LocalServerImpl<ID: Any, C: Central<ID>>(
+open class LocalServerImpl<ID: Any, C: Client<ID>>(
     protected val scope: CoroutineScope,
     protected val server: GattServer<ID, C>,
 ): LocalServer<ID, C> {
@@ -102,7 +102,7 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
     private val attributes = MutableStateFlow<Map<Int, LocalAttribute<C>>>(emptyMap())
 
     /**
-     * Prepared writes of each central. Accessed only by the event loop.
+     * Prepared writes of each client. Accessed only by the event loop.
      */
     private val preparedWrites = mutableMapOf<C, MutableList<PreparedWrite<C>>>()
 
@@ -111,19 +111,19 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
             logger?.trace(Layer.GATT) { message() }
         }
 
-        override suspend fun notify(central: C, characteristic: Int, value: ByteArray, confirm: Boolean) =
-            server.notify(central, characteristic, value, confirm)
+        override suspend fun notify(client: C, characteristic: Int, value: ByteArray, confirm: Boolean) =
+            server.notify(client, characteristic, value, confirm)
     }
 
     override val state get() = server.state
     override val services: StateFlow<List<LocalService>> get() = _services
 
-    /** The views of the services for each central. */
-    private val centralServices = MutableStateFlow<Map<ID, StateFlow<List<LocalService>>>>(emptyMap())
+    /** The views of the services for each client. */
+    private val clientServices = MutableStateFlow<Map<ID, StateFlow<List<LocalService>>>>(emptyMap())
 
     override fun services(identifier: ID): StateFlow<List<LocalService>> =
-        centralServices.value[identifier] ?: centralServices
-            .updateAndGet { map -> if (identifier in map) map else map + (identifier to CentralServices(_services, identifier)) }
+        clientServices.value[identifier] ?: clientServices
+            .updateAndGet { map -> if (identifier in map) map else map + (identifier to ClientServices(_services, identifier)) }
             .getValue(identifier)
 
     init {
@@ -194,7 +194,7 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
         _services.value.forEach { (it as BaseLocalService<C>).invalidate() }
         _services.value = emptyList()
         attributes.value = emptyMap()
-        oldAttributes.values.forEach { (it as? BaseLocalCharacteristic<C>)?.removeAllCentrals() }
+        oldAttributes.values.forEach { (it as? BaseLocalCharacteristic<C>)?.removeAllClients() }
     }
 
     // ----- Event loop -----
@@ -205,44 +205,44 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
             is GattServerEvent.WriteRequested -> onWriteRequested(event)
             is GattServerEvent.ExecuteWrite -> onExecuteWrite(event)
             is GattServerEvent.SubscriptionChanged -> onSubscriptionChanged(event)
-            is GattServerEvent.CentralDisconnected -> onCentralDisconnected(event)
+            is GattServerEvent.ClientDisconnected -> onClientDisconnected(event)
         }
     }
 
     private suspend fun onReadRequested(event: GattServerEvent.ReadRequested<C>) {
-        val central = event.central
+        val client = event.client
         val attribute = attributes.value[event.attribute]
         if (attribute == null) {
-            logger?.warn(Layer.GATT) { "Read request from $central for unknown attribute ${event.attribute}" }
-            server.respond(central, event.requestId, OperationStatus.InvalidHandle, event.offset, EMPTY)
+            logger?.warn(Layer.GATT) { "Read request from $client for unknown attribute ${event.attribute}" }
+            server.respond(client, event.requestId, OperationStatus.InvalidHandle, event.offset, EMPTY)
             return
         }
-        logger?.trace(Layer.GATT) { "Read request from $central: $attribute, offset ${event.offset}" }
+        logger?.trace(Layer.GATT) { "Read request from $client: $attribute, offset ${event.offset}" }
 
         val status = checkReadable(attribute)
         if (status != null) {
-            server.respond(central, event.requestId, status, event.offset, EMPTY)
+            server.respond(client, event.requestId, status, event.offset, EMPTY)
             return
         }
 
         val value: ByteArray
         if (attribute is BaseLocalDescriptor<C> && attribute.isClientCharacteristicConfiguration) {
-            val cccd = attribute.characteristic.cccdValue(central)
+            val cccd = attribute.characteristic.cccdValue(client)
             value = byteArrayOf((cccd and 0xFF).toByte(), ((cccd shr 8) and 0xFF).toByte())
         } else {
             val response = try {
-                attribute.state.read(ReadRequest(central))
+                attribute.state.read(ReadRequest(client))
             } catch (e: Exception) {
                 // A CancellationException thrown by the handler fails just that request, unless
                 // the manager itself has been cancelled.
                 currentCoroutineContext().ensureActive()
                 logger?.error(Layer.GATT) { "Read handler of $attribute failed: $e" }
-                server.respond(central, event.requestId, OperationStatus.UnlikelyError, event.offset, EMPTY)
+                server.respond(client, event.requestId, OperationStatus.UnlikelyError, event.offset, EMPTY)
                 return
             }
             when (response) {
                 is ReadResponse.Failure -> {
-                    server.respond(central, event.requestId, response.status, event.offset, EMPTY)
+                    server.respond(client, event.requestId, response.status, event.offset, EMPTY)
                     return
                 }
                 is ReadResponse.Success -> value = response.value
@@ -250,11 +250,11 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
         }
 
         if (event.offset > value.size) {
-            server.respond(central, event.requestId, OperationStatus.InvalidOffset, event.offset, EMPTY)
+            server.respond(client, event.requestId, OperationStatus.InvalidOffset, event.offset, EMPTY)
             return
         }
         server.respond(
-            central = central,
+            client = client,
             requestId = event.requestId,
             status = OperationStatus.Success,
             offset = event.offset,
@@ -263,45 +263,45 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
     }
 
     private suspend fun onWriteRequested(event: GattServerEvent.WriteRequested<C>) {
-        val central = event.central
+        val client = event.client
         val attribute = attributes.value[event.attribute]
         if (attribute == null) {
-            logger?.warn(Layer.GATT) { "Write request from $central for unknown attribute ${event.attribute}" }
+            logger?.warn(Layer.GATT) { "Write request from $client for unknown attribute ${event.attribute}" }
             respondToWrite(event, OperationStatus.InvalidHandle)
             return
         }
         logger?.trace(Layer.GATT) {
-            "Write request from $central: $attribute, ${event.value.size} bytes" +
+            "Write request from $client: $attribute, ${event.value.size} bytes" +
             (if (event.prepared) " (prepared, offset ${event.offset})" else "")
         }
 
         if (event.prepared) {
             val status = checkWritable(attribute, withResponse = true)
-                ?: queuePreparedWrite(central, attribute, event.offset, event.value)
+                ?: queuePreparedWrite(client, attribute, event.offset, event.value)
             // The platform echoes the value of a successful prepared write.
-            server.respond(central, event.requestId, status ?: OperationStatus.Success, event.offset, event.value)
+            server.respond(client, event.requestId, status ?: OperationStatus.Success, event.offset, event.value)
             return
         }
 
-        val status = write(central, attribute, event.value, event.responseNeeded)
+        val status = write(client, attribute, event.value, event.responseNeeded)
         respondToWrite(event, status)
     }
 
     private fun respondToWrite(event: GattServerEvent.WriteRequested<C>, status: OperationStatus) {
         if (event.responseNeeded) {
-            server.respond(event.central, event.requestId, status, event.offset, EMPTY)
+            server.respond(event.client, event.requestId, status, event.offset, EMPTY)
         }
     }
 
     private suspend fun onExecuteWrite(event: GattServerEvent.ExecuteWrite<C>) {
-        val central = event.central
-        val queue = preparedWrites.remove(central).orEmpty()
+        val client = event.client
+        val queue = preparedWrites.remove(client).orEmpty()
         if (!event.execute) {
-            logger?.trace(Layer.GATT) { "Prepared writes of $central cancelled (${queue.size} fragment(s))" }
-            server.respond(central, event.requestId, OperationStatus.Success, 0, EMPTY)
+            logger?.trace(Layer.GATT) { "Prepared writes of $client cancelled (${queue.size} fragment(s))" }
+            server.respond(client, event.requestId, OperationStatus.Success, 0, EMPTY)
             return
         }
-        logger?.trace(Layer.GATT) { "Executing prepared writes of $central (${queue.size} fragment(s))" }
+        logger?.trace(Layer.GATT) { "Executing prepared writes of $client (${queue.size} fragment(s))" }
 
         // Assemble the fragments of each attribute.
         val assembled = mutableListOf<Pair<LocalAttribute<C>, ByteArray>>()
@@ -310,26 +310,26 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
             var value = byteArrayOf()
             for (fragment in list) {
                 if (fragment.offset != value.size) {
-                    server.respond(central, event.requestId, OperationStatus.InvalidOffset, 0, EMPTY)
+                    server.respond(client, event.requestId, OperationStatus.InvalidOffset, 0, EMPTY)
                     return
                 }
                 value += fragment.value
             }
             if (value.size > MAX_ATTRIBUTE_LENGTH) {
-                server.respond(central, event.requestId, OperationStatus.InvalidAttributeLength, 0, EMPTY)
+                server.respond(client, event.requestId, OperationStatus.InvalidAttributeLength, 0, EMPTY)
                 return
             }
             assembled += attribute to value
         }
 
         for ((attribute, value) in assembled) {
-            val status = write(central, attribute, value, withResponse = true)
+            val status = write(client, attribute, value, withResponse = true)
             if (status != OperationStatus.Success) {
-                server.respond(central, event.requestId, status, 0, EMPTY)
+                server.respond(client, event.requestId, status, 0, EMPTY)
                 return
             }
         }
-        server.respond(central, event.requestId, OperationStatus.Success, 0, EMPTY)
+        server.respond(client, event.requestId, OperationStatus.Success, 0, EMPTY)
     }
 
     private fun onSubscriptionChanged(event: GattServerEvent.SubscriptionChanged<C>) {
@@ -344,15 +344,15 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
             logger?.warn(Layer.GATT) { "Subscription change of $characteristic not supported: $value" }
             return
         }
-        logger?.info(Layer.GATT) { "${event.central} ${if (value == 0) "unsubscribed from" else "subscribed to"} $characteristic" }
-        characteristic.setCccdValue(event.central, value)
+        logger?.info(Layer.GATT) { "${event.client} ${if (value == 0) "unsubscribed from" else "subscribed to"} $characteristic" }
+        characteristic.setCccdValue(event.client, value)
     }
 
-    private fun onCentralDisconnected(event: GattServerEvent.CentralDisconnected<C>) {
-        val central = event.central
-        logger?.info(Layer.GATT) { "$central disconnected" }
-        preparedWrites.remove(central)
-        attributes.value.values.forEach { (it as? BaseLocalCharacteristic<C>)?.removeCentral(central) }
+    private fun onClientDisconnected(event: GattServerEvent.ClientDisconnected<C>) {
+        val client = event.client
+        logger?.info(Layer.GATT) { "$client disconnected" }
+        preparedWrites.remove(client)
+        attributes.value.values.forEach { (it as? BaseLocalCharacteristic<C>)?.removeClient(client) }
     }
 
     // ----- Helpers -----
@@ -379,9 +379,9 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
         else -> OperationStatus.WriteNotPermitted
     }
 
-    /** Adds a fragment to the prepared writes of the central. Returns an error or `null`. */
-    private fun queuePreparedWrite(central: C, attribute: LocalAttribute<C>, offset: Int, value: ByteArray): OperationStatus? {
-        val queue = preparedWrites.getOrPut(central) { mutableListOf() }
+    /** Adds a fragment to the prepared writes of the client. Returns an error or `null`. */
+    private fun queuePreparedWrite(client: C, attribute: LocalAttribute<C>, offset: Int, value: ByteArray): OperationStatus? {
+        val queue = preparedWrites.getOrPut(client) { mutableListOf() }
         if (queue.size >= PREPARED_WRITE_QUEUE_LIMIT) {
             return OperationStatus.PrepareQueueFull
         }
@@ -393,9 +393,9 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
      * Executes a write: validates the request and handles the CCCD, or passes the value to
      * the attribute.
      *
-     * @return The status to be sent to the central.
+     * @return The status to be sent to the client.
      */
-    private suspend fun write(central: C, attribute: LocalAttribute<C>, value: ByteArray, withResponse: Boolean): OperationStatus {
+    private suspend fun write(client: C, attribute: LocalAttribute<C>, value: ByteArray, withResponse: Boolean): OperationStatus {
         // The attribute may have been removed, if the services were replaced in the meantime.
         if (attributes.value[attribute.instanceId] !== attribute) {
             return OperationStatus.InvalidHandle
@@ -405,10 +405,10 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
             return OperationStatus.InvalidAttributeLength
         }
         if (attribute is BaseLocalDescriptor<C> && attribute.isClientCharacteristicConfiguration) {
-            return writeCccd(central, attribute, value)
+            return writeCccd(client, attribute, value)
         }
         val response = try {
-            attribute.state.write(WriteRequest(central, value, withResponse))
+            attribute.state.write(WriteRequest(client, value, withResponse))
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             logger?.error(Layer.GATT) { "Write handler of $attribute failed: $e" }
@@ -421,7 +421,7 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
     }
 
     /** Handles a write to the Client Characteristic Configuration descriptor. */
-    private fun writeCccd(central: C, descriptor: BaseLocalDescriptor<C>, value: ByteArray): OperationStatus {
+    private fun writeCccd(client: C, descriptor: BaseLocalDescriptor<C>, value: ByteArray): OperationStatus {
         if (value.size != 2) {
             return OperationStatus.InvalidAttributeLength
         }
@@ -432,12 +432,12 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
         }
         logger?.info(Layer.GATT) {
             when (cccd) {
-                0 -> "$central disabled updates of $characteristic"
-                NOTIFICATIONS -> "$central enabled notifications of $characteristic"
-                else -> "$central enabled indications of $characteristic"
+                0 -> "$client disabled updates of $characteristic"
+                NOTIFICATIONS -> "$client enabled notifications of $characteristic"
+                else -> "$client enabled indications of $characteristic"
             }
         }
-        characteristic.setCccdValue(central, cccd)
+        characteristic.setCccdValue(client, cccd)
         return OperationStatus.Success
     }
 
@@ -450,7 +450,7 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
     }
 
     /** A fragment of a prepared (long or reliable) write. */
-    private class PreparedWrite<C: Central<*>>(
+    private class PreparedWrite<C: Client<*>>(
         val attribute: LocalAttribute<C>,
         val offset: Int,
         val value: ByteArray,
@@ -465,7 +465,7 @@ open class LocalServerImpl<ID: Any, C: Central<ID>>(
         /** Bit 1 of the Client Characteristic Configuration. */
         const val INDICATIONS = 0x0002
 
-        /** The maximum number of fragments of prepared writes queued by a single central. */
+        /** The maximum number of fragments of prepared writes queued by a single client. */
         const val PREPARED_WRITE_QUEUE_LIMIT = 64
     }
 }

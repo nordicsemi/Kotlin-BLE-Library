@@ -37,20 +37,20 @@ import no.nordicsemi.kotlin.ble.server.LocalServer
 /**
  * Android-specific interface of the Peripheral Manager.
  *
- * It uses MAC addresses as central identifiers, and reports connection state, MTU, PHY and
- * connection parameters of centrals.
+ * It uses MAC addresses as client identifiers, and reports connection state, MTU, PHY and
+ * connection parameters of clients.
  *
  * To make the device discoverable, use the advertiser.
  */
-interface LocalServer: LocalServer<String, Central> {
+interface LocalServer: LocalServer<String, Client> {
 
     /**
-     * Centrals currently connected to the local GATT server.
+     * Clients currently connected to the local GATT server.
      *
-     * Centrals that disconnected are removed from the list. Their [Central.state] changes to
+     * Clients that disconnected are removed from the list. Their [Client.state] changes to
      * disconnected first.
      */
-    val connectedCentrals: StateFlow<List<Central>>
+    val connectedClients: StateFlow<List<Client>>
 
     companion object Factory
 }

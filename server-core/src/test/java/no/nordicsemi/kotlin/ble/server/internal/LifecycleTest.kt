@@ -105,8 +105,8 @@ class LifecycleTest {
         val rw = fixture.rw
         fixture.manager.close()
 
-        fixture.emit(GattServerEvent.ReadRequested(fixture.central, 1, rw.instanceId, 0))
-        fixture.emit(GattServerEvent.WriteRequested(fixture.central, 2, rw.instanceId, 0, bytes(1), false, true))
+        fixture.emit(GattServerEvent.ReadRequested(fixture.client, 1, rw.instanceId, 0))
+        fixture.emit(GattServerEvent.WriteRequested(fixture.client, 2, rw.instanceId, 0, bytes(1), false, true))
 
         assertTrue(fixture.server.responses.isEmpty())
         assertTrue(rw.value.value.isEmpty())
@@ -186,9 +186,9 @@ class LifecycleTest {
         }
 
         // The write is sent while the first request is still being handled.
-        fixture.server.events.emit(GattServerEvent.ReadRequested(fixture.central, 1, fixture.ro.instanceId, 0))
+        fixture.server.events.emit(GattServerEvent.ReadRequested(fixture.client, 1, fixture.ro.instanceId, 0))
         fixture.server.events.emit(
-            GattServerEvent.WriteRequested(fixture.central, 2, fixture.rw.instanceId, 0, bytes(1), false, true)
+            GattServerEvent.WriteRequested(fixture.client, 2, fixture.rw.instanceId, 0, bytes(1), false, true)
         )
         testScheduler.advanceTimeBy(101)
         testScheduler.runCurrent()
@@ -210,11 +210,11 @@ class LifecycleTest {
     fun serverRespondFailure_doesNotKillEventLoop() = runTest {
         val server = FakeGattServer()
         val manager = LocalServerImpl(backgroundScope, server)
-        val central = FakeCentral("AA")
+        val client = FakeClient("AA")
         server.respondError = IllegalStateException("Disconnected")
 
-        server.events.emit(GattServerEvent.ReadRequested(central, 1, 1, 0))
-        server.events.emit(GattServerEvent.ReadRequested(central, 2, 1, 0))
+        server.events.emit(GattServerEvent.ReadRequested(client, 1, 1, 0))
+        server.events.emit(GattServerEvent.ReadRequested(client, 2, 1, 0))
         testScheduler.runCurrent()
 
         assertEquals(listOf(2), server.responses.map { it.requestId })

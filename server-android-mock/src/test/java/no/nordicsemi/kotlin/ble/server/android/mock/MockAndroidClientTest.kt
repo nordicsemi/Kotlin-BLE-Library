@@ -46,14 +46,14 @@ import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
-class MockAndroidCentralTest {
+class MockAndroidClientTest {
 
     @Test
     fun `random addresses look like MAC addresses and differ`() = runTest {
         val manager = mockManager()
 
-        val a = manager.simulateCentral()
-        val b = manager.simulateCentral()
+        val a = manager.simulateClient()
+        val b = manager.simulateClient()
 
         val regex = Regex("([0-9A-F]{2}:){5}[0-9A-F]{2}")
         assertTrue(regex.matches(a.address))
@@ -63,177 +63,177 @@ class MockAndroidCentralTest {
 
     @Test
     fun `address is used as identifier`() = runTest {
-        val central = mockManager().simulateCentral("11:22:33:44:55:66")
+        val client = mockManager().simulateClient("11:22:33:44:55:66")
 
-        assertEquals("11:22:33:44:55:66", central.address)
-        assertEquals("11:22:33:44:55:66", central.identifier)
+        assertEquals("11:22:33:44:55:66", client.address)
+        assertEquals("11:22:33:44:55:66", client.identifier)
     }
 
     @Test
-    fun `central with the same address cannot be created twice`() = runTest {
+    fun `client with the same address cannot be created twice`() = runTest {
         val manager = mockManager()
-        val _ = manager.simulateCentral("11:22:33:44:55:66")
+        val _ = manager.simulateClient("11:22:33:44:55:66")
 
-        assertFailsWith<IllegalArgumentException> { manager.simulateCentral("11:22:33:44:55:66") }
+        assertFailsWith<IllegalArgumentException> { manager.simulateClient("11:22:33:44:55:66") }
     }
 
     @Test
-    fun `new central is disconnected and has no link information`() = runTest {
-        val central = mockManager().simulateCentral()
+    fun `new client is disconnected and has no link information`() = runTest {
+        val client = mockManager().simulateClient()
 
-        assertEquals(ConnectionState.Disconnected(), central.state.value)
-        assertNull(central.mtu.value)
-        assertNull(central.phy.value)
-        assertNull(central.connectionParameters.value)
+        assertEquals(ConnectionState.Disconnected(), client.state.value)
+        assertNull(client.mtu.value)
+        assertNull(client.phy.value)
+        assertNull(client.connectionParameters.value)
     }
 
     @Test
     fun `connect sets default link information`() = runTest {
         val manager = mockManager()
-        val central = manager.simulateCentral()
+        val client = manager.simulateClient()
 
-        central.connect()
+        client.connect()
 
-        assertEquals(ConnectionState.Connected, central.state.value)
-        assertEquals(23, central.mtu.value)
-        assertEquals(20, central.maximumUpdateValueLength)
-        assertEquals(PhyInUse.PHY_LE_1M, central.phy.value)
-        assertEquals(ConnectionParameters.Unknown, central.connectionParameters.value)
-        assertSame(central, manager.connectedCentrals.value.single())
+        assertEquals(ConnectionState.Connected, client.state.value)
+        assertEquals(23, client.mtu.value)
+        assertEquals(20, client.maximumUpdateValueLength)
+        assertEquals(PhyInUse.PHY_LE_1M, client.phy.value)
+        assertEquals(ConnectionParameters.Unknown, client.connectionParameters.value)
+        assertSame(client, manager.connectedClients.value.single())
     }
 
     @Test
-    fun `disconnect clears link information and removes the central`() = runTest {
+    fun `disconnect clears link information and removes the client`() = runTest {
         val manager = mockManager()
-        val central = manager.simulateCentral()
-        central.connect()
+        val client = manager.simulateClient()
+        client.connect()
 
-        central.disconnect()
+        client.disconnect()
 
         assertEquals(
             ConnectionState.Disconnected(ConnectionState.Disconnected.Reason.TerminateLocalHost),
-            central.state.value,
+            client.state.value,
         )
-        assertNull(central.mtu.value)
-        assertNull(central.phy.value)
-        assertNull(central.connectionParameters.value)
-        assertTrue(manager.connectedCentrals.value.isEmpty())
+        assertNull(client.mtu.value)
+        assertNull(client.phy.value)
+        assertNull(client.connectionParameters.value)
+        assertTrue(manager.connectedClients.value.isEmpty())
     }
 
     @Test
     fun `link loss is reported with its reason`() = runTest {
-        val central = mockManager().simulateCentral().also { it.connect() }
+        val client = mockManager().simulateClient().also { it.connect() }
 
-        central.simulateLinkLoss()
+        client.simulateLinkLoss()
 
-        assertEquals(ConnectionState.Disconnected(ConnectionState.Disconnected.Reason.LinkLoss), central.state.value)
+        assertEquals(ConnectionState.Disconnected(ConnectionState.Disconnected.Reason.LinkLoss), client.state.value)
     }
 
     @Test
     fun `MTU change updates MTU and maximum update value length`() = runTest {
-        val central = mockManager().simulateCentral().also { it.connect() }
+        val client = mockManager().simulateClient().also { it.connect() }
 
-        val mtu = central.simulateMtuChange(185)
+        val mtu = client.simulateMtuChange(185)
 
         assertEquals(185, mtu)
-        assertEquals(185, central.mtu.value)
-        assertEquals(182, central.maximumUpdateValueLength)
+        assertEquals(185, client.mtu.value)
+        assertEquals(182, client.maximumUpdateValueLength)
     }
 
     @Test
     fun `MTU is limited to the maximum of the environment`() = runTest {
         // Android 4.4 supports only the default MTU.
         val manager = mockManager(MockAndroidEnvironment.Api19())
-        val central = manager.simulateCentral().also { it.connect() }
+        val client = manager.simulateClient().also { it.connect() }
 
-        val _ = central.simulateMtuChange(517)
+        val _ = client.simulateMtuChange(517)
 
-        assertEquals(23, central.mtu.value)
+        assertEquals(23, client.mtu.value)
     }
 
     @Test
     fun `MTU is limited to 517`() = runTest {
-        val central = mockManager().simulateCentral().also { it.connect() }
+        val client = mockManager().simulateClient().also { it.connect() }
 
-        val _ = central.simulateMtuChange(1000)
+        val _ = client.simulateMtuChange(1000)
 
-        assertEquals(517, central.mtu.value)
+        assertEquals(517, client.mtu.value)
     }
 
     @Test
     fun `MTU is reset when reconnecting`() = runTest {
-        val central = mockManager().simulateCentral().also { it.connect() }
-        val _ = central.simulateMtuChange(185)
-        central.disconnect()
+        val client = mockManager().simulateClient().also { it.connect() }
+        val _ = client.simulateMtuChange(185)
+        client.disconnect()
 
-        central.connect()
+        client.connect()
 
-        assertEquals(23, central.mtu.value)
+        assertEquals(23, client.mtu.value)
     }
 
     @Test
     fun `preferred PHY is applied when supported`() = runTest {
-        val central = mockManager(MockAndroidEnvironment.Api31()).simulateCentral().also { it.connect() }
+        val client = mockManager(MockAndroidEnvironment.Api31()).simulateClient().also { it.connect() }
 
-        val phy = central.setPreferredPhy(Phy.PHY_LE_2M)
+        val phy = client.setPreferredPhy(Phy.PHY_LE_2M)
 
         assertEquals(PhyInUse(Phy.PHY_LE_2M, Phy.PHY_LE_2M), phy)
-        assertEquals(phy, central.phy.value)
+        assertEquals(phy, client.phy.value)
     }
 
     @Test
     fun `preferred PHY falls back to 1M when not supported`() = runTest {
         val environment = MockAndroidEnvironment.Api31(isLe2MPhySupported = false, isLeCodedPhySupported = false)
-        val central = mockManager(environment).simulateCentral().also { it.connect() }
+        val client = mockManager(environment).simulateClient().also { it.connect() }
 
-        assertEquals(PhyInUse.PHY_LE_1M, central.setPreferredPhy(Phy.PHY_LE_2M))
-        assertEquals(PhyInUse.PHY_LE_1M, central.setPreferredPhy(Phy.PHY_LE_CODED))
+        assertEquals(PhyInUse.PHY_LE_1M, client.setPreferredPhy(Phy.PHY_LE_2M))
+        assertEquals(PhyInUse.PHY_LE_1M, client.setPreferredPhy(Phy.PHY_LE_CODED))
     }
 
     @Test
     fun `PHY can have different TX and RX`() = runTest {
-        val central = mockManager().simulateCentral().also { it.connect() }
+        val client = mockManager().simulateClient().also { it.connect() }
 
-        central.simulatePhyChange(Phy.PHY_LE_CODED, Phy.PHY_LE_2M)
+        client.simulatePhyChange(Phy.PHY_LE_CODED, Phy.PHY_LE_2M)
 
-        assertEquals(PhyInUse(Phy.PHY_LE_CODED, Phy.PHY_LE_2M), central.phy.value)
+        assertEquals(PhyInUse(Phy.PHY_LE_CODED, Phy.PHY_LE_2M), client.phy.value)
     }
 
     @Test
     fun `connection parameters change is reported`() = runTest {
-        val central = mockManager().simulateCentral().also { it.connect() }
+        val client = mockManager().simulateClient().also { it.connect() }
 
-        central.simulateConnectionParametersChange(connectionInterval = 24, latency = 2, supervisionTimeout = 400)
+        client.simulateConnectionParametersChange(connectionInterval = 24, latency = 2, supervisionTimeout = 400)
 
-        assertEquals(ConnectionParameters(24, 2, 400), central.connectionParameters.value)
+        assertEquals(ConnectionParameters(24, 2, 400), client.connectionParameters.value)
     }
 
     @Test
     fun `link changes fail when not connected`() = runTest {
-        val central = mockManager().simulateCentral()
+        val client = mockManager().simulateClient()
 
-        assertFailsWith<IllegalStateException> { central.simulateMtuChange(100) }
-        assertFailsWith<IllegalStateException> { central.simulatePhyChange(Phy.PHY_LE_2M) }
-        assertFailsWith<IllegalStateException> { central.simulateConnectionParametersChange(ConnectionParameters.Unknown) }
-        assertFailsWith<IllegalStateException> { central.setPreferredPhy(Phy.PHY_LE_2M) }
+        assertFailsWith<IllegalStateException> { client.simulateMtuChange(100) }
+        assertFailsWith<IllegalStateException> { client.simulatePhyChange(Phy.PHY_LE_2M) }
+        assertFailsWith<IllegalStateException> { client.simulateConnectionParametersChange(ConnectionParameters.Unknown) }
+        assertFailsWith<IllegalStateException> { client.setPreferredPhy(Phy.PHY_LE_2M) }
     }
 
     @Test
-    fun `several centrals are connected independently`() = runTest {
+    fun `several clients are connected independently`() = runTest {
         val manager = mockManager()
-        val a = manager.simulateCentral("A").also { it.connect() }
-        val b = manager.simulateCentral("B").also { it.connect() }
-        val c = manager.simulateCentral("C")
+        val a = manager.simulateClient("A").also { it.connect() }
+        val b = manager.simulateClient("B").also { it.connect() }
+        val c = manager.simulateClient("C")
 
         val _ = a.simulateMtuChange(100)
 
-        assertEquals(setOf("A", "B"), manager.connectedCentrals.value.map { it.address }.toSet())
+        assertEquals(setOf("A", "B"), manager.connectedClients.value.map { it.address }.toSet())
         assertEquals(100, a.mtu.value)
         assertEquals(23, b.mtu.value)
         assertFalse(c.state.value.isConnected)
 
         a.disconnect()
-        assertEquals(listOf("B"), manager.connectedCentrals.value.map { it.address })
+        assertEquals(listOf("B"), manager.connectedClients.value.map { it.address })
     }
 
     @Test
@@ -248,11 +248,11 @@ class MockAndroidCentralTest {
     }
 
     @Test
-    fun `turning Bluetooth off disconnects all centrals`() = runTest {
+    fun `turning Bluetooth off disconnects all clients`() = runTest {
         val environment = MockAndroidEnvironment.Api31()
         val manager = mockManager(environment)
-        val a = manager.simulateCentral().also { it.connect() }
-        val b = manager.simulateCentral().also { it.connect() }
+        val a = manager.simulateClient().also { it.connect() }
+        val b = manager.simulateClient().also { it.connect() }
         testScheduler.runCurrent()
 
         environment.simulatePowerOff()
@@ -260,6 +260,6 @@ class MockAndroidCentralTest {
 
         assertFalse(a.state.value.isConnected)
         assertFalse(b.state.value.isConnected)
-        assertTrue(manager.connectedCentrals.value.isEmpty())
+        assertTrue(manager.connectedClients.value.isEmpty())
     }
 }

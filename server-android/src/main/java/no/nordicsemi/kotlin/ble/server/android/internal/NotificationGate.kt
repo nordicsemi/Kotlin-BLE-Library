@@ -38,9 +38,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration
 
 /**
- * Serializes notifications and indications sent to a single central.
+ * Serializes notifications and indications sent to a single client.
  *
- * Android allows only one notification per central to be in flight. The next one may be sent
+ * Android allows only one notification per client to be in flight. The next one may be sent
  * after `onNotificationSent` was called, which for indications means that the confirmation was
  * received.
  */

@@ -43,7 +43,7 @@ import kotlin.random.Random
 /**
  * Creates a mock implementation of a [LocalServer], which hosts a simulated GATT server.
  *
- * Use [MockLocalServer.simulateCentral] to simulate centrals that connect to the server and
+ * Use [MockLocalServer.simulateClient] to simulate clients that connect to the server and
  * send requests to it.
  *
  * Background work of the manager, like handling of requests, runs in the given [scope]. A scope
