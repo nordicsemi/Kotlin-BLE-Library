@@ -32,6 +32,7 @@
 package no.nordicsemi.kotlin.ble.client.android.mock.internal
 
 import no.nordicsemi.kotlin.ble.server.LocalServer
+import no.nordicsemi.kotlin.ble.server.android.mock.mock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -84,6 +85,9 @@ open class MockCentralManagerImpl(
 ): MockCentralManager, CentralManagerImpl(scope, environment, server) {
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
 
+    override fun createServer(): LocalServer<String> =
+        no.nordicsemi.kotlin.ble.server.android.LocalServer.mock(environment, internalScope)
+
     /** The number of scans (flows returned by [scan]) that are currently collected. */
     internal val activeScans = MutableStateFlow(0)
 
@@ -116,7 +120,7 @@ open class MockCentralManagerImpl(
                             environment = environment,
                             advertisements = mockAdvertiser.events,
                             scope = scope,
-                            server = server,
+                            serverProvider = { server },
                         )
                     )
                 )
@@ -166,7 +170,7 @@ open class MockCentralManagerImpl(
                         environment = environment,
                         advertisements = mockAdvertiser.events,
                         scope = scope,
-                        server = server,
+                        serverProvider = { server },
                     ).also { p -> p.logger = logger }
                 )
             }
@@ -344,7 +348,7 @@ open class MockCentralManagerImpl(
                                     environment = environment,
                                     advertisements = mockAdvertiser.events,
                                     scope = scope,
-                                    server = server,
+                                    serverProvider = { server },
                                 )
                             ).also { p -> p.logger = logger }
                         }

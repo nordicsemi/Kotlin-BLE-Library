@@ -33,6 +33,7 @@ package no.nordicsemi.kotlin.ble.client.android.mock
 
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.mock.SimulationProvider
+import no.nordicsemi.kotlin.ble.server.android.mock.MockLocalServer
 
 /**
  * A mock central manager implementation for Android that can mock a real Central Manager.
@@ -40,3 +41,14 @@ import no.nordicsemi.kotlin.ble.client.mock.SimulationProvider
  * Use [simulatePeripherals] to set up mock peripherals.
  */
 interface MockCentralManager: CentralManager, SimulationProvider<String>
+
+/**
+ * The local GATT server of the mock central manager as a [MockLocalServer], which can simulate
+ * clients.
+ *
+ * It is the server created by the manager, or the one given to it when it is a [MockLocalServer].
+ *
+ * @throws IllegalStateException if another kind of server was given to the manager.
+ */
+val MockCentralManager.mockServer: MockLocalServer
+    get() = checkNotNull(server as? MockLocalServer) { "The server of the manager is not a MockLocalServer" }

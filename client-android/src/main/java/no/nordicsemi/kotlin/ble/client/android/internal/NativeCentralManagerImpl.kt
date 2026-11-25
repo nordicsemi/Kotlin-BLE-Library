@@ -32,6 +32,7 @@
 package no.nordicsemi.kotlin.ble.client.android.internal
 
 import no.nordicsemi.kotlin.ble.server.LocalServer
+import no.nordicsemi.kotlin.ble.server.android.native
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -103,6 +104,7 @@ private const val NATIVE_SCAN_RESULTS_BUFFER_SIZE = 512
  *
  * @param scope The coroutine scope.
  * @param environment Native Android environment object.
+ * @param server The local GATT server, or `null` to create it when it is first accessed.
  */
 internal class NativeCentralManagerImpl(
     scope: CoroutineScope,
@@ -110,6 +112,9 @@ internal class NativeCentralManagerImpl(
     server: LocalServer<String>? = null,
 ): CentralManagerImpl(scope, environment, server) {
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
+
+    override fun createServer(): LocalServer<String> =
+        no.nordicsemi.kotlin.ble.server.android.LocalServer.native(environment, internalScope)
     override val state = environment.bluetoothState
 
     /** A change of the bond state of the device with the given [address]. */

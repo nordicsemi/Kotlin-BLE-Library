@@ -119,13 +119,14 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
     internal val executor = this.impl
 
     /**
-     * The local GATT server of this device, set when the peripheral is created by a central manager.
+     * Gives the local GATT server of this device, set when the peripheral is created by a central
+     * manager. The server may be created when it is first needed, so it is not read earlier.
      *
      * Its services are available to the profiles registered on this peripheral.
      *
      * @hide
      */
-    internal var server: LocalServer<ID>? = null
+    internal var serverProvider: (() -> LocalServer<ID>)? = null
 
     /**
      * A job that collects GATT events from the peripheral.
@@ -1476,12 +1477,12 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      * its [unsupported][Profile.unsupported] or [failed][Profile.failed] method
      * is called instead (see [ProfileServices]).
      * @param required Whether support for this profile is required by the app.
-     * @throws IllegalStateException if the profile needs local services, but the central manager
-     * was created without a local server.
+     * @throws IllegalStateException if the profile needs local services, but the peripheral was
+     * not obtained from a central manager, which provides the local server.
      */
     fun profile(scope: CoroutineScope, profile: Profile, required: Boolean = true) {
-        check(profile.localServiceUuids.isEmpty() || server != null) {
-            "${profile.name ?: "Profile"} needs local services, but the central manager has no local server"
+        check(profile.localServiceUuids.isEmpty() || serverProvider != null) {
+            "${profile.name ?: "Profile"} needs local services, but the peripheral has no central manager"
         }
         if (profile.localServiceUuids.isEmpty()) {
             profileImpl(
@@ -1534,10 +1535,10 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      * The services are the views of the local server for this peripheral.
      */
     private suspend fun localServicesOf(profile: Profile): List<LocalService> {
-        val server = checkNotNull(server) {
-            "${profile.name ?: "Profile"} needs local services, but the central manager has no local server"
+        val server = checkNotNull(serverProvider) {
+            "${profile.name ?: "Profile"} needs local services, but the peripheral has no central manager"
         }
-        return server.services(identifier)
+        return server().services(identifier)
             .first { list -> profile.localServiceUuids.all { uuid -> list.any { it.uuid == uuid } } }
             .filter { it.uuid in profile.localServiceUuids }
     }

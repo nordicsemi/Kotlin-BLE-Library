@@ -68,8 +68,9 @@ import kotlin.uuid.Uuid
  * @param environment The mock environment.
  * @param advertisements A flow of advertisements emitted by the mock advertiser.
  * @param scope The scope of the mock central manager, in which the connection runs its jobs.
- * @param server The local GATT server of the phone, which may be used by the peripheral as
- * a client, see [PeripheralSpec.Builder.client].
+ * @param serverProvider Gives the local GATT server of the phone, which may be used by the
+ * peripheral as a client, see [PeripheralSpec.Builder.client]. The server is not created until
+ * the peripheral is connected.
  * @hide
  */
 open class MockExecutor(
@@ -78,7 +79,7 @@ open class MockExecutor(
     override val environment: MockEnvironment,
     private val advertisements: Flow<MockScanResult<String>>,
     private val scope: CoroutineScope,
-    private val server: LocalServer<String>? = null,
+    private val serverProvider: (() -> LocalServer<String>)? = null,
 ): Peripheral.Executor<String> {
     override val operationMutex = OperationMutex()
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
@@ -124,7 +125,7 @@ open class MockExecutor(
             peripheralSpec.events.collect { events.emit(it) }
         }
         // The peripheral may use the GATT server of the phone, as long as it is connected.
-        if (peripheralSpec.clientRole != null && server is MockClientHost<*>) {
+        if (peripheralSpec.clientRole != null && serverProvider != null) {
             scope.launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
                 events.collect { event ->
                     if (event is ConnectionStateChanged) {
@@ -143,7 +144,7 @@ open class MockExecutor(
         if (clientRoleJob?.isActive == true) return
         val role = peripheralSpec.clientRole ?: return
         @Suppress("UNCHECKED_CAST")
-        val host = server as? MockClientHost<String> ?: return
+        val host = serverProvider?.invoke() as? MockClientHost<String> ?: return
         val client = host.simulatedClient(peripheralSpec.identifier)
         clientRoleJob = scope.launch {
             try {

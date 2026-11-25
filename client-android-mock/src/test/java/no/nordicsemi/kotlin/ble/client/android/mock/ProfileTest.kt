@@ -167,13 +167,27 @@ class ProfileTest {
     }
 
     @Test
-    fun `profile needing local services requires a server`() = runTest {
+    fun `profile uses the server created by the manager`() = runTest {
         withTimeout(10.seconds) {
-            val (_, peripheral) = setUp(server = null)
+            val (manager, peripheral) = setUp(server = null)
+            val profile = RemoteAndLocalProfile()
+            peripheral.profile(backgroundScope, profile)
 
-            assertFailsWith<IllegalStateException> {
-                peripheral.profile(backgroundScope, RemoteAndLocalProfile())
+            manager.connect(peripheral, CentralManager.ConnectionOptions.Direct())
+            gattSettle()
+            assertFalse(profile.initialized)
+
+            val _ = manager.mockServer.setup {
+                Service(LOCAL_SERVICE_UUID) {
+                    Characteristic(
+                        LOCAL_CHARACTERISTIC_UUID,
+                        CharacteristicProperty.WRITE_WITHOUT_RESPONSE and CharacteristicProperty.WRITE,
+                        Permission.WRITE,
+                    )
+                }
             }
+            gattSettle()
+            assertTrue(profile.initialized)
         }
     }
 }

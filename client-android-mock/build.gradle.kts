@@ -49,9 +49,9 @@ nordicPublishing {
 dependencies {
     api(project(":client-core-mock"))
     api(project(":client-core-android"))
+    api(project(":server-android-mock"))
     api(project(":environment-android-mock"))
 
-    testImplementation(project(":server-android-mock"))
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
 }

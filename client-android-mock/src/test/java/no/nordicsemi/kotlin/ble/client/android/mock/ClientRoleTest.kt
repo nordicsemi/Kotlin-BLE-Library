@@ -53,10 +53,13 @@ import no.nordicsemi.kotlin.ble.environment.android.mock.LatestApi
 import no.nordicsemi.kotlin.ble.server.WriteRequest
 import no.nordicsemi.kotlin.ble.server.android.mock.MockLocalServer
 import no.nordicsemi.kotlin.ble.server.android.mock.mock
+import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
 import no.nordicsemi.kotlin.ble.server.android.LocalServer
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
@@ -95,6 +98,14 @@ class ClientRoleTest {
         val manager = CentralManager.mock(environment = LatestApi(), scope = backgroundScope, server = server)
             .apply { simulatePeripherals(listOf(spec)) }
         return manager to manager.getPeripheralById(TAG_ADDRESS)!!
+    }
+
+    private fun tagSpec(
+        role: suspend kotlinx.coroutines.CoroutineScope.(no.nordicsemi.kotlin.ble.client.Peripheral<String, *>) -> Unit,
+    ) = PeripheralSpec.simulatePeripheral(identifier = TAG_ADDRESS, addressType = AddressType.PUBLIC) {
+        advertising { CompleteLocalName("Tag") }
+        connectable(name = "Tag", eventHandler = object : PeripheralSpecEventHandler {}, services = { })
+        client(role)
     }
 
     private suspend fun no.nordicsemi.kotlin.ble.client.Peripheral<String, *>.alertLevel(): RemoteCharacteristic =
@@ -210,6 +221,45 @@ class ClientRoleTest {
             // The services were discovered again, as they have changed.
             assertEquals(1, requests.size)
             assertContentEquals(byteArrayOf(1), requests.single().value)
+        }
+    }
+
+    @Test
+    fun `the manager creates the server when it is first accessed`() = runTest {
+        withTimeout(10.seconds) {
+            val manager = CentralManager.mock(environment = LatestApi(), scope = backgroundScope)
+                .apply { simulatePeripherals(listOf(tagSpec { phone ->
+                    phone.alertLevel().write(byteArrayOf(3), WriteType.WITHOUT_RESPONSE)
+                })) }
+            val requests = mutableListOf<WriteRequest>()
+            // Services of the manager's own server, defined after the manager was created.
+            manager.mockServer.defineServices()
+            assertSame(manager.mockServer, manager.server)
+            manager.mockServer.services.value.single().characteristics.single().writes
+                .onEach { requests += it }
+                .launchIn(backgroundScope)
+
+            val peripheral = manager.getPeripheralById(TAG_ADDRESS)!!
+            manager.connect(peripheral, CentralManager.ConnectionOptions.Direct())
+            gattSettle()
+
+            assertContentEquals(byteArrayOf(3), requests.single().value)
+        }
+    }
+
+    @Test
+    fun `the manager closes the server it created, but not the one it was given`() = runTest {
+        withTimeout(10.seconds) {
+            val own = CentralManager.mock(environment = LatestApi(), scope = backgroundScope)
+            val ownServer = own.mockServer
+            own.close()
+            assertFailsWith<ManagerClosedException> { ownServer.setup { } }
+
+            val given = LocalServer.mock(LatestApi(), backgroundScope)
+            val manager = CentralManager.mock(environment = LatestApi(), scope = backgroundScope, server = given)
+            assertSame(given, manager.server)
+            manager.close()
+            val _ = given.setup { }
         }
     }
 }

@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.Flow
 import no.nordicsemi.kotlin.ble.client.exception.ConnectionFailedException
 import no.nordicsemi.kotlin.ble.client.exception.ScanningException
 import no.nordicsemi.kotlin.ble.core.Manager
+import no.nordicsemi.kotlin.ble.server.LocalServer
 import no.nordicsemi.kotlin.ble.core.Peer
 import no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException
 import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
@@ -75,6 +76,21 @@ interface CentralManager<
      * @see [Peer.identifier]
      */
     fun getPeripheralsById(ids: List<ID>): List<P>
+
+    /**
+     * The local GATT server of this device, which serves the remote devices that connect to it,
+     * and whose services are available to the profiles with local services.
+     *
+     * It is created when first accessed, so the applications that don't need it don't use
+     * the resources, or request the permissions and capabilities of the platform that
+     * the server needs. Accessing it may throw if the platform doesn't support the server,
+     * or if it is not permitted.
+     *
+     * It is closed together with the manager, unless it was given to the manager when it was
+     * created, in which case it is owned by the caller. Use `setup` of the server to define the
+     * services, at any time.
+     */
+    val server: LocalServer<ID>
 
     /**
      * A peripheral that the central manager is able to match to the provided identifier.
