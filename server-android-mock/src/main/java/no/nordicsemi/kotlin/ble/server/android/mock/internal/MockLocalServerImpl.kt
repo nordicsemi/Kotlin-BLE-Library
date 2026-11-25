@@ -97,6 +97,9 @@ internal class MockLocalServerImpl private constructor(
             .also { clients[address] = it }
     }
 
+    override fun simulatedClient(identifier: String): MockAndroidClient =
+        clients[identifier] ?: simulateClient(identifier)
+
     override fun close() {
         bluetoothWatcher.cancel()
         super.close()

@@ -32,6 +32,7 @@
 package no.nordicsemi.kotlin.ble.client.android.mock.internal
 
 import kotlinx.coroutines.CoroutineScope
+import no.nordicsemi.kotlin.ble.server.LocalServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -68,6 +69,7 @@ import kotlin.time.Duration.Companion.seconds
  * @param environment The mock environment.
  * @param advertisements A flow of advertisements emitted by the mock advertiser.
  * @param scope The scope of the mock central manager, in which the connection runs its jobs.
+ * @param server The local GATT server of the phone, which may be used by the peripheral as a client.
  */
 open class MockExecutor(
     peripheralSpec: PeripheralSpec<String>,
@@ -75,7 +77,8 @@ open class MockExecutor(
     override val environment: MockAndroidEnvironment,
     advertisements: Flow<MockScanResult<String>>,
     scope: CoroutineScope,
-): MockExecutor(peripheralSpec, name, environment, advertisements, scope), Peripheral.Executor {
+    server: LocalServer<String>? = null,
+): MockExecutor(peripheralSpec, name, environment, advertisements, scope, server), Peripheral.Executor {
     override val type: PeripheralType = peripheralSpec.type
 
     // The bond state follows the spec right away (Unconfined), so that a change is visible as soon

@@ -47,6 +47,7 @@ import no.nordicsemi.kotlin.ble.core.log.Layer
 import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.internal.GattServerEvent
 import no.nordicsemi.kotlin.log.Log
+import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
 import kotlin.uuid.Uuid
 
 /**
@@ -114,6 +115,14 @@ abstract class MockClient<ID: Any>(
     val updates: SharedFlow<MockUpdate> = _updates.asSharedFlow()
 
     private val procedureLock = Mutex()
+
+    /**
+     * The definitions of the services of the GATT server the client is connected to.
+     *
+     * They change when the services are set up again.
+     */
+    val services: StateFlow<List<ServiceDefinition>>
+        get() = server.services
 
     /** `true` if the client is connected. */
     val isConnected: Boolean

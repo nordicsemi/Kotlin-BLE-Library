@@ -65,6 +65,7 @@ import no.nordicsemi.kotlin.ble.client.ServiceDiscoveryFailed
 import no.nordicsemi.kotlin.ble.client.RssiRead
 import no.nordicsemi.kotlin.ble.client.ServicesChanged
 import no.nordicsemi.kotlin.ble.client.ServicesDiscovered
+import no.nordicsemi.kotlin.ble.client.Peripheral
 import no.nordicsemi.kotlin.ble.client.internal.CharacteristicChanged
 import no.nordicsemi.kotlin.ble.client.mock.internal.MockRemoteService
 import no.nordicsemi.kotlin.ble.client.mock.internal.MockScanResult
@@ -132,6 +133,8 @@ import kotlin.uuid.Uuid
  * a real peripheral.
  * @param server The GATT server hosted by the peripheral, instead of the GATT callbacks of
  * the [eventHandler], or `null`.
+ * @param clientRole The block that uses the GATT server of the phone while the peripheral is
+ * connected, or `null`, see [Builder.client].
  * @param services The services available after service discovery.
  * @param cachedServices The services cached on the client side.
  * @param isServiceCacheValid Whether the cached services are valid.
@@ -156,6 +159,7 @@ class PeripheralSpec<ID: Any> private constructor(
     internal val advertisingSets: List<MockAdvertisingSet>?,
     internal val eventHandler: PeripheralSpecEventHandler?,
     val server: MockPeripheralServer?,
+    internal val clientRole: (suspend CoroutineScope.(server: Peripheral<String, *>) -> Unit)?,
     private val cachedServices: List<ServiceDefinition>?,
     isServiceCacheValid: Boolean,
 ): MockPeripheral {
@@ -1874,6 +1878,7 @@ class PeripheralSpec<ID: Any> private constructor(
         private var cachedServices: List<ServiceDefinition>? = null
         private var eventHandler: PeripheralSpecEventHandler? = null
         private var server: MockPeripheralServer? = null
+        private var clientRole: (suspend CoroutineScope.(server: Peripheral<String, *>) -> Unit)? = null
         private var preferredConnectionInterval: @Range(from = 6L, to = 3200L) IntRange? = null
         private var preferredSlaveLatency: @Range(from = 0, to = 499) Int? = null
         private var preferredSupervisionTimeout: @Range(from = 10, to = 3200) Int? = null
@@ -2439,9 +2444,49 @@ class PeripheralSpec<ID: Any> private constructor(
                 MockPeripheralServer(CoroutineScope(SupervisorJob() + Dispatchers.Unconfined))
                     .also { it.setupBlocking(block) }
             },
+            clientRole = clientRole,
             cachedServices = cachedServices,
             isServiceCacheValid = isServiceCacheValid,
         )
+
+        /**
+         * Makes the peripheral a client of the GATT server of the phone, that is of the local
+         * server of the central manager (see `CentralManager.mock(server = ...)`).
+         *
+         * Every time the peripheral is connected to the phone, the [block] is called in the scope
+         * of the central manager. Its parameter is the GATT server of the phone, with the same API
+         * as a peripheral has on the client side: [Peripheral.services] discovers the services,
+         * and the characteristics and descriptors can be read, written and subscribed to.
+         * The block is cancelled when the connection ends, and called again after reconnection.
+         *
+         * ```kotlin
+         * val tag = PeripheralSpec.simulatePeripheral("01:02:03:04:05:06") {
+         *     advertising { CompleteLocalName("Tag") }
+         *     connectable(name = "Tag")
+         *     client { server ->
+         *         val discovered = server.services(listOf(IMMEDIATE_ALERT_SERVICE_UUID))
+         *             .filterIsInstance<RemoteServices.Discovered>()
+         *             .first()
+         *         discovered.services.single()
+         *             .characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+         *             .write(byteArrayOf(2), WriteType.WITHOUT_RESPONSE)
+         *     }
+         * }
+         * ```
+         *
+         * The services of the phone have to be set up before the central manager connects, or
+         * the discovery reports no services until they are, and the services are discovered
+         * again when they change. The requests are sent without simulating the transfer time,
+         * and reliable writes are not supported.
+         *
+         * The phone has to be a mock local server, for example `LocalServer.mock(...)`. For other
+         * servers the block is not called.
+         *
+         * @param block The block using the server.
+         */
+        fun client(block: suspend CoroutineScope.(server: Peripheral<String, *>) -> Unit) {
+            clientRole = block
+        }
 
         // Implementation
 

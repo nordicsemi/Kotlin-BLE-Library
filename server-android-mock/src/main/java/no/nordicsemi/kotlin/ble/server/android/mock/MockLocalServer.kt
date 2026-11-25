@@ -32,6 +32,7 @@
 package no.nordicsemi.kotlin.ble.server.android.mock
 
 import no.nordicsemi.kotlin.ble.server.android.LocalServer
+import no.nordicsemi.kotlin.ble.server.mock.MockClientHost
 
 /**
  * A mock [LocalServer], which hosts a simulated GATT server and is used by simulated clients.
@@ -53,7 +54,7 @@ import no.nordicsemi.kotlin.ble.server.android.LocalServer
  * When Bluetooth is turned off, all simulated clients are disconnected, and [setup] throws
  * `BluetoothUnavailableException`.
  */
-interface MockLocalServer: LocalServer {
+interface MockLocalServer: LocalServer, MockClientHost<String> {
 
     /**
      * Creates a simulated client, which can connect to the local GATT server.
@@ -65,4 +66,7 @@ interface MockLocalServer: LocalServer {
      * @throws IllegalArgumentException if a client with the same address has already been created.
      */
     fun simulateClient(address: String = randomMacAddress()): MockAndroidClient
+
+    /** Returns the simulated client with the address, or creates it. See [MockClientHost]. */
+    override fun simulatedClient(identifier: String): MockAndroidClient
 }

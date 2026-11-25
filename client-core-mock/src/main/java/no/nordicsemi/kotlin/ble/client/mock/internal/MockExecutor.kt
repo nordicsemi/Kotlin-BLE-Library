@@ -33,11 +33,18 @@ package no.nordicsemi.kotlin.ble.client.mock.internal
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import no.nordicsemi.kotlin.ble.client.ConnectionStateChanged
 import no.nordicsemi.kotlin.ble.client.GattEvent
 import no.nordicsemi.kotlin.ble.client.Peripheral
 import no.nordicsemi.kotlin.ble.client.internal.OperationMutex
@@ -46,6 +53,8 @@ import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.ConnectionState.Disconnected.Reason
 import no.nordicsemi.kotlin.ble.core.log.Layer
+import no.nordicsemi.kotlin.ble.server.LocalServer
+import no.nordicsemi.kotlin.ble.server.mock.MockClientHost
 import no.nordicsemi.kotlin.ble.core.mock.MockEnvironment
 import no.nordicsemi.kotlin.log.Log
 import kotlin.uuid.Uuid
@@ -59,6 +68,8 @@ import kotlin.uuid.Uuid
  * @param environment The mock environment.
  * @param advertisements A flow of advertisements emitted by the mock advertiser.
  * @param scope The scope of the mock central manager, in which the connection runs its jobs.
+ * @param server The local GATT server of the phone, which may be used by the peripheral as
+ * a client, see [PeripheralSpec.Builder.client].
  * @hide
  */
 open class MockExecutor(
@@ -67,6 +78,7 @@ open class MockExecutor(
     override val environment: MockEnvironment,
     private val advertisements: Flow<MockScanResult<String>>,
     private val scope: CoroutineScope,
+    private val server: LocalServer<String>? = null,
 ): Peripheral.Executor<String> {
     override val operationMutex = OperationMutex()
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
@@ -102,12 +114,62 @@ open class MockExecutor(
     final override val events: SharedFlow<GattEvent>
         field = MutableSharedFlow<GattEvent>(extraBufferCapacity = 64)
 
+    /** The job running the client role of the peripheral, while the peripheral is connected. */
+    private var clientRoleJob: Job? = null
+
     init {
         // Forward the events of the peripheral to this client. Unconfined and undispatched, so
         // that the subscription is made right away, and the events are forwarded as they are emitted.
         scope.launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
             peripheralSpec.events.collect { events.emit(it) }
         }
+        // The peripheral may use the GATT server of the phone, as long as it is connected.
+        if (peripheralSpec.clientRole != null && server is MockClientHost<*>) {
+            scope.launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+                events.collect { event ->
+                    if (event is ConnectionStateChanged) {
+                        when (event.newState) {
+                            is ConnectionState.Connected -> startClientRole()
+                            is ConnectionState.Disconnected -> stopClientRole()
+                            else -> { /* Ignore */ }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun startClientRole() {
+        if (clientRoleJob?.isActive == true) return
+        val role = peripheralSpec.clientRole ?: return
+        @Suppress("UNCHECKED_CAST")
+        val host = server as? MockClientHost<String> ?: return
+        val client = host.simulatedClient(peripheralSpec.identifier)
+        clientRoleJob = scope.launch {
+            try {
+                client.connect()
+                peripheralSpec.mtu?.let { client.exchangeMtu(it) }
+                val executor = ServerExecutor(client, environment, scope)
+                try {
+                    coroutineScope {
+                        role(this, ServerPeripheral(scope, executor))
+                        // The client stays connected until the peripheral disconnects.
+                        awaitCancellation()
+                    }
+                } finally {
+                    executor.close()
+                }
+            } finally {
+                withContext(NonCancellable) {
+                    client.disconnect(Reason.TerminatePeerUser)
+                }
+            }
+        }
+    }
+
+    private suspend fun stopClientRole() {
+        clientRoleJob?.cancelAndJoin()
+        clientRoleJob = null
     }
 
     override val isClosed: Boolean
@@ -148,6 +210,8 @@ open class MockExecutor(
     }
 
     override fun close() {
+        clientRoleJob?.cancel()
+        clientRoleJob = null
         gatt?.close()
         gatt = null
     }
