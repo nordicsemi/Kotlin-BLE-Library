@@ -62,5 +62,5 @@ fun CentralManager.Factory.mock(
     environment: MockAndroidEnvironment = LatestApi(),
     scope: CoroutineScope,
     clock: Clock = Clock.System,
-    server: LocalServer<String, *>? = null,
+    server: LocalServer<String>? = null,
 ): MockCentralManager = MockCentralManagerImpl(scope, environment, clock, server)

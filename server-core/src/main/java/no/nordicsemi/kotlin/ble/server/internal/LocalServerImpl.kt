@@ -83,7 +83,7 @@ import no.nordicsemi.kotlin.log.Log
 open class LocalServerImpl<ID: Any, C: Client<ID>>(
     protected val scope: CoroutineScope,
     protected val server: GattServer<ID, C>,
-): LocalServer<ID, C> {
+): LocalServer<ID> {
     override var logger: Log.Sink<Layer>? = null
 
     /**

@@ -55,15 +55,14 @@ import no.nordicsemi.kotlin.ble.core.Profile
  * The profile runs on a child coroutine of the given [scope], until the scope is cancelled.
  *
  * @param ID The type of the identifier of the manager.
- * @param C The type of the client.
  * @param scope The scope in which the profile runs.
  * @param profile The profile, which uses the local services.
  * @return The job observing the services, which can be cancelled to unregister the profile.
  */
 @IgnorableReturnValue
-fun <ID: Any, C: Client<ID>> LocalServer<ID, C>.profile(
+fun <ID: Any> LocalServer<ID>.profile(
     scope: CoroutineScope,
-    profile: Profile<LocalServer<ID, C>, Nothing, LocalService>,
+    profile: Profile<LocalServer<ID>, Nothing, LocalService>,
 ): Job {
     val manager = this
     return scope.launch {
@@ -92,11 +91,10 @@ fun <ID: Any, C: Client<ID>> LocalServer<ID, C>.profile(
  * The profile runs in the scope of the caller. See the overload with a scope for details.
  *
  * @param ID The type of the identifier of the manager.
- * @param C The type of the client.
  * @param profile The profile, which uses the local services.
  * @return The job observing the services, which can be cancelled to unregister the profile.
  */
 @IgnorableReturnValue
-suspend fun <ID: Any, C: Client<ID>> LocalServer<ID, C>.profile(
-    profile: Profile<LocalServer<ID, C>, Nothing, LocalService>,
+suspend fun <ID: Any> LocalServer<ID>.profile(
+    profile: Profile<LocalServer<ID>, Nothing, LocalService>,
 ): Job = profile(CoroutineScope(currentCoroutineContext()), profile)

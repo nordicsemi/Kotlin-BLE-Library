@@ -80,7 +80,7 @@ open class MockCentralManagerImpl(
     scope: CoroutineScope,
     private val environment: MockAndroidEnvironment = LatestApi(),
     clock: Clock = Clock.System,
-    server: LocalServer<String, *>? = null,
+    server: LocalServer<String>? = null,
 ): MockCentralManager, CentralManagerImpl(scope, environment, server) {
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
 

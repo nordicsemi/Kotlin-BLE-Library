@@ -66,9 +66,8 @@ import no.nordicsemi.kotlin.ble.core.ServerScope
  * ```
  *
  * @param ID The type of the client identifier.
- * @param C The type of the client.
  */
-interface LocalServer<ID: Any, C: Client<ID>>: Manager {
+interface LocalServer<ID: Any>: Manager {
 
     /**
      * The services currently hosted by the local GATT server.
@@ -114,7 +113,7 @@ interface LocalServer<ID: Any, C: Client<ID>>: Manager {
      * @param client The client.
      * @see services
      */
-    fun services(client: C): StateFlow<List<LocalService>> = services(client.identifier)
+    fun services(client: Client<ID>): StateFlow<List<LocalService>> = services(client.identifier)
 
     companion object Factory
 }

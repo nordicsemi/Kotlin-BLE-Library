@@ -107,7 +107,7 @@ private const val NATIVE_SCAN_RESULTS_BUFFER_SIZE = 512
 internal class NativeCentralManagerImpl(
     scope: CoroutineScope,
     private val environment: NativeAndroidEnvironment,
-    server: LocalServer<String, *>? = null,
+    server: LocalServer<String>? = null,
 ): CentralManagerImpl(scope, environment, server) {
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
     override val state = environment.bluetoothState

@@ -80,7 +80,7 @@ import kotlin.time.Duration.Companion.seconds
 abstract class CentralManagerImpl(
     scope: CoroutineScope,
     private val environment: AndroidEnvironment,
-    server: LocalServer<String, *>? = null,
+    server: LocalServer<String>? = null,
 ): CentralManagerImpl<String, Peripheral, Peripheral.Executor, ConjunctionFilterScope, ScanResult>(scope, environment, server),
     CentralManager {
 

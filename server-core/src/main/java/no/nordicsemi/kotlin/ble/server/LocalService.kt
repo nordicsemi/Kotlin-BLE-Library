@@ -60,7 +60,7 @@ sealed interface AnyLocalService: AnyService<LocalCharacteristic> {
      * The manager hosting this service, or `null` if the service was removed, because the services
      * were replaced using [LocalServer.setup] or the manager was closed.
      */
-    val manager: LocalServer<*, *>?
+    val manager: LocalServer<*>?
 }
 
 /**
@@ -77,6 +77,6 @@ interface LocalIncludedService: IncludedService<LocalCharacteristic>, AnyLocalSe
     override val service: AnyLocalService
     override val owner: Peer<*>?
         get() = null
-    override val manager: LocalServer<*, *>?
+    override val manager: LocalServer<*>?
         get() = service.manager
 }

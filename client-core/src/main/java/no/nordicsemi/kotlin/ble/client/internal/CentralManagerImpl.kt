@@ -71,7 +71,7 @@ abstract class CentralManagerImpl<
     protected val scope: CoroutineScope,
     private val environment: Environment,
     /** The local GATT server of this device, whose services are available to the profiles. */
-    val server: LocalServer<ID, *>? = null,
+    val server: LocalServer<ID>? = null,
 ): CentralManager<ID, P, EX, F, SR> {
     /**
      * The scope of the jobs of this manager, e.g. closing the peripherals.

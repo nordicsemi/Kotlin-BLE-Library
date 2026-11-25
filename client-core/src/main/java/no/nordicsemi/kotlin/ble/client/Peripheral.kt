@@ -125,7 +125,7 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      *
      * @hide
      */
-    internal var server: LocalServer<ID, *>? = null
+    internal var server: LocalServer<ID>? = null
 
     /**
      * A job that collects GATT events from the peripheral.

@@ -42,7 +42,7 @@ import no.nordicsemi.kotlin.ble.server.LocalServer
  *
  * To make the device discoverable, use the advertiser.
  */
-interface LocalServer: LocalServer<String, Client> {
+interface LocalServer: LocalServer<String> {
 
     /**
      * Clients currently connected to the local GATT server.

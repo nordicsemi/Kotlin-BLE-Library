@@ -54,15 +54,15 @@ import kotlin.uuid.Uuid
  */
 internal class SharedLocalService<C: Client<*>>(
     definition: ServiceDefinition,
-    manager: LocalServer<*, C>,
+    manager: LocalServer<*>,
     host: LocalServerHost<C>,
 ): LocalService {
     @Volatile
-    private var _manager: LocalServer<*, C>? = manager
+    private var _manager: LocalServer<*>? = manager
 
     override val uuid: Uuid = definition.uuid
     override val instanceId: Int = definition.instanceId
-    override val manager: LocalServer<*, C>? get() = _manager
+    override val manager: LocalServer<*>? get() = _manager
     override val characteristics: List<SharedLocalCharacteristic<C>> =
         definition.characteristics.map { SharedLocalCharacteristic(it, this, host) }
     override val includedServices: List<SharedLocalIncludedService<C>> =

@@ -49,5 +49,5 @@ import no.nordicsemi.kotlin.ble.environment.android.NativeAndroidEnvironment
 fun CentralManager.Factory.native(
     environment: NativeAndroidEnvironment,
     scope: CoroutineScope,
-    server: LocalServer<String, *>? = null,
+    server: LocalServer<String>? = null,
 ): CentralManager = NativeCentralManagerImpl(scope, environment, server)
