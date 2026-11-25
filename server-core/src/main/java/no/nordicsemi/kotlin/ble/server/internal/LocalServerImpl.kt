@@ -36,6 +36,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
@@ -62,7 +67,10 @@ import no.nordicsemi.kotlin.ble.server.ReadRequest
 import no.nordicsemi.kotlin.ble.server.ReadResponse
 import no.nordicsemi.kotlin.ble.server.WriteRequest
 import no.nordicsemi.kotlin.ble.server.WriteResponse
+import no.nordicsemi.kotlin.ble.server.exception.ClientNotConnectedException
+import no.nordicsemi.kotlin.ble.server.exception.OperationFailedException
 import no.nordicsemi.kotlin.log.Log
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Base implementation of [LocalServer], shared by native and mock implementations.
@@ -111,7 +119,48 @@ open class LocalServerImpl<ID: Any>(
         }
 
         override suspend fun notify(client: Client<*>, characteristic: Int, value: ByteArray, confirm: Boolean) =
-            server.notify(client, characteristic, value, confirm)
+            sendUpdate(client, characteristic, value, confirm)
+    }
+
+    /**
+     * The locks of the clients. The Bluetooth stack allows only one notification or indication
+     * to be in flight per client, so the next one is sent when the previous one was reported.
+     */
+    private val clientLocks = MutableStateFlow<Map<Client<*>, Mutex>>(emptyMap())
+
+    private fun lockOf(client: Client<*>): Mutex =
+        clientLocks.value[client] ?: clientLocks
+            .updateAndGet { map -> if (client in map) map else map + (client to Mutex()) }
+            .getValue(client)
+
+    /**
+     * Sends a notification or an indication and waits until it was sent, or confirmed.
+     *
+     * The call enters the lock of the client, starts sending using the platform layer and then
+     * waits for the result, which is reported as an event.
+     */
+    private suspend fun sendUpdate(client: Client<*>, characteristic: Int, value: ByteArray, confirm: Boolean) {
+        lockOf(client).withLock {
+            coroutineScope {
+                // Subscribe to the events before sending, so that the result is not missed.
+                val result = async(start = CoroutineStart.UNDISPATCHED) {
+                    withTimeoutOrNull(NOTIFICATION_TIMEOUT) {
+                        server.events.first {
+                            (it is GattServerEvent.NotificationSent && it.client == client) ||
+                            (it is GattServerEvent.ClientDisconnected && it.client == client)
+                        }
+                    }
+                }
+                server.notify(client, characteristic, value, confirm)
+                when (val event = result.await()) {
+                    null -> throw OperationFailedException(OperationStatus.ConnectionTimeout)
+                    is GattServerEvent.NotificationSent -> {
+                        if (event.status != OperationStatus.Success) throw OperationFailedException(event.status)
+                    }
+                    else -> throw ClientNotConnectedException()
+                }
+            }
+        }
     }
 
     override val state get() = server.state
@@ -205,6 +254,8 @@ open class LocalServerImpl<ID: Any>(
             is GattServerEvent.ExecuteWrite -> onExecuteWrite(event)
             is GattServerEvent.SubscriptionChanged -> onSubscriptionChanged(event)
             is GattServerEvent.ClientDisconnected -> onClientDisconnected(event)
+            // Handled by the call that is waiting for it.
+            is GattServerEvent.NotificationSent -> {}
         }
     }
 
@@ -351,6 +402,7 @@ open class LocalServerImpl<ID: Any>(
         val client = event.client
         logger?.info(Layer.GATT) { "$client disconnected" }
         preparedWrites.remove(client)
+        clientLocks.update { it - client }
         attributes.value.values.forEach { (it as? SharedLocalCharacteristic)?.removeClient(client) }
     }
 
@@ -466,5 +518,12 @@ open class LocalServerImpl<ID: Any>(
 
         /** The maximum number of fragments of prepared writes queued by a single client. */
         const val PREPARED_WRITE_QUEUE_LIMIT = 64
+
+        /**
+         * The time to wait for a notification to be sent, or an indication confirmed.
+         *
+         * The ATT transaction timeout is 30 seconds, after which the link is terminated.
+         */
+        val NOTIFICATION_TIMEOUT = 35.seconds
     }
 }

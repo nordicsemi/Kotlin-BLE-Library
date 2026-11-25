@@ -131,10 +131,22 @@ open class MockGattServer<ID: Any>(
         request.response.complete(Response(status, value.copyOf()))
     }
 
-    override suspend fun notify(client: Client<*>, attribute: Int, value: ByteArray, confirm: Boolean) {
+    override fun notify(client: Client<*>, attribute: Int, value: ByteArray, confirm: Boolean) {
         val target = _clients.value.firstOrNull { it.identifier == client.identifier }
             ?: throw GattOperationException(OperationStatus.RequestFailed)
         target.deliver(MockUpdate(attribute, value.copyOf(), isIndication = confirm))
+        // The notification is sent, and the indication is confirmed, right away.
+        reportNotification(client, OperationStatus.Success)
+    }
+
+    /**
+     * Reports that the notification was sent, the indication was confirmed, or sending failed.
+     *
+     * @param client The client.
+     * @param status The result.
+     */
+    protected fun reportNotification(client: Client<*>, status: OperationStatus) {
+        tryEmit(GattServerEvent.NotificationSent(client, status))
     }
 
     override fun close() {

@@ -31,15 +31,19 @@
 
 package no.nordicsemi.kotlin.ble.server.internal
 
-import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import no.nordicsemi.kotlin.ble.core.OperationStatus
+import no.nordicsemi.kotlin.ble.server.exception.ClientNotConnectedException
+import no.nordicsemi.kotlin.ble.server.exception.OperationFailedException
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 
 class UpdateTest {
 
@@ -216,19 +220,17 @@ class UpdateTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify, 1, fixture.client)
         fixture.subscribe(fixture.notify, 1, fixture.client2)
-        val gate = CompletableDeferred<Unit>()
-        var started = 0
-        fixture.server.onNotify = { started++; gate.await() }
+        fixture.server.autoConfirmNotifications = false
 
         val job = launch { fixture.notify.update(bytes(1)) }
         testScheduler.runCurrent()
 
         // Both notifications are in progress, none completed yet.
-        assertEquals(2, started)
-        assertTrue(job.isActive)
-        gate.complete(Unit)
-        job.join()
         assertEquals(2, fixture.server.notifications.size)
+        assertTrue(job.isActive)
+        fixture.server.events.emit(GattServerEvent.NotificationSent(fixture.client, OperationStatus.Success))
+        fixture.server.events.emit(GattServerEvent.NotificationSent(fixture.client2, OperationStatus.Success))
+        job.join()
     }
 
     @Test
@@ -268,4 +270,65 @@ class UpdateTest {
 
         assertEquals(notifyOnly.instanceId, fixture.server.notifications.single().attribute)
     }
+
+    @Test
+    fun update_nextNotificationOfTheSameClientWaitsForThePrevious() = runTest {
+        val fixture = Fixture(this).apply { val _ = setup() }
+        fixture.subscribe(fixture.notify)
+        fixture.server.autoConfirmNotifications = false
+
+        val first = launch { fixture.notify.update(bytes(1)) }
+        val second = launch { fixture.notify.update(bytes(2)) }
+        testScheduler.runCurrent()
+
+        // Only one notification at a time is in flight.
+        assertEquals(1, fixture.server.notifications.size)
+        fixture.server.events.emit(GattServerEvent.NotificationSent(fixture.client, OperationStatus.Success))
+        testScheduler.runCurrent()
+        assertEquals(2, fixture.server.notifications.size)
+        fixture.server.events.emit(GattServerEvent.NotificationSent(fixture.client, OperationStatus.Success))
+        first.join()
+        second.join()
+    }
+
+    @Test
+    fun update_failedNotificationIsReportedAsException() = runTest {
+        val fixture = Fixture(this).apply { val _ = setup() }
+        fixture.subscribe(fixture.notify)
+        fixture.server.autoConfirmNotifications = false
+
+        val result = async { runCatching { fixture.notify.update(bytes(1)) } }
+        testScheduler.runCurrent()
+        fixture.server.events.emit(GattServerEvent.NotificationSent(fixture.client, OperationStatus.RequestFailed))
+
+        assertTrue(result.await().exceptionOrNull() is OperationFailedException)
+    }
+
+    @Test
+    fun update_disconnectionWhileWaitingIsReportedAsException() = runTest {
+        val fixture = Fixture(this).apply { val _ = setup() }
+        fixture.subscribe(fixture.notify)
+        fixture.server.autoConfirmNotifications = false
+
+        val result = async { runCatching { fixture.notify.update(bytes(1)) } }
+        testScheduler.runCurrent()
+        fixture.server.events.emit(GattServerEvent.ClientDisconnected(fixture.client))
+
+        assertTrue(result.await().exceptionOrNull() is ClientNotConnectedException)
+    }
+
+    @Test
+    fun update_notificationNotReportedIsTimedOut() = runTest {
+        val fixture = Fixture(this).apply { val _ = setup() }
+        fixture.subscribe(fixture.notify)
+        fixture.server.autoConfirmNotifications = false
+
+        val result = async { runCatching { fixture.notify.update(bytes(1)) } }
+        testScheduler.advanceTimeBy(36.seconds)
+        testScheduler.runCurrent()
+
+        val exception = result.await().exceptionOrNull()
+        assertTrue(exception is OperationFailedException)
+    }
 }
+

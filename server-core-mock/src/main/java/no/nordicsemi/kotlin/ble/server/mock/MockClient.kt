@@ -571,8 +571,10 @@ abstract class MockClient<ID: Any>(
         return write(cccd, byteArrayOf(0x00, 0x00), withResponse = true)
     }
 
-    internal suspend fun deliver(update: MockUpdate) {
-        _updates.emit(update)
+    internal fun deliver(update: MockUpdate) {
+        if (!_updates.tryEmit(update)) {
+            throw GattOperationException(OperationStatus.Busy)
+        }
     }
 
     private suspend fun <T> procedure(block: suspend () -> T): T {

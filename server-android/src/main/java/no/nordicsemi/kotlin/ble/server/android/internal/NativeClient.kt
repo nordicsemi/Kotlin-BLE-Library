@@ -89,9 +89,6 @@ internal class NativeClient(
     override val maximumUpdateValueLength: Int
         get() = (mtu.value ?: ATT_MTU_DEFAULT) - NOTIFICATION_HEADER_SIZE
 
-    /** Serializes notifications sent to this client. */
-    val notifications = NotificationGate()
-
     /** Whether the disconnection was requested by the app. */
     @Volatile
     private var disconnectRequested = false
@@ -156,7 +153,6 @@ internal class NativeClient(
         phy.value = null
         connectionParameters.value = null
         val exception = ClientNotConnectedException()
-        notifications.close(exception)
         phyRequest?.completeExceptionally(exception)
     }
 

@@ -84,17 +84,23 @@ interface GattServer {
     fun respond(client: Client<*>, requestId: Int, status: OperationStatus, offset: Int, value: ByteArray)
 
     /**
-     * Sends a notification or an indication to a client.
+     * Starts sending a notification or an indication to a client.
      *
-     * The platform serializes calls to the same client. Suspends until the notification has been
-     * sent, or the indication confirmed.
+     * The method does not wait for the result. When the notification was sent, or the indication
+     * confirmed, or sending failed, [GattServerEvent.NotificationSent] is emitted. Only one
+     * notification at a time is sent to a client: the caller, [LocalServerImpl], waits for
+     * the event before sending the next one.
      *
      * @param client The client.
      * @param attribute The `instanceId` of the characteristic.
      * @param value The value, no longer than [Client.maximumUpdateValueLength].
      * @param confirm `true` to send an indication, `false` for a notification.
+     * @throws no.nordicsemi.kotlin.ble.server.exception.ClientNotConnectedException if the client is
+     * not connected.
+     * @throws no.nordicsemi.kotlin.ble.server.exception.OperationFailedException if sending could
+     * not be started. No event is emitted then.
      */
-    suspend fun notify(client: Client<*>, attribute: Int, value: ByteArray, confirm: Boolean)
+    fun notify(client: Client<*>, attribute: Int, value: ByteArray, confirm: Boolean)
 
     /** Stops the server and releases its resources. Closes all connections. */
     fun close()
@@ -155,6 +161,17 @@ sealed class GattServerEvent {
         val attribute: Int,
         val notifications: Boolean,
         val indications: Boolean,
+    ): GattServerEvent()
+
+    /**
+     * A notification was sent to a client, or an indication was confirmed, as a result of
+     * [GattServer.notify].
+     *
+     * @property status [OperationStatus.Success] if the notification was sent.
+     */
+    class NotificationSent (
+        val client: Client<*>,
+        val status: OperationStatus,
     ): GattServerEvent()
 
     /** A client disconnected, or is no longer reachable. Its state should be dropped. */

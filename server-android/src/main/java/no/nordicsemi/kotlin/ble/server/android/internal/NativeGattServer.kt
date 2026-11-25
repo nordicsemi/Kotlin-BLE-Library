@@ -75,13 +75,6 @@ private const val EVENT_BUFFER_CAPACITY = 1024
 /** The time to wait for the stack to confirm that a service was added. */
 private val SERVICE_ADDED_TIMEOUT = 10.seconds
 
-/**
- * The time to wait for a notification to be sent, or an indication confirmed.
- *
- * The ATT transaction timeout is 30 seconds, after which the link is terminated.
- */
-private val NOTIFICATION_TIMEOUT = 35.seconds
-
 /** `GATT_INVALID_HANDLE`, sent when a request targets an attribute that is not known. */
 private const val GATT_INVALID_HANDLE = 0x01
 
@@ -312,7 +305,7 @@ internal class NativeGattServer(
         }
     }
 
-    override suspend fun notify(
+    override fun notify(
         client: no.nordicsemi.kotlin.ble.server.Client<*>,
         attribute: Int,
         value: ByteArray,
@@ -325,21 +318,10 @@ internal class NativeGattServer(
         if (!nativeClient.state.value.isConnected) {
             throw ClientNotConnectedException()
         }
-
-        // Only one notification can be in flight per client. The next ones are queued.
-        val status = nativeClient.notifications.send(NOTIFICATION_TIMEOUT) {
-            // The server may have been closed while the notification was queued.
-            val server = server ?: throw ClientNotConnectedException()
-            if (!nativeClient.state.value.isConnected) {
-                throw ClientNotConnectedException()
-            }
-            logger?.d(Layer.GATT) { "server.notifyCharacteristicChanged(device=${nativeClient.device}, characteristic=${characteristic.uuid}, confirm=$confirm, value=0x${value.toHexString()})" }
-            server.sendNotification(nativeClient.device, characteristic, confirm, value)
-        } ?: throw OperationFailedException(OperationStatus.ConnectionTimeout)
-
-        if (status != BluetoothGatt.GATT_SUCCESS) {
-            throw OperationFailedException(status.toOperationStatus())
-        }
+        val server = server ?: throw ClientNotConnectedException()
+        logger?.d(Layer.GATT) { "server.notifyCharacteristicChanged(device=${nativeClient.device}, characteristic=${characteristic.uuid}, confirm=$confirm, value=0x${value.toHexString()})" }
+        // The result is reported in onNotificationSent.
+        server.sendNotification(nativeClient.device, characteristic, confirm, value)
     }
 
     /**
@@ -585,7 +567,7 @@ internal class NativeGattServer(
 
         override fun onNotificationSent(device: BluetoothDevice, status: Int) {
             logger?.d(Layer.GATT) { "onNotificationSent(device=$device, status=$status)" }
-            existingClient(device)?.notifications?.onSent(status)
+            existingClient(device)?.let { emit(GattServerEvent.NotificationSent(it, status.toOperationStatus())) }
         }
 
         override fun onMtuChanged(device: BluetoothDevice, mtu: Int) {

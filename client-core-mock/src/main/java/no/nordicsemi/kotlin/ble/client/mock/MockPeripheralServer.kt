@@ -38,6 +38,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import no.nordicsemi.kotlin.ble.client.mock.internal.SimulatedClientImpl
 import no.nordicsemi.kotlin.ble.core.Characteristic
 import no.nordicsemi.kotlin.ble.core.ConnectionState
@@ -49,6 +50,7 @@ import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
 import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.LocalCharacteristic
 import no.nordicsemi.kotlin.ble.server.internal.LocalServerImpl
+import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.server.mock.MockClient
 import no.nordicsemi.kotlin.ble.server.mock.MockGattServer
 import no.nordicsemi.kotlin.ble.server.mock.ReadResult
@@ -150,6 +152,10 @@ class MockPeripheralServer private constructor(
 
     /** The client, which is also a [MockClient] sending the requests of the clients. */
     internal val simulatedClient = SimulatedClientImpl(gatt)
+
+    init {
+        gatt.scope = internalScope
+    }
 
     /**
      * Defines the services without suspending.
@@ -377,9 +383,27 @@ internal class SimulatedGattServer: MockGattServer<String>() {
      */
     var updateSink: (suspend (attribute: Int, value: ByteArray, indication: Boolean) -> Unit)? = null
 
-    override suspend fun notify(client: Client<*>, attribute: Int, value: ByteArray, confirm: Boolean) {
-        updateSink?.invoke(attribute, value, confirm)
-        super.notify(client, attribute, value, confirm)
+    /** The scope in which the transfers are simulated. */
+    var scope: CoroutineScope? = null
+
+    override fun notify(client: Client<*>, attribute: Int, value: ByteArray, confirm: Boolean) {
+        val sink = updateSink
+        val scope = scope
+        if (sink == null || scope == null) {
+            super.notify(client, attribute, value, confirm)
+            return
+        }
+        // The transfer takes time. The result is reported when the update was delivered.
+        scope.launch {
+            try {
+                sink(attribute, value, confirm)
+                super@SimulatedGattServer.notify(client, attribute, value, confirm)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                reportNotification(client, OperationStatus.RequestFailed)
+            }
+        }
     }
 }
 

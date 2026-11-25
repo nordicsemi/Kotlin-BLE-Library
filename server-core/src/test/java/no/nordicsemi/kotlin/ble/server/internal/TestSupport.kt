@@ -93,8 +93,14 @@ class FakeGattServer: GattServer {
     /** An exception to be thrown by [setServices]. */
     var setServicesError: Throwable? = null
 
-    /** A hook called by [notify], before the notification is recorded. */
-    var onNotify: suspend (Notification) -> Unit = {}
+    /** A hook called by [notify], before the notification is recorded. It may throw. */
+    var onNotify: (Notification) -> Unit = {}
+
+    /**
+     * Whether the notifications are reported as sent right away. If `false`, the test emits
+     * [GattServerEvent.NotificationSent].
+     */
+    var autoConfirmNotifications = true
 
     /** A hook called by [setServices], after the services were recorded. */
     var setServicesHook: suspend () -> Unit = {}
@@ -116,10 +122,13 @@ class FakeGattServer: GattServer {
         responses += Response(client, requestId, status, offset, value)
     }
 
-    override suspend fun notify(client: Client<*>, attribute: Int, value: ByteArray, confirm: Boolean) {
+    override fun notify(client: Client<*>, attribute: Int, value: ByteArray, confirm: Boolean) {
         val notification = Notification(client, attribute, value, confirm)
         onNotify(notification)
         notifications += notification
+        if (autoConfirmNotifications) {
+            events.tryEmit(GattServerEvent.NotificationSent(client, OperationStatus.Success))
+        }
     }
 
     override fun close() {

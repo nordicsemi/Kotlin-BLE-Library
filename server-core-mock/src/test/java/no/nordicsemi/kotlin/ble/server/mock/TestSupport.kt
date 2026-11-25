@@ -145,6 +145,7 @@ class FakeApp(server: TestServer, scope: TestScope) {
                     }
                     is GattServerEvent.SubscriptionChanged -> Unit
                     is GattServerEvent.ClientDisconnected -> queues.remove(event.client)
+                    is GattServerEvent.NotificationSent -> {}
                 }
             }
         }
