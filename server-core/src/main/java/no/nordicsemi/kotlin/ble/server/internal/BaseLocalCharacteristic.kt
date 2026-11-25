@@ -50,6 +50,21 @@ import no.nordicsemi.kotlin.ble.server.WriteResponse
 import kotlin.uuid.Uuid
 
 /**
+ * A characteristic that can notify a single central.
+ *
+ * Used by the per-central views, which are built on the public [LocalCharacteristic] interface.
+ */
+internal interface TargetedUpdate {
+
+    /**
+     * Sets the value and notifies the given central only.
+     *
+     * @throws IllegalStateException if [to] is not subscribed.
+     */
+    suspend fun update(value: ByteArray, to: Central<*>)
+}
+
+/**
  * Base implementation of [LocalCharacteristic].
  *
  * The state of Client Characteristic Configuration descriptors of all centrals is kept here.
@@ -64,7 +79,7 @@ internal class BaseLocalCharacteristic<C: Central<*>>(
     definition: CharacteristicDefinition,
     override val service: AnyLocalService,
     private val host: LocalServerHost<C>,
-): LocalCharacteristic, LocalAttribute<C> {
+): LocalCharacteristic, TargetedUpdate, LocalAttribute<C> {
     override val uuid: Uuid = definition.uuid
     override val instanceId: Int = definition.instanceId
     override val properties: Set<CharacteristicProperty> = definition.properties
@@ -91,14 +106,12 @@ internal class BaseLocalCharacteristic<C: Central<*>>(
     override fun onWrite(handler: (suspend WriteRequest.() -> WriteResponse)?) = state.onWrite(handler)
     override fun setValue(value: ByteArray) = state.setValue(value)
 
-    override suspend fun update(value: ByteArray) = update(value, to = null)
+    override suspend fun update(value: ByteArray) = notify(value, to = null)
 
-    /**
-     * Sets the value and notifies the given central, or all subscribers when `null`.
-     *
-     * @throws IllegalStateException if [to] is not subscribed.
-     */
-    suspend fun update(value: ByteArray, to: Central<*>?) {
+    override suspend fun update(value: ByteArray, to: Central<*>) = notify(value, to)
+
+    /** Sets the value and notifies the given central, or all subscribers when `null`. */
+    private suspend fun notify(value: ByteArray, to: Central<*>?) {
         check(canUpdate) { "Characteristic does not support notifications nor indications" }
         check(service.manager != null) { "The service has been removed" }
         require(value.size <= MAX_ATTRIBUTE_LENGTH) {

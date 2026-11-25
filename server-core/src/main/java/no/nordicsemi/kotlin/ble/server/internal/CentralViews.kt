@@ -142,7 +142,7 @@ internal class CentralLocalCharacteristic(
         // Updates are sent to the central of the view only.
         val central = characteristic.subscribers.value.firstOrNull { it.identifier == identifier }
         checkNotNull(central) { "The central has not subscribed to this characteristic" }
-        (characteristic as BaseLocalCharacteristic<*>).update(value, central)
+        (characteristic as TargetedUpdate).update(value, central)
     }
 
     override fun toString() = "Central$characteristic"
