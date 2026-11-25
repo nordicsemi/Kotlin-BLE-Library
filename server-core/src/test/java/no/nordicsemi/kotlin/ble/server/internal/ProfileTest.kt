@@ -35,12 +35,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import no.nordicsemi.kotlin.ble.core.Profile
+import no.nordicsemi.kotlin.ble.server.LocalProfile as ServerProfile
 import no.nordicsemi.kotlin.ble.server.LocalService
 import no.nordicsemi.kotlin.ble.server.LocalServer
 import no.nordicsemi.kotlin.ble.server.profile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
 
@@ -151,5 +153,74 @@ class ProfileTest {
 
         assertFalse(job.isActive)
         assertEquals(1, profile.cancelled)
+    }
+
+    private class SimpleProfile(var reject: Boolean = false): ServerProfile.Simple(SERVICE_UUID) {
+        var characteristicUuid: Uuid? = null
+        var initialized = 0
+        var unsupported = 0
+
+        override fun prepare(server: LocalServer<*>, service: LocalService) {
+            // Throws NoSuchElementException when missing, which rejects the service.
+            characteristicUuid = service.characteristics.first { it.uuid == if (reject) NONE_UUID else RW_UUID }.uuid
+            if (reject) throw NoSuchElementException()
+        }
+
+        override suspend fun CoroutineScope.initialize(target: LocalServer<*>) {
+            initialized++
+        }
+
+        override suspend fun unsupported(target: LocalServer<*>) {
+            unsupported++
+        }
+    }
+
+    private class Multi: ServerProfile.MultiService(listOf(SERVICE_UUID)) {
+        var services: List<LocalService>? = null
+
+        override fun prepare(server: LocalServer<*>, services: List<LocalService>) {
+            this.services = services
+        }
+
+        override suspend fun CoroutineScope.initialize(target: LocalServer<*>) {}
+    }
+
+    @Test
+    fun simpleProfile_isGivenItsService() = runTest {
+        val fixture = Fixture(this)
+        val profile = SimpleProfile()
+        fixture.manager.profile(backgroundScope, profile)
+        runCurrent()
+        assertEquals(0, profile.initialized)
+
+        val _ = fixture.setup()
+        runCurrent()
+
+        assertEquals(1, profile.initialized)
+        assertEquals(RW_UUID, profile.characteristicUuid)
+    }
+
+    @Test
+    fun simpleProfile_rejectingTheServiceIsUnsupported() = runTest {
+        val fixture = Fixture(this)
+        val profile = SimpleProfile(reject = true)
+        val _ = fixture.setup()
+        fixture.manager.profile(backgroundScope, profile)
+        runCurrent()
+
+        assertEquals(0, profile.initialized)
+        assertEquals(1, profile.unsupported)
+    }
+
+    @Test
+    fun multiServiceProfile_isGivenItsServices() = runTest {
+        val fixture = Fixture(this)
+        val profile = Multi()
+        assertNull(profile.services)
+        val _ = fixture.setup()
+        fixture.manager.profile(backgroundScope, profile)
+        runCurrent()
+
+        assertEquals(listOf(SERVICE_UUID), profile.services?.map { it.uuid })
     }
 }
