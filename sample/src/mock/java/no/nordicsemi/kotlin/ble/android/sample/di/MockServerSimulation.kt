@@ -37,9 +37,13 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import no.nordicsemi.kotlin.ble.android.sample.scanner.profile.LedButtonProfile
+import no.nordicsemi.kotlin.ble.client.RemoteServices
+import no.nordicsemi.kotlin.ble.core.WriteType
 import no.nordicsemi.kotlin.ble.server.android.mock.MockLocalServer
 import timber.log.Timber
 import kotlin.time.Duration.Companion.milliseconds
@@ -69,15 +73,16 @@ fun MockLocalServer.simulateLedButtonClient(scope: CoroutineScope) {
                     client.connect()
                     val _ = client.simulateMtuChange(247)
 
-                    val led = client.findCharacteristic(
-                        LedButtonProfile.SERVICE_UUID,
-                        LedButtonProfile.LED_CHARACTERISTIC_UUID,
-                    ) ?: return@collectLatest
-                    val button = client.findCharacteristic(
-                        LedButtonProfile.SERVICE_UUID,
-                        LedButtonProfile.BUTTON_CHARACTERISTIC_UUID,
-                    ) ?: return@collectLatest
-                    val _ = client.subscribe(button)
+                    // Discover the service of the local server, the way a client application does.
+                    val service = client.server
+                        .services(listOf(LedButtonProfile.SERVICE_UUID))
+                        .filterIsInstance<RemoteServices.Discovered>()
+                        .first { it.services.isNotEmpty() }
+                        .services.single()
+                    val led = service.characteristics.first { it.uuid == LedButtonProfile.LED_CHARACTERISTIC_UUID }
+                    val button = service.characteristics.first { it.uuid == LedButtonProfile.BUTTON_CHARACTERISTIC_UUID }
+                    // Subscribing enables notifications, which are not used by the simulation itself.
+                    launch { button.subscribe().collect { Timber.d("Simulated client: button %s", it.toList()) } }
 
                     // The characteristic of the local GATT server, to simulate button presses.
                     val buttonCharacteristic = services.value
@@ -91,7 +96,7 @@ fun MockLocalServer.simulateLedButtonClient(scope: CoroutineScope) {
                             while (true) {
                                 delay(4.seconds)
                                 on = !on
-                                val _ = client.write(led, byteArrayOf(if (on) 1 else 0))
+                                led.write(byteArrayOf(if (on) 1 else 0), WriteType.WITH_RESPONSE)
                             }
                         }
                         launch {
