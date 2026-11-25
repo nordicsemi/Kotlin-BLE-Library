@@ -161,11 +161,11 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
             // The manager may have been closed while the services were being added.
             if (closed.value) throw ManagerClosedException()
 
-            val newServices = definitions.map { BaseLocalService(it, this, host) }
+            val newServices = definitions.map { SharedLocalService(it, this, host) }
             val newAttributes = mutableMapOf<Int, LocalAttribute<C>>()
             fun addAttributes(service: AnyLocalService) {
                 service.characteristics.forEach { characteristic ->
-                    characteristic as BaseLocalCharacteristic<C>
+                    characteristic as SharedLocalCharacteristic<C>
                     newAttributes[characteristic.instanceId] = characteristic
                     characteristic.localDescriptors.forEach { newAttributes[it.instanceId] = it }
                 }
@@ -176,7 +176,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
             val oldServices = _services.value
             attributes.value = newAttributes
             _services.value = newServices
-            oldServices.forEach { (it as BaseLocalService<C>).invalidate() }
+            oldServices.forEach { (it as SharedLocalService<C>).invalidate() }
             newServices
         }
     }
@@ -191,10 +191,10 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
             logger?.warn(Layer.GATT) { "Closing the GATT server failed: $e" }
         }
         val oldAttributes = attributes.value
-        _services.value.forEach { (it as BaseLocalService<C>).invalidate() }
+        _services.value.forEach { (it as SharedLocalService<C>).invalidate() }
         _services.value = emptyList()
         attributes.value = emptyMap()
-        oldAttributes.values.forEach { (it as? BaseLocalCharacteristic<C>)?.removeAllClients() }
+        oldAttributes.values.forEach { (it as? SharedLocalCharacteristic<C>)?.removeAllClients() }
     }
 
     // ----- Event loop -----
@@ -226,7 +226,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
         }
 
         val value: ByteArray
-        if (attribute is BaseLocalDescriptor<C> && attribute.isClientCharacteristicConfiguration) {
+        if (attribute is SharedLocalDescriptor<C> && attribute.isClientCharacteristicConfiguration) {
             val cccd = attribute.characteristic.cccdValue(client)
             value = byteArrayOf((cccd and 0xFF).toByte(), ((cccd shr 8) and 0xFF).toByte())
         } else {
@@ -333,7 +333,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
     }
 
     private fun onSubscriptionChanged(event: GattServerEvent.SubscriptionChanged<C>) {
-        val characteristic = attributes.value[event.attribute] as? BaseLocalCharacteristic<C>
+        val characteristic = attributes.value[event.attribute] as? SharedLocalCharacteristic<C>
         if (characteristic == null) {
             logger?.warn(Layer.GATT) { "Subscription change for unknown characteristic ${event.attribute}" }
             return
@@ -352,27 +352,27 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
         val client = event.client
         logger?.info(Layer.GATT) { "$client disconnected" }
         preparedWrites.remove(client)
-        attributes.value.values.forEach { (it as? BaseLocalCharacteristic<C>)?.removeClient(client) }
+        attributes.value.values.forEach { (it as? SharedLocalCharacteristic<C>)?.removeClient(client) }
     }
 
     // ----- Helpers -----
 
     /** Returns an error status if the attribute can't be read, or `null` otherwise. */
     private fun checkReadable(attribute: LocalAttribute<C>): OperationStatus? = when {
-        attribute is BaseLocalCharacteristic<C> && CharacteristicProperty.READ !in attribute.properties ->
+        attribute is SharedLocalCharacteristic<C> && CharacteristicProperty.READ !in attribute.properties ->
             OperationStatus.ReadNotPermitted
-        attribute is BaseLocalDescriptor<C> && !attribute.isClientCharacteristicConfiguration && !attribute.isReadPermitted ->
+        attribute is SharedLocalDescriptor<C> && !attribute.isClientCharacteristicConfiguration && !attribute.isReadPermitted ->
             OperationStatus.ReadNotPermitted
         else -> null
     }
 
     /** Returns an error status if the attribute can't be written, or `null` otherwise. */
     private fun checkWritable(attribute: LocalAttribute<C>, withResponse: Boolean): OperationStatus? = when {
-        attribute is BaseLocalCharacteristic<C> -> {
+        attribute is SharedLocalCharacteristic<C> -> {
             val required = if (withResponse) CharacteristicProperty.WRITE else CharacteristicProperty.WRITE_WITHOUT_RESPONSE
             if (required in attribute.properties) null else OperationStatus.WriteNotPermitted
         }
-        attribute is BaseLocalDescriptor<C> -> {
+        attribute is SharedLocalDescriptor<C> -> {
             // Descriptors are always written with response.
             if (attribute.isWritePermitted && withResponse) null else OperationStatus.WriteNotPermitted
         }
@@ -404,7 +404,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
         if (value.size > MAX_ATTRIBUTE_LENGTH) {
             return OperationStatus.InvalidAttributeLength
         }
-        if (attribute is BaseLocalDescriptor<C> && attribute.isClientCharacteristicConfiguration) {
+        if (attribute is SharedLocalDescriptor<C> && attribute.isClientCharacteristicConfiguration) {
             return writeCccd(client, attribute, value)
         }
         val response = try {
@@ -421,7 +421,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
     }
 
     /** Handles a write to the Client Characteristic Configuration descriptor. */
-    private fun writeCccd(client: C, descriptor: BaseLocalDescriptor<C>, value: ByteArray): OperationStatus {
+    private fun writeCccd(client: C, descriptor: SharedLocalDescriptor<C>, value: ByteArray): OperationStatus {
         if (value.size != 2) {
             return OperationStatus.InvalidAttributeLength
         }
@@ -442,7 +442,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
     }
 
     /** Checks whether the CCCD value is valid and the characteristic supports it. */
-    private fun isCccdValueSupported(characteristic: BaseLocalCharacteristic<C>, cccd: Int) = when (cccd) {
+    private fun isCccdValueSupported(characteristic: SharedLocalCharacteristic<C>, cccd: Int) = when (cccd) {
         0 -> true
         NOTIFICATIONS -> CharacteristicProperty.NOTIFY in characteristic.properties
         INDICATIONS -> CharacteristicProperty.INDICATE in characteristic.properties

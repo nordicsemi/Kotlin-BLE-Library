@@ -65,7 +65,9 @@ internal interface TargetedUpdate {
 }
 
 /**
- * Base implementation of [LocalCharacteristic].
+ * The implementation of [LocalCharacteristic], one instance per attribute shared by all clients.
+ *
+ * The per-client views in `ClientViews.kt` delegate to it.
  *
  * The state of Client Characteristic Configuration descriptors of all clients is kept here.
  * It is modified only by the event loop of the [LocalServerImpl].
@@ -75,7 +77,7 @@ internal interface TargetedUpdate {
  * @property service The service the characteristic belongs to.
  * @property host The services of the manager.
  */
-internal class BaseLocalCharacteristic<C: Client<*>>(
+internal class SharedLocalCharacteristic<C: Client<*>>(
     definition: CharacteristicDefinition,
     override val service: AnyLocalService,
     private val host: LocalServerHost<C>,
@@ -86,9 +88,9 @@ internal class BaseLocalCharacteristic<C: Client<*>>(
     override val state = AttributeState()
 
     /** The descriptors, including the auto-added Client Characteristic Configuration. */
-    val localDescriptors: List<BaseLocalDescriptor<C>> =
-        definition.descriptors.map { BaseLocalDescriptor(it, this) }
-    override val descriptors: List<BaseLocalDescriptor<C>> get() = localDescriptors
+    val localDescriptors: List<SharedLocalDescriptor<C>> =
+        definition.descriptors.map { SharedLocalDescriptor(it, this) }
+    override val descriptors: List<SharedLocalDescriptor<C>> get() = localDescriptors
 
     /** The values of Client Characteristic Configuration descriptors: only non-zero ones. */
     private val cccdValues = MutableStateFlow<Map<C, Int>>(emptyMap())

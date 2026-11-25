@@ -45,7 +45,9 @@ import no.nordicsemi.kotlin.ble.server.WriteResponse
 import kotlin.uuid.Uuid
 
 /**
- * Base implementation of [LocalDescriptor].
+ * The implementation of [LocalDescriptor], one instance per attribute shared by all clients.
+ *
+ * The per-client views in `ClientViews.kt` delegate to it.
  *
  * The Client Characteristic Configuration descriptor is handled by the [LocalServerImpl]:
  * its value is stored per client in the characteristic.
@@ -54,9 +56,9 @@ import kotlin.uuid.Uuid
  * @param definition The definition of the descriptor.
  * @property characteristic The characteristic the descriptor belongs to.
  */
-internal class BaseLocalDescriptor<C: Client<*>>(
+internal class SharedLocalDescriptor<C: Client<*>>(
     definition: DescriptorDefinition,
-    override val characteristic: BaseLocalCharacteristic<C>,
+    override val characteristic: SharedLocalCharacteristic<C>,
 ): LocalDescriptor, LocalAttribute<C> {
     override val uuid: Uuid = definition.uuid
     override val instanceId: Int = definition.instanceId

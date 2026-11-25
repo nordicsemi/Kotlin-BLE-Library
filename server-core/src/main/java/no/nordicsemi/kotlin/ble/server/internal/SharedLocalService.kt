@@ -41,7 +41,9 @@ import kotlin.concurrent.Volatile
 import kotlin.uuid.Uuid
 
 /**
- * Base implementation of [LocalService].
+ * The implementation of [LocalService], one instance per attribute shared by all clients.
+ *
+ * The per-client views in `ClientViews.kt` delegate to it.
  *
  * The service, with all its characteristics, descriptors and included services, is created from
  * the definition. It stays valid until the services are replaced or the manager is closed.
@@ -50,7 +52,7 @@ import kotlin.uuid.Uuid
  * @param definition The definition of the service.
  * @param host The services of the manager.
  */
-internal class BaseLocalService<C: Client<*>>(
+internal class SharedLocalService<C: Client<*>>(
     definition: ServiceDefinition,
     manager: LocalServer<*, C>,
     host: LocalServerHost<C>,
@@ -61,10 +63,10 @@ internal class BaseLocalService<C: Client<*>>(
     override val uuid: Uuid = definition.uuid
     override val instanceId: Int = definition.instanceId
     override val manager: LocalServer<*, C>? get() = _manager
-    override val characteristics: List<BaseLocalCharacteristic<C>> =
-        definition.characteristics.map { BaseLocalCharacteristic(it, this, host) }
-    override val includedServices: List<BaseLocalIncludedService<C>> =
-        definition.includedServices.map { BaseLocalIncludedService(it, this, host) }
+    override val characteristics: List<SharedLocalCharacteristic<C>> =
+        definition.characteristics.map { SharedLocalCharacteristic(it, this, host) }
+    override val includedServices: List<SharedLocalIncludedService<C>> =
+        definition.includedServices.map { SharedLocalIncludedService(it, this, host) }
 
     /** Marks the service as removed: [manager] becomes `null`. */
     fun invalidate() {
@@ -75,24 +77,26 @@ internal class BaseLocalService<C: Client<*>>(
 }
 
 /**
- * Base implementation of [LocalIncludedService].
+ * The implementation of [LocalIncludedService], one instance per attribute shared by all clients.
+ *
+ * The per-client views in `ClientViews.kt` delegate to it.
  *
  * @param C The type of the client.
  * @param definition The definition of the service.
  * @property service The service that includes this one.
  * @param host The services of the manager.
  */
-internal class BaseLocalIncludedService<C: Client<*>>(
+internal class SharedLocalIncludedService<C: Client<*>>(
     definition: ServiceDefinition,
     override val service: AnyLocalService,
     host: LocalServerHost<C>,
 ): LocalIncludedService {
     override val uuid: Uuid = definition.uuid
     override val instanceId: Int = definition.instanceId
-    override val characteristics: List<BaseLocalCharacteristic<C>> =
-        definition.characteristics.map { BaseLocalCharacteristic(it, this, host) }
-    override val includedServices: List<BaseLocalIncludedService<C>> =
-        definition.includedServices.map { BaseLocalIncludedService(it, this, host) }
+    override val characteristics: List<SharedLocalCharacteristic<C>> =
+        definition.characteristics.map { SharedLocalCharacteristic(it, this, host) }
+    override val includedServices: List<SharedLocalIncludedService<C>> =
+        definition.includedServices.map { SharedLocalIncludedService(it, this, host) }
 
     override fun toString() = "IncludedService(uuid=$uuid, instanceId=$instanceId)"
 }
