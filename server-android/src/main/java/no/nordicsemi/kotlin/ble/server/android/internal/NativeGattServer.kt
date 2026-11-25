@@ -42,16 +42,12 @@ import android.bluetooth.BluetoothGattService
 import android.os.Build
 import androidx.annotation.Keep
 import androidx.annotation.RequiresApi
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeoutOrNull
 import no.nordicsemi.kotlin.ble.core.Manager
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.Phy
@@ -67,13 +63,9 @@ import no.nordicsemi.kotlin.ble.server.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.server.internal.GattServer
 import no.nordicsemi.kotlin.ble.server.internal.GattServerEvent
 import no.nordicsemi.kotlin.log.Log
-import kotlin.time.Duration.Companion.seconds
 
 /** The number of events that can wait to be processed. No event may be lost. */
 private const val EVENT_BUFFER_CAPACITY = 1024
-
-/** The time to wait for the stack to confirm that a service was added. */
-private val SERVICE_ADDED_TIMEOUT = 10.seconds
 
 /** `GATT_INVALID_HANDLE`, sent when a request targets an attribute that is not known. */
 private const val GATT_INVALID_HANDLE = 0x01
@@ -122,15 +114,8 @@ internal class NativeGattServer(
     /** Maps the native services, characteristics and descriptors to IDs of their definitions. */
     private val attributes = AttributeMap<Any>()
 
-    /** Guards setting the services. */
-    private val servicesMutex = Mutex()
-
     /** Connected clients, by their addresses. Guarded by itself. */
     private val clients = LinkedHashMap<String, NativeClient>()
-
-    /** The pending [BluetoothGattServer.addService], waiting for `onServiceAdded`. */
-    @Volatile
-    private var serviceAdded: CompletableDeferred<Int>? = null
 
     /**
      * Guards setting the value of a characteristic and notifying with it before Android 13.
@@ -182,7 +167,7 @@ internal class NativeGattServer(
 
     // Services
 
-    override suspend fun setServices(services: List<ServiceDefinition>) {
+    override fun clearServices() {
         ensureOpen()
 
         // Ensure Bluetooth is enabled.
@@ -193,46 +178,20 @@ internal class NativeGattServer(
         // Verify the BLUETOOTH_CONNECT permission is granted (Android 12+).
         checkConnectPermission()
 
-        servicesMutex.withLock {
-            val server = openServer()
-
-            // Remove the previous services. This does nothing for a new server.
-            logger?.d(Layer.GATT) { "server.clearServices()" }
-            server.clearServices()
-            attributes.clear()
-
-            try {
-                // The services have to be added one by one. The next one can be added after
-                // the stack confirmed the previous one.
-                services.forEach { definition ->
-                    server.addService(definition, BluetoothGattService.SERVICE_TYPE_PRIMARY)
-                }
-            } catch (e: Throwable) {
-                // Do not leave the server with some of the services only.
-                logger?.w(Layer.GATT) { "Adding services failed: $e" }
-                if (this.server === server) {
-                    server.clearServices()
-                }
-                attributes.clear()
-                throw e
-            }
-        }
+        val server = openServer()
+        logger?.d(Layer.GATT) { "server.clearServices()" }
+        server.clearServices()
+        attributes.clear()
     }
 
-    /**
-     * Creates the native service from the definition and adds it to the server.
-     *
-     * Services included in the service are added first, as secondary services, and are then
-     * included in the new one.
-     *
-     * @return The native service that was added.
-     */
-    @IgnorableReturnValue
-    private suspend fun BluetoothGattServer.addService(
-        definition: ServiceDefinition,
-        type: Int,
-    ): BluetoothGattService {
-        val service = BluetoothGattService(definition.uuid.toJavaUuid(), type)
+    override fun addService(definition: ServiceDefinition, primary: Boolean) {
+        ensureOpen()
+        val server = server ?: throw BluetoothUnavailableException()
+
+        val service = BluetoothGattService(
+            definition.uuid.toJavaUuid(),
+            if (primary) BluetoothGattService.SERVICE_TYPE_PRIMARY else BluetoothGattService.SERVICE_TYPE_SECONDARY,
+        )
         attributes.register(service, definition.instanceId)
 
         definition.characteristics.forEach { characteristicDefinition ->
@@ -254,27 +213,18 @@ internal class NativeGattServer(
             service.addCharacteristic(characteristic)
         }
 
+        // The included services were added before, as secondary services.
         definition.includedServices.forEach { includedDefinition ->
-            val secondary = addService(includedDefinition, BluetoothGattService.SERVICE_TYPE_SECONDARY)
-            service.addService(secondary)
+            val included = attributes.attributeOf(includedDefinition.instanceId) as? BluetoothGattService
+                ?: throw IllegalStateException("The included service ${includedDefinition.uuid} was not added")
+            service.addService(included)
         }
 
-        val added = CompletableDeferred<Int>()
-        serviceAdded = added
-        try {
-            logger?.d(Layer.GATT) { "server.addService(${service.uuid})" }
-            if (!addService(service)) {
-                throw OperationFailedException(OperationStatus.RequestFailed)
-            }
-            val status = withTimeoutOrNull(SERVICE_ADDED_TIMEOUT) { added.await() }
-                ?: throw OperationFailedException(OperationStatus.RequestFailed)
-            if (status != BluetoothGatt.GATT_SUCCESS) {
-                throw OperationFailedException(status.toOperationStatus())
-            }
-        } finally {
-            serviceAdded = null
+        // The result is reported in onServiceAdded.
+        logger?.d(Layer.GATT) { "server.addService(${service.uuid})" }
+        if (!server.addService(service)) {
+            throw OperationFailedException(OperationStatus.RequestFailed)
         }
-        return service
     }
 
     // Responses and notifications
@@ -388,7 +338,6 @@ internal class NativeGattServer(
         // The clients are disconnected, but the callbacks may not be called after the server
         // is closed.
         dropAllClients()
-        serviceAdded?.completeExceptionally(ManagerClosedException())
 
         val server = synchronized(this) { server.also { server = null } }
         if (server != null) {
@@ -403,7 +352,6 @@ internal class NativeGattServer(
         val server = synchronized(this) { server.also { server = null } } ?: return
         logger?.w(Layer.GAP) { "Bluetooth is not available, closing the server" }
         dropAllClients()
-        serviceAdded?.completeExceptionally(BluetoothUnavailableException())
         try {
             server.close()
         } catch (e: Exception) {
@@ -499,7 +447,8 @@ internal class NativeGattServer(
 
         override fun onServiceAdded(status: Int, service: BluetoothGattService) {
             logger?.d(Layer.GATT) { "onServiceAdded(${service.uuid}, status=$status)" }
-            serviceAdded?.complete(status)
+            val id = attributes.idOf(service) ?: return
+            emit(GattServerEvent.ServiceAdded(id, status.toOperationStatus()))
         }
 
         override fun onCharacteristicReadRequest(

@@ -102,16 +102,28 @@ class FakeGattServer: GattServer {
      */
     var autoConfirmNotifications = true
 
-    /** A hook called by [setServices], after the services were recorded. */
-    var setServicesHook: suspend () -> Unit = {}
+    /** A hook called by [addService], after the service was recorded. */
+    var setServicesHook: () -> Unit = {}
+
+    /** Whether the services are reported as added right away. If `false`, the test emits the events. */
+    var autoConfirmServices = true
 
     /** An exception to be thrown by the next call of [respond]. */
     var respondError: Throwable? = null
 
-    override suspend fun setServices(services: List<ServiceDefinition>) {
+    override fun clearServices() {
         setServicesError?.let { throw it }
-        setServicesCalls += services
+        setServicesCalls += mutableListOf<ServiceDefinition>()
+    }
+
+    override fun addService(definition: ServiceDefinition, primary: Boolean) {
+        if (primary) {
+            (setServicesCalls.last() as MutableList) += definition
+        }
         setServicesHook()
+        if (autoConfirmServices) {
+            events.tryEmit(GattServerEvent.ServiceAdded(definition.instanceId, OperationStatus.Success))
+        }
     }
 
     override fun respond(client: Client<*>, requestId: Int, status: OperationStatus, offset: Int, value: ByteArray) {

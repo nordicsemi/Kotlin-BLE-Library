@@ -35,9 +35,12 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeoutOrNull
@@ -54,7 +57,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
+import no.nordicsemi.kotlin.ble.core.Manager
 import no.nordicsemi.kotlin.ble.core.OperationStatus
+import no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException
+import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
 import no.nordicsemi.kotlin.ble.core.ServerScope
 import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
 import no.nordicsemi.kotlin.ble.core.internal.ServerScopeImpl
@@ -204,7 +210,18 @@ open class LocalServerImpl<ID: Any>(
             if (closed.value) throw ManagerClosedException()
 
             logger?.info(Layer.GATT) { "Setting up ${definitions.size} service(s)" }
-            server.setServices(definitions)
+            server.clearServices()
+            try {
+                definitions.forEach { addService(it, primary = true) }
+            } catch (e: Throwable) {
+                // Do not leave the server with some of the services only.
+                try {
+                    server.clearServices()
+                } catch (_: Exception) {
+                    // The server is not available, so there is nothing to clean up.
+                }
+                throw e
+            }
 
             // The manager may have been closed while the services were being added.
             if (closed.value) throw ManagerClosedException()
@@ -226,6 +243,43 @@ open class LocalServerImpl<ID: Any>(
             _services.value = newServices
             oldServices.forEach { (it as SharedLocalService).invalidate() }
             newServices
+        }
+    }
+
+    /**
+     * Adds the service, and the services it includes, and waits for the platform to confirm it.
+     */
+    private suspend fun addService(definition: ServiceDefinition, primary: Boolean) {
+        definition.includedServices.forEach { addService(it, primary = false) }
+        coroutineScope {
+            val result = CompletableDeferred<GattServerEvent.ServiceAdded>()
+            try {
+                // Subscribe to the events before adding, so that the result is not missed.
+                launch(start = CoroutineStart.UNDISPATCHED) {
+                    result.complete(
+                        server.events
+                            .filterIsInstance<GattServerEvent.ServiceAdded>()
+                            .first { it.service == definition.instanceId }
+                    )
+                }
+                // The result will never come if the server was closed, or Bluetooth was turned off.
+                launch {
+                    closed.first { it }
+                    result.completeExceptionally(ManagerClosedException())
+                }
+                launch {
+                    server.state.first { it != Manager.State.POWERED_ON }
+                    result.completeExceptionally(BluetoothUnavailableException())
+                }
+
+                server.addService(definition, primary)
+
+                val event = withTimeoutOrNull(SERVICE_ADDED_TIMEOUT) { result.await() }
+                    ?: throw OperationFailedException(OperationStatus.RequestFailed)
+                if (event.status != OperationStatus.Success) throw OperationFailedException(event.status)
+            } finally {
+                coroutineContext.cancelChildren()
+            }
         }
     }
 
@@ -255,7 +309,8 @@ open class LocalServerImpl<ID: Any>(
             is GattServerEvent.SubscriptionChanged -> onSubscriptionChanged(event)
             is GattServerEvent.ClientDisconnected -> onClientDisconnected(event)
             // Handled by the call that is waiting for it.
-            is GattServerEvent.NotificationSent -> {}
+            is GattServerEvent.NotificationSent,
+            is GattServerEvent.ServiceAdded -> {}
         }
     }
 
@@ -525,5 +580,8 @@ open class LocalServerImpl<ID: Any>(
          * The ATT transaction timeout is 30 seconds, after which the link is terminated.
          */
         val NOTIFICATION_TIMEOUT = 35.seconds
+
+        /** The time to wait for the platform to confirm that a service was added. */
+        val SERVICE_ADDED_TIMEOUT = 10.seconds
     }
 }

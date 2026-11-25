@@ -84,7 +84,7 @@ open class MockGattServer<ID: Any>(
     private val _services = MutableStateFlow<List<ServiceDefinition>>(emptyList())
 
     /**
-     * The definitions of the services given in the last call to [setServices], for inspection.
+     * The definitions of the services added since the last call to [clearServices], for inspection.
      */
     val services: StateFlow<List<ServiceDefinition>> = _services.asStateFlow()
 
@@ -108,7 +108,7 @@ open class MockGattServer<ID: Any>(
         private set
 
     /**
-     * Throws if the server cannot be used, e.g. when Bluetooth is off. Called by [setServices].
+     * Throws if the server cannot be used, e.g. when Bluetooth is off. Called by [clearServices] and [addService].
      *
      * Can be overridden to simulate other conditions, like a missing permission.
      *
@@ -120,9 +120,34 @@ open class MockGattServer<ID: Any>(
         }
     }
 
-    override suspend fun setServices(services: List<ServiceDefinition>) {
+    override fun clearServices() {
         checkAvailable()
-        _services.value = services.toList()
+        _services.value = emptyList()
+    }
+
+    override fun addService(definition: ServiceDefinition, primary: Boolean) {
+        checkAvailable()
+        if (primary) {
+            _services.update { it + definition }
+        }
+        // The service is added right away.
+        tryEmit(GattServerEvent.ServiceAdded(definition.instanceId, OperationStatus.Success))
+    }
+
+    /**
+     * Replaces the services with the given ones, without waiting for the confirmation.
+     *
+     * The same as the [clearServices] and [addService] of all the services, for tests of the mock.
+     *
+     * @param services The definitions of the services.
+     */
+    fun setServices(services: List<ServiceDefinition>) {
+        clearServices()
+        fun add(definition: ServiceDefinition, primary: Boolean) {
+            definition.includedServices.forEach { add(it, primary = false) }
+            addService(definition, primary)
+        }
+        services.forEach { add(it, primary = true) }
     }
 
     override fun respond(client: Client<*>, requestId: Int, status: OperationStatus, offset: Int, value: ByteArray) {

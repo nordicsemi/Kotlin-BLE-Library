@@ -60,15 +60,31 @@ interface GattServer {
     val events: SharedFlow<GattServerEvent>
 
     /**
-     * Makes the given services available, replacing the current ones.
+     * Removes all the services.
      *
-     * Suspends until the platform confirmed that all services were added.
+     * Called before the new services are added using [addService].
      *
      * @throws no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException if Bluetooth is
      * not available.
      * @throws SecurityException if the required permission is denied.
      */
-    suspend fun setServices(services: List<ServiceDefinition>)
+    fun clearServices()
+
+    /**
+     * Starts adding a service, with its characteristics and descriptors.
+     *
+     * The method does not wait for the result. When the platform added the service, or failed to
+     * do that, [GattServerEvent.ServiceAdded] is emitted. The next service is added after that.
+     * The services included in this service were added before, with `primary` set to `false`.
+     *
+     * @param definition The definition of the service.
+     * @param primary `true` for a primary service, `false` for a service that is included in another one.
+     * @throws no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException if Bluetooth is
+     * not available.
+     * @throws no.nordicsemi.kotlin.ble.server.exception.OperationFailedException if adding could not
+     * be started. No event is emitted then.
+     */
+    fun addService(definition: ServiceDefinition, primary: Boolean)
 
     /**
      * Sends a response to a request received in [GattServerEvent.ReadRequested],
@@ -161,6 +177,17 @@ sealed class GattServerEvent {
         val attribute: Int,
         val notifications: Boolean,
         val indications: Boolean,
+    ): GattServerEvent()
+
+    /**
+     * The platform added a service, as a result of [GattServer.addService].
+     *
+     * @property service The `instanceId` of the service.
+     * @property status [OperationStatus.Success] if the service was added.
+     */
+    class ServiceAdded (
+        val service: Int,
+        val status: OperationStatus,
     ): GattServerEvent()
 
     /**
