@@ -64,7 +64,7 @@ class FakeClient(
 
 /** A response sent using [GattServer.respond]. */
 class Response(
-    val client: FakeClient,
+    val client: Client<*>,
     val requestId: Int,
     val status: OperationStatus,
     val offset: Int,
@@ -73,16 +73,16 @@ class Response(
 
 /** A notification or an indication sent using [GattServer.notify]. */
 class Notification(
-    val client: FakeClient,
+    val client: Client<*>,
     val attribute: Int,
     val value: ByteArray,
     val confirm: Boolean,
 )
 
 /** A [GattServer] that records calls and lets tests emit events. */
-class FakeGattServer: GattServer<String, FakeClient> {
+class FakeGattServer: GattServer {
     override val state = MutableStateFlow(Manager.State.POWERED_ON)
-    override val events = MutableSharedFlow<GattServerEvent<FakeClient>>(extraBufferCapacity = 256)
+    override val events = MutableSharedFlow<GattServerEvent>(extraBufferCapacity = 256)
 
     val setServicesCalls = mutableListOf<List<ServiceDefinition>>()
     val responses = mutableListOf<Response>()
@@ -108,7 +108,7 @@ class FakeGattServer: GattServer<String, FakeClient> {
         setServicesHook()
     }
 
-    override fun respond(client: FakeClient, requestId: Int, status: OperationStatus, offset: Int, value: ByteArray) {
+    override fun respond(client: Client<*>, requestId: Int, status: OperationStatus, offset: Int, value: ByteArray) {
         respondError?.let {
             respondError = null
             throw it
@@ -116,7 +116,7 @@ class FakeGattServer: GattServer<String, FakeClient> {
         responses += Response(client, requestId, status, offset, value)
     }
 
-    override suspend fun notify(client: FakeClient, attribute: Int, value: ByteArray, confirm: Boolean) {
+    override suspend fun notify(client: Client<*>, attribute: Int, value: ByteArray, confirm: Boolean) {
         val notification = Notification(client, attribute, value, confirm)
         onNotify(notification)
         notifications += notification
@@ -154,7 +154,7 @@ val CUSTOM_DESCRIPTOR_UUID = Uuid.parse("00002a00-0000-1000-8000-00805f9b34fb")
 @OptIn(ExperimentalCoroutinesApi::class)
 class Fixture(private val testScope: TestScope) {
     val server = FakeGattServer()
-    val manager = LocalServerImpl(testScope.backgroundScope, server)
+    val manager = LocalServerImpl<String>(testScope.backgroundScope, server)
     val client = FakeClient("AA")
     val client2 = FakeClient("BB")
     private var requestId = 0
@@ -202,7 +202,7 @@ class Fixture(private val testScope: TestScope) {
     val both get() = characteristic(BOTH_UUID)
 
     /** Emits an event and lets the manager process it. */
-    suspend fun emit(event: GattServerEvent<FakeClient>) {
+    suspend fun emit(event: GattServerEvent) {
         server.events.emit(event)
         testScope.testScheduler.runCurrent()
     }

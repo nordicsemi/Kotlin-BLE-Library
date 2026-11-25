@@ -46,8 +46,8 @@ import no.nordicsemi.kotlin.ble.server.mock.MockGattServer
  * keeps its MTU in sync with the connection.
  */
 internal class SimulatedClientImpl(
-    server: MockGattServer<String, SimulatedClient>,
-): MockClient<String, SimulatedClient>(IDENTIFIER, server), SimulatedClient {
+    server: MockGattServer<String>,
+): MockClient<String>(IDENTIFIER, server), SimulatedClient {
 
     override val state: StateFlow<ConnectionState>
         get() = connectionState

@@ -72,29 +72,28 @@ internal interface TargetedUpdate {
  * The state of Client Characteristic Configuration descriptors of all clients is kept here.
  * It is modified only by the event loop of the [LocalServerImpl].
  *
- * @param C The type of the client.
  * @param definition The definition of the characteristic.
  * @property service The service the characteristic belongs to.
  * @property host The services of the manager.
  */
-internal class SharedLocalCharacteristic<C: Client<*>>(
+internal class SharedLocalCharacteristic(
     definition: CharacteristicDefinition,
     override val service: AnyLocalService,
-    private val host: LocalServerHost<C>,
-): LocalCharacteristic, TargetedUpdate, LocalAttribute<C> {
+    private val host: LocalServerHost,
+): LocalCharacteristic, TargetedUpdate, LocalAttribute {
     override val uuid: Uuid = definition.uuid
     override val instanceId: Int = definition.instanceId
     override val properties: Set<CharacteristicProperty> = definition.properties
     override val state = AttributeState()
 
     /** The descriptors, including the auto-added Client Characteristic Configuration. */
-    val localDescriptors: List<SharedLocalDescriptor<C>> =
+    val localDescriptors: List<SharedLocalDescriptor> =
         definition.descriptors.map { SharedLocalDescriptor(it, this) }
-    override val descriptors: List<SharedLocalDescriptor<C>> get() = localDescriptors
+    override val descriptors: List<SharedLocalDescriptor> get() = localDescriptors
 
     /** The values of Client Characteristic Configuration descriptors: only non-zero ones. */
-    private val cccdValues = MutableStateFlow<Map<C, Int>>(emptyMap())
-    private val _subscribers = MutableStateFlow<Set<C>>(emptySet())
+    private val cccdValues = MutableStateFlow<Map<Client<*>, Int>>(emptyMap())
+    private val _subscribers = MutableStateFlow<Set<Client<*>>>(emptySet())
 
     /** `true` if the characteristic can notify or indicate. */
     private val canUpdate = CharacteristicProperty.NOTIFY in properties ||
@@ -102,7 +101,7 @@ internal class SharedLocalCharacteristic<C: Client<*>>(
 
     override val value get() = state.value
     override val writes get() = state.writes
-    override val subscribers: StateFlow<Set<C>> get() = _subscribers
+    override val subscribers: StateFlow<Set<Client<*>>> get() = _subscribers
 
     override fun onRead(handler: (suspend ReadRequest.() -> ReadResponse)?) = state.onRead(handler)
     override fun onWrite(handler: (suspend WriteRequest.() -> WriteResponse)?) = state.onWrite(handler)
@@ -158,20 +157,20 @@ internal class SharedLocalCharacteristic<C: Client<*>>(
     }
 
     /** Returns the value of the Client Characteristic Configuration descriptor of the client. */
-    fun cccdValue(client: C): Int = cccdValues.value[client] ?: 0
+    fun cccdValue(client: Client<*>): Int = cccdValues.value[client] ?: 0
 
     /**
      * Sets the value of the Client Characteristic Configuration descriptor of the client.
      *
      * @param value Bit 0 for notifications, bit 1 for indications.
      */
-    fun setCccdValue(client: C, value: Int) {
+    fun setCccdValue(client: Client<*>, value: Int) {
         cccdValues.update { if (value == 0) it - client else it + (client to value) }
         _subscribers.value = cccdValues.value.keys
     }
 
     /** Forgets the client. */
-    fun removeClient(client: C) = setCccdValue(client, 0)
+    fun removeClient(client: Client<*>) = setCccdValue(client, 0)
 
     /** Forgets all clients. */
     fun removeAllClients() {

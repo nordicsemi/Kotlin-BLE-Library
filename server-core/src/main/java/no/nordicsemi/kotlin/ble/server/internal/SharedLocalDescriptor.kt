@@ -52,14 +52,13 @@ import kotlin.uuid.Uuid
  * The Client Characteristic Configuration descriptor is handled by the [LocalServerImpl]:
  * its value is stored per client in the characteristic.
  *
- * @param C The type of the client.
  * @param definition The definition of the descriptor.
  * @property characteristic The characteristic the descriptor belongs to.
  */
-internal class SharedLocalDescriptor<C: Client<*>>(
+internal class SharedLocalDescriptor(
     definition: DescriptorDefinition,
-    override val characteristic: SharedLocalCharacteristic<C>,
-): LocalDescriptor, LocalAttribute<C> {
+    override val characteristic: SharedLocalCharacteristic,
+): LocalDescriptor, LocalAttribute {
     override val uuid: Uuid = definition.uuid
     override val instanceId: Int = definition.instanceId
     override val state = AttributeState(initialValue(definition))

@@ -48,7 +48,7 @@ import no.nordicsemi.kotlin.ble.server.Client
  * Attributes (services, characteristics and descriptors) are identified by the `instanceId`
  * of their [ServiceDefinition], which is unique within a GATT server.
  */
-interface GattServer<ID: Any, C: Client<ID>> {
+interface GattServer {
 
     /** The state of Bluetooth on the local device. */
     val state: StateFlow<Manager.State>
@@ -57,7 +57,7 @@ interface GattServer<ID: Any, C: Client<ID>> {
      * Requests and events from clients. A hot flow, buffered so that no event is lost while
      * the collector is busy.
      */
-    val events: SharedFlow<GattServerEvent<C>>
+    val events: SharedFlow<GattServerEvent>
 
     /**
      * Makes the given services available, replacing the current ones.
@@ -81,7 +81,7 @@ interface GattServer<ID: Any, C: Client<ID>> {
      * @param value The value of the attribute, starting from [offset], to be sent on success,
      * for read requests. Empty for write requests.
      */
-    fun respond(client: C, requestId: Int, status: OperationStatus, offset: Int, value: ByteArray)
+    fun respond(client: Client<*>, requestId: Int, status: OperationStatus, offset: Int, value: ByteArray)
 
     /**
      * Sends a notification or an indication to a client.
@@ -94,7 +94,7 @@ interface GattServer<ID: Any, C: Client<ID>> {
      * @param value The value, no longer than [Client.maximumUpdateValueLength].
      * @param confirm `true` to send an indication, `false` for a notification.
      */
-    suspend fun notify(client: C, attribute: Int, value: ByteArray, confirm: Boolean)
+    suspend fun notify(client: Client<*>, attribute: Int, value: ByteArray, confirm: Boolean)
 
     /** Stops the server and releases its resources. Closes all connections. */
     fun close()
@@ -103,19 +103,19 @@ interface GattServer<ID: Any, C: Client<ID>> {
 /**
  * An event reported by the platform layer, [GattServer].
  */
-sealed class GattServerEvent<C: Client<*>> {
+sealed class GattServerEvent {
 
     /**
      * A client wants to read an attribute. Must be answered using [GattServer.respond].
      *
      * @property offset The offset for long reads, 0 for the first request.
      */
-    class ReadRequested<C: Client<*>>(
-        val client: C,
+    class ReadRequested (
+        val client: Client<*>,
         val requestId: Int,
         val attribute: Int,
         val offset: Int,
-    ): GattServerEvent<C>()
+    ): GattServerEvent()
 
     /**
      * A client wants to write an attribute, including Client Characteristic Configuration
@@ -124,25 +124,25 @@ sealed class GattServerEvent<C: Client<*>> {
      * If [responseNeeded], must be answered using [GattServer.respond]. If [prepared], the value
      * is a part of a long or reliable write, to be executed on [ExecuteWrite].
      */
-    class WriteRequested<C: Client<*>>(
-        val client: C,
+    class WriteRequested (
+        val client: Client<*>,
         val requestId: Int,
         val attribute: Int,
         val offset: Int,
         val value: ByteArray,
         val prepared: Boolean,
         val responseNeeded: Boolean,
-    ): GattServerEvent<C>()
+    ): GattServerEvent()
 
     /**
      * A client wants to execute or cancel the queued prepared writes. Must be answered using
      * [GattServer.respond].
      */
-    class ExecuteWrite<C: Client<*>>(
-        val client: C,
+    class ExecuteWrite (
+        val client: Client<*>,
         val requestId: Int,
         val execute: Boolean,
-    ): GattServerEvent<C>()
+    ): GattServerEvent()
 
     /**
      * A client enabled or disabled notifications or indications.
@@ -150,13 +150,13 @@ sealed class GattServerEvent<C: Client<*>> {
      * For platforms that do not expose the Client Characteristic Configuration descriptor
      * (iOS). On Android and in the mock, the descriptor is written using [WriteRequested].
      */
-    class SubscriptionChanged<C: Client<*>>(
-        val client: C,
+    class SubscriptionChanged (
+        val client: Client<*>,
         val attribute: Int,
         val notifications: Boolean,
         val indications: Boolean,
-    ): GattServerEvent<C>()
+    ): GattServerEvent()
 
     /** A client disconnected, or is no longer reachable. Its state should be dropped. */
-    class ClientDisconnected<C: Client<*>>(val client: C): GattServerEvent<C>()
+    class ClientDisconnected (val client: Client<*>): GattServerEvent()
 }

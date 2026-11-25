@@ -52,7 +52,7 @@ import no.nordicsemi.kotlin.log.Log
 internal class NativeLocalServerImpl private constructor(
     scope: CoroutineScope,
     private val nativeServer: NativeGattServer,
-): LocalServerImpl<String, Client>(scope, nativeServer), LocalServer {
+): LocalServerImpl<String>(scope, nativeServer), LocalServer {
 
     /**
      * Creates the manager.

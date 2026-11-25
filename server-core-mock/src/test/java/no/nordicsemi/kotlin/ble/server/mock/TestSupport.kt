@@ -40,6 +40,7 @@ import no.nordicsemi.kotlin.ble.core.Permission
 import no.nordicsemi.kotlin.ble.core.and
 import no.nordicsemi.kotlin.ble.core.internal.ServerScopeImpl
 import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
+import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.internal.GattServerEvent
 import kotlin.uuid.Uuid
 
@@ -52,11 +53,11 @@ val DESCRIPTOR_UUID = Uuid.parse("00002a02-0000-1000-8000-00805f9b34fb")
 /** A client type used in tests, which is its own GATT server-side representation. */
 class TestClient(
     identifier: String,
-    server: MockGattServer<String, TestClient>,
+    server: MockGattServer<String>,
     maxMtu: Int = 517,
-): MockClient<String, TestClient>(identifier, server, maxMtu)
+): MockClient<String>(identifier, server, maxMtu)
 
-typealias TestServer = MockGattServer<String, TestClient>
+typealias TestServer = MockGattServer<String>
 
 fun buildServices(): List<ServiceDefinition> = ServerScopeImpl()
     .apply {
@@ -89,14 +90,14 @@ fun buildServices(): List<ServiceDefinition> = ServerScopeImpl()
 @OptIn(ExperimentalCoroutinesApi::class)
 class FakeApp(server: TestServer, scope: TestScope) {
     val values = mutableMapOf<Int, ByteArray>()
-    val events = mutableListOf<GattServerEvent<TestClient>>()
+    val events = mutableListOf<GattServerEvent>()
     val failing = mutableMapOf<Int, OperationStatus>()
-    private val queues = mutableMapOf<TestClient, MutableList<GattServerEvent.WriteRequested<TestClient>>>()
+    private val queues = mutableMapOf<Client<*>, MutableList<GattServerEvent.WriteRequested>>()
 
-    val reads get() = events.filterIsInstance<GattServerEvent.ReadRequested<TestClient>>()
-    val writes get() = events.filterIsInstance<GattServerEvent.WriteRequested<TestClient>>()
-    val executes get() = events.filterIsInstance<GattServerEvent.ExecuteWrite<TestClient>>()
-    val disconnects get() = events.filterIsInstance<GattServerEvent.ClientDisconnected<TestClient>>()
+    val reads get() = events.filterIsInstance<GattServerEvent.ReadRequested>()
+    val writes get() = events.filterIsInstance<GattServerEvent.WriteRequested>()
+    val executes get() = events.filterIsInstance<GattServerEvent.ExecuteWrite>()
+    val disconnects get() = events.filterIsInstance<GattServerEvent.ClientDisconnected>()
 
     init {
         scope.backgroundScope.launch(UnconfinedTestDispatcher(scope.testScheduler)) {
@@ -152,7 +153,7 @@ class FakeApp(server: TestServer, scope: TestScope) {
 
 /** Collects the updates received by a client. */
 @OptIn(ExperimentalCoroutinesApi::class)
-fun TestScope.collectUpdates(client: MockClient<*, *>): List<MockUpdate> {
+fun TestScope.collectUpdates(client: MockClient<*>): List<MockUpdate> {
     val list = mutableListOf<MockUpdate>()
     backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
         client.updates.collect { list += it }

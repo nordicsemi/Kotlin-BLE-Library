@@ -76,13 +76,12 @@ import no.nordicsemi.kotlin.log.Log
  * suspends for a long time delays processing of requests from other clients.
  *
  * @param ID The type of the client identifier.
- * @param C The type of the client.
  * @property scope The coroutine scope.
  * @property server The platform layer.
  */
-open class LocalServerImpl<ID: Any, C: Client<ID>>(
+open class LocalServerImpl<ID: Any>(
     protected val scope: CoroutineScope,
-    protected val server: GattServer<ID, C>,
+    protected val server: GattServer,
 ): LocalServer<ID> {
     override var logger: Log.Sink<Layer>? = null
 
@@ -99,19 +98,19 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
     private val _services = MutableStateFlow<List<LocalService>>(emptyList())
 
     /** The characteristics and descriptors of the current services, by their instance ID. */
-    private val attributes = MutableStateFlow<Map<Int, LocalAttribute<C>>>(emptyMap())
+    private val attributes = MutableStateFlow<Map<Int, LocalAttribute>>(emptyMap())
 
     /**
      * Prepared writes of each client. Accessed only by the event loop.
      */
-    private val preparedWrites = mutableMapOf<C, MutableList<PreparedWrite<C>>>()
+    private val preparedWrites = mutableMapOf<Client<*>, MutableList<PreparedWrite>>()
 
-    private val host = object: LocalServerHost<C> {
+    private val host = object: LocalServerHost {
         override fun trace(message: () -> String) {
             logger?.trace(Layer.GATT) { message() }
         }
 
-        override suspend fun notify(client: C, characteristic: Int, value: ByteArray, confirm: Boolean) =
+        override suspend fun notify(client: Client<*>, characteristic: Int, value: ByteArray, confirm: Boolean) =
             server.notify(client, characteristic, value, confirm)
     }
 
@@ -162,10 +161,10 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
             if (closed.value) throw ManagerClosedException()
 
             val newServices = definitions.map { SharedLocalService(it, this, host) }
-            val newAttributes = mutableMapOf<Int, LocalAttribute<C>>()
+            val newAttributes = mutableMapOf<Int, LocalAttribute>()
             fun addAttributes(service: AnyLocalService) {
                 service.characteristics.forEach { characteristic ->
-                    characteristic as SharedLocalCharacteristic<C>
+                    characteristic as SharedLocalCharacteristic
                     newAttributes[characteristic.instanceId] = characteristic
                     characteristic.localDescriptors.forEach { newAttributes[it.instanceId] = it }
                 }
@@ -176,7 +175,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
             val oldServices = _services.value
             attributes.value = newAttributes
             _services.value = newServices
-            oldServices.forEach { (it as SharedLocalService<C>).invalidate() }
+            oldServices.forEach { (it as SharedLocalService).invalidate() }
             newServices
         }
     }
@@ -191,15 +190,15 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
             logger?.warn(Layer.GATT) { "Closing the GATT server failed: $e" }
         }
         val oldAttributes = attributes.value
-        _services.value.forEach { (it as SharedLocalService<C>).invalidate() }
+        _services.value.forEach { (it as SharedLocalService).invalidate() }
         _services.value = emptyList()
         attributes.value = emptyMap()
-        oldAttributes.values.forEach { (it as? SharedLocalCharacteristic<C>)?.removeAllClients() }
+        oldAttributes.values.forEach { (it as? SharedLocalCharacteristic)?.removeAllClients() }
     }
 
     // ----- Event loop -----
 
-    private suspend fun process(event: GattServerEvent<C>) {
+    private suspend fun process(event: GattServerEvent) {
         when (event) {
             is GattServerEvent.ReadRequested -> onReadRequested(event)
             is GattServerEvent.WriteRequested -> onWriteRequested(event)
@@ -209,7 +208,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
         }
     }
 
-    private suspend fun onReadRequested(event: GattServerEvent.ReadRequested<C>) {
+    private suspend fun onReadRequested(event: GattServerEvent.ReadRequested) {
         val client = event.client
         val attribute = attributes.value[event.attribute]
         if (attribute == null) {
@@ -226,7 +225,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
         }
 
         val value: ByteArray
-        if (attribute is SharedLocalDescriptor<C> && attribute.isClientCharacteristicConfiguration) {
+        if (attribute is SharedLocalDescriptor && attribute.isClientCharacteristicConfiguration) {
             val cccd = attribute.characteristic.cccdValue(client)
             value = byteArrayOf((cccd and 0xFF).toByte(), ((cccd shr 8) and 0xFF).toByte())
         } else {
@@ -262,7 +261,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
         )
     }
 
-    private suspend fun onWriteRequested(event: GattServerEvent.WriteRequested<C>) {
+    private suspend fun onWriteRequested(event: GattServerEvent.WriteRequested) {
         val client = event.client
         val attribute = attributes.value[event.attribute]
         if (attribute == null) {
@@ -287,13 +286,13 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
         respondToWrite(event, status)
     }
 
-    private fun respondToWrite(event: GattServerEvent.WriteRequested<C>, status: OperationStatus) {
+    private fun respondToWrite(event: GattServerEvent.WriteRequested, status: OperationStatus) {
         if (event.responseNeeded) {
             server.respond(event.client, event.requestId, status, event.offset, EMPTY)
         }
     }
 
-    private suspend fun onExecuteWrite(event: GattServerEvent.ExecuteWrite<C>) {
+    private suspend fun onExecuteWrite(event: GattServerEvent.ExecuteWrite) {
         val client = event.client
         val queue = preparedWrites.remove(client).orEmpty()
         if (!event.execute) {
@@ -304,7 +303,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
         logger?.trace(Layer.GATT) { "Executing prepared writes of $client (${queue.size} fragment(s))" }
 
         // Assemble the fragments of each attribute.
-        val assembled = mutableListOf<Pair<LocalAttribute<C>, ByteArray>>()
+        val assembled = mutableListOf<Pair<LocalAttribute, ByteArray>>()
         val fragments = queue.groupBy { it.attribute }
         for ((attribute, list) in fragments) {
             var value = byteArrayOf()
@@ -332,8 +331,8 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
         server.respond(client, event.requestId, OperationStatus.Success, 0, EMPTY)
     }
 
-    private fun onSubscriptionChanged(event: GattServerEvent.SubscriptionChanged<C>) {
-        val characteristic = attributes.value[event.attribute] as? SharedLocalCharacteristic<C>
+    private fun onSubscriptionChanged(event: GattServerEvent.SubscriptionChanged) {
+        val characteristic = attributes.value[event.attribute] as? SharedLocalCharacteristic
         if (characteristic == null) {
             logger?.warn(Layer.GATT) { "Subscription change for unknown characteristic ${event.attribute}" }
             return
@@ -348,31 +347,31 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
         characteristic.setCccdValue(event.client, value)
     }
 
-    private fun onClientDisconnected(event: GattServerEvent.ClientDisconnected<C>) {
+    private fun onClientDisconnected(event: GattServerEvent.ClientDisconnected) {
         val client = event.client
         logger?.info(Layer.GATT) { "$client disconnected" }
         preparedWrites.remove(client)
-        attributes.value.values.forEach { (it as? SharedLocalCharacteristic<C>)?.removeClient(client) }
+        attributes.value.values.forEach { (it as? SharedLocalCharacteristic)?.removeClient(client) }
     }
 
     // ----- Helpers -----
 
     /** Returns an error status if the attribute can't be read, or `null` otherwise. */
-    private fun checkReadable(attribute: LocalAttribute<C>): OperationStatus? = when {
-        attribute is SharedLocalCharacteristic<C> && CharacteristicProperty.READ !in attribute.properties ->
+    private fun checkReadable(attribute: LocalAttribute): OperationStatus? = when {
+        attribute is SharedLocalCharacteristic && CharacteristicProperty.READ !in attribute.properties ->
             OperationStatus.ReadNotPermitted
-        attribute is SharedLocalDescriptor<C> && !attribute.isClientCharacteristicConfiguration && !attribute.isReadPermitted ->
+        attribute is SharedLocalDescriptor && !attribute.isClientCharacteristicConfiguration && !attribute.isReadPermitted ->
             OperationStatus.ReadNotPermitted
         else -> null
     }
 
     /** Returns an error status if the attribute can't be written, or `null` otherwise. */
-    private fun checkWritable(attribute: LocalAttribute<C>, withResponse: Boolean): OperationStatus? = when {
-        attribute is SharedLocalCharacteristic<C> -> {
+    private fun checkWritable(attribute: LocalAttribute, withResponse: Boolean): OperationStatus? = when {
+        attribute is SharedLocalCharacteristic -> {
             val required = if (withResponse) CharacteristicProperty.WRITE else CharacteristicProperty.WRITE_WITHOUT_RESPONSE
             if (required in attribute.properties) null else OperationStatus.WriteNotPermitted
         }
-        attribute is SharedLocalDescriptor<C> -> {
+        attribute is SharedLocalDescriptor -> {
             // Descriptors are always written with response.
             if (attribute.isWritePermitted && withResponse) null else OperationStatus.WriteNotPermitted
         }
@@ -380,7 +379,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
     }
 
     /** Adds a fragment to the prepared writes of the client. Returns an error or `null`. */
-    private fun queuePreparedWrite(client: C, attribute: LocalAttribute<C>, offset: Int, value: ByteArray): OperationStatus? {
+    private fun queuePreparedWrite(client: Client<*>, attribute: LocalAttribute, offset: Int, value: ByteArray): OperationStatus? {
         val queue = preparedWrites.getOrPut(client) { mutableListOf() }
         if (queue.size >= PREPARED_WRITE_QUEUE_LIMIT) {
             return OperationStatus.PrepareQueueFull
@@ -395,7 +394,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
      *
      * @return The status to be sent to the client.
      */
-    private suspend fun write(client: C, attribute: LocalAttribute<C>, value: ByteArray, withResponse: Boolean): OperationStatus {
+    private suspend fun write(client: Client<*>, attribute: LocalAttribute, value: ByteArray, withResponse: Boolean): OperationStatus {
         // The attribute may have been removed, if the services were replaced in the meantime.
         if (attributes.value[attribute.instanceId] !== attribute) {
             return OperationStatus.InvalidHandle
@@ -404,7 +403,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
         if (value.size > MAX_ATTRIBUTE_LENGTH) {
             return OperationStatus.InvalidAttributeLength
         }
-        if (attribute is SharedLocalDescriptor<C> && attribute.isClientCharacteristicConfiguration) {
+        if (attribute is SharedLocalDescriptor && attribute.isClientCharacteristicConfiguration) {
             return writeCccd(client, attribute, value)
         }
         val response = try {
@@ -421,7 +420,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
     }
 
     /** Handles a write to the Client Characteristic Configuration descriptor. */
-    private fun writeCccd(client: C, descriptor: SharedLocalDescriptor<C>, value: ByteArray): OperationStatus {
+    private fun writeCccd(client: Client<*>, descriptor: SharedLocalDescriptor, value: ByteArray): OperationStatus {
         if (value.size != 2) {
             return OperationStatus.InvalidAttributeLength
         }
@@ -442,7 +441,7 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
     }
 
     /** Checks whether the CCCD value is valid and the characteristic supports it. */
-    private fun isCccdValueSupported(characteristic: SharedLocalCharacteristic<C>, cccd: Int) = when (cccd) {
+    private fun isCccdValueSupported(characteristic: SharedLocalCharacteristic, cccd: Int) = when (cccd) {
         0 -> true
         NOTIFICATIONS -> CharacteristicProperty.NOTIFY in characteristic.properties
         INDICATIONS -> CharacteristicProperty.INDICATE in characteristic.properties
@@ -450,8 +449,8 @@ open class LocalServerImpl<ID: Any, C: Client<ID>>(
     }
 
     /** A fragment of a prepared (long or reliable) write. */
-    private class PreparedWrite<C: Client<*>>(
-        val attribute: LocalAttribute<C>,
+    private class PreparedWrite(
+        val attribute: LocalAttribute,
         val offset: Int,
         val value: ByteArray,
     )

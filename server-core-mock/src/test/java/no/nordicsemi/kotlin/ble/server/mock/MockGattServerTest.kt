@@ -188,7 +188,7 @@ class MockGattServerTest {
         val client = server.client().also { it.connect() }
         val updates = collectUpdates(client)
 
-        server.notify(client.asClient, attribute = 7, value = byteArrayOf(1, 2, 3), confirm = false)
+        server.notify(client, attribute = 7, value = byteArrayOf(1, 2, 3), confirm = false)
 
         assertEquals(1, updates.size)
         assertEquals(7, updates[0].attribute)
@@ -202,7 +202,7 @@ class MockGattServerTest {
         val client = server.client().also { it.connect() }
         val updates = collectUpdates(client)
 
-        server.notify(client.asClient, attribute = 7, value = byteArrayOf(9), confirm = true)
+        server.notify(client, attribute = 7, value = byteArrayOf(9), confirm = true)
 
         assertTrue(updates.single().isIndication)
     }
@@ -215,7 +215,7 @@ class MockGattServerTest {
         val updatesA = collectUpdates(a)
         val updatesB = collectUpdates(b)
 
-        server.notify(b.asClient, 1, byteArrayOf(1), false)
+        server.notify(b, 1, byteArrayOf(1), false)
 
         assertTrue(updatesA.isEmpty())
         assertEquals(1, updatesB.size)
@@ -228,7 +228,7 @@ class MockGattServerTest {
         val updates = collectUpdates(client)
         val value = byteArrayOf(1, 2)
 
-        server.notify(client.asClient, 1, value, false)
+        server.notify(client, 1, value, false)
         value[0] = 100
 
         assertEquals(1, updates.single().value[0].toInt())
@@ -240,7 +240,7 @@ class MockGattServerTest {
         val client = server.client()
 
         val exception = assertFailsWith<GattOperationException> {
-            server.notify(client.asClient, 1, byteArrayOf(1), false)
+            server.notify(client, 1, byteArrayOf(1), false)
         }
 
         assertEquals(OperationStatus.RequestFailed, exception.status)
@@ -251,7 +251,7 @@ class MockGattServerTest {
         val server = TestServer()
         val client = server.client().also { it.connect() }
 
-        server.respond(client.asClient, 12345, OperationStatus.Success, 0, ByteArray(0))
+        server.respond(client, 12345, OperationStatus.Success, 0, ByteArray(0))
     }
 
     @Test

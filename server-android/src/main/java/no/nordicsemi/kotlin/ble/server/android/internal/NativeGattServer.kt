@@ -101,7 +101,7 @@ private const val GATT_CONN_TERMINATE_LOCAL_HOST = 0x16
 internal class NativeGattServer(
     scope: CoroutineScope,
     private val environment: NativeAndroidEnvironment,
-): GattServer<String, Client>, Log.Emitter {
+): GattServer, Log.Emitter {
 
     /** The logger. It is also set to the clients. */
     var logger: Log.Sink<Layer>? = Log.Sink.Null
@@ -112,8 +112,8 @@ internal class NativeGattServer(
 
     override val state: StateFlow<Manager.State> = environment.bluetoothState
 
-    override val events: SharedFlow<GattServerEvent<Client>>
-        field = MutableSharedFlow<GattServerEvent<Client>>(extraBufferCapacity = EVENT_BUFFER_CAPACITY)
+    override val events: SharedFlow<GattServerEvent>
+        field = MutableSharedFlow<GattServerEvent>(extraBufferCapacity = EVENT_BUFFER_CAPACITY)
 
     /** The clients that are currently connected. */
     val connectedClients: StateFlow<List<Client>>
@@ -287,7 +287,7 @@ internal class NativeGattServer(
     // Responses and notifications
 
     override fun respond(
-        client: Client,
+        client: no.nordicsemi.kotlin.ble.server.Client<*>,
         requestId: Int,
         status: OperationStatus,
         offset: Int,
@@ -313,7 +313,7 @@ internal class NativeGattServer(
     }
 
     override suspend fun notify(
-        client: Client,
+        client: no.nordicsemi.kotlin.ble.server.Client<*>,
         attribute: Int,
         value: ByteArray,
         confirm: Boolean,
@@ -393,7 +393,7 @@ internal class NativeGattServer(
         server.cancelConnection(client.device)
     }
 
-    private fun Client.asNative(): NativeClient =
+    private fun no.nordicsemi.kotlin.ble.server.Client<*>.asNative(): NativeClient =
         this as? NativeClient
             ?: throw IllegalArgumentException("$this was not created by the native GATT server")
 
@@ -492,7 +492,7 @@ internal class NativeGattServer(
 
     // Events
 
-    private fun emit(event: GattServerEvent<Client>) {
+    private fun emit(event: GattServerEvent) {
         if (!events.tryEmit(event)) {
             logger?.e(Layer.GATT) { "Event $event was lost" }
         }

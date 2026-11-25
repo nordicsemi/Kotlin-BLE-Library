@@ -49,7 +49,7 @@ import no.nordicsemi.kotlin.ble.server.mock.MockGattServer
  */
 internal class MockAndroidGattServer(
     private val environment: MockAndroidEnvironment,
-): MockGattServer<String, Client>(environment.bluetoothState) {
+): MockGattServer<String>(environment.bluetoothState) {
 
     override fun checkAvailable() {
         super.checkAvailable()
@@ -67,7 +67,7 @@ internal class MockLocalServerImpl private constructor(
     scope: CoroutineScope,
     private val environment: MockAndroidEnvironment,
     private val mockServer: MockAndroidGattServer,
-): LocalServerImpl<String, Client>(scope, mockServer), MockLocalServer {
+): LocalServerImpl<String>(scope, mockServer), MockLocalServer {
 
     constructor(
         scope: CoroutineScope,
@@ -86,8 +86,10 @@ internal class MockLocalServerImpl private constructor(
             }
     }
 
+    // The simulated clients are created by simulateClient(), so all of them are MockAndroidClients.
+    @Suppress("UNCHECKED_CAST")
     override val connectedClients: StateFlow<List<Client>>
-        get() = mockServer.connectedClients
+        get() = mockServer.connectedClients as StateFlow<List<Client>>
 
     override fun simulateClient(address: String): MockAndroidClient {
         require(address !in clients) { "A client with address $address already exists" }

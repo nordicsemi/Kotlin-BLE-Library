@@ -146,7 +146,7 @@ class LifecycleTest {
         val job = Job()
         val scope = CoroutineScope(StandardTestDispatcher(testScheduler) + job)
         val server = FakeGattServer()
-        val manager = LocalServerImpl(scope, server)
+        val manager = LocalServerImpl<String>(scope, server)
         val services = manager.setup { Service(SERVICE_UUID) }
         testScheduler.runCurrent()
 
@@ -162,7 +162,7 @@ class LifecycleTest {
     fun close_doesNotCancelTheParentScope() = runTest {
         val job = Job()
         val scope = CoroutineScope(StandardTestDispatcher(testScheduler) + job)
-        val manager = LocalServerImpl(scope, FakeGattServer())
+        val manager = LocalServerImpl<String>(scope, FakeGattServer())
 
         manager.close()
         testScheduler.advanceUntilIdle()
@@ -209,7 +209,7 @@ class LifecycleTest {
     @Test
     fun serverRespondFailure_doesNotKillEventLoop() = runTest {
         val server = FakeGattServer()
-        val manager = LocalServerImpl(backgroundScope, server)
+        val manager = LocalServerImpl<String>(backgroundScope, server)
         val client = FakeClient("AA")
         server.respondError = IllegalStateException("Disconnected")
 

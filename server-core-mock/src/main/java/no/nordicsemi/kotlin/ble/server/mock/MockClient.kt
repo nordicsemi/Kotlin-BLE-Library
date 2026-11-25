@@ -68,16 +68,14 @@ import kotlin.uuid.Uuid
  * the platform-specific [Client] interface.
  *
  * @param ID The type of the client identifier.
- * @param C The type of the client as seen by the GATT server. The simulated client **must** be
- * an instance of this type, as it is given to the GATT server in events.
  * @property identifier The client identifier.
  * @property server The GATT server to connect to.
  * @property maxMtu The maximum ATT MTU supported by the simulated client (and the simulated local
  * device), 23 to 517.
  */
-abstract class MockClient<ID: Any, C: Client<ID>>(
+abstract class MockClient<ID: Any>(
     final override val identifier: ID,
-    protected val server: MockGattServer<ID, C>,
+    protected val server: MockGattServer<ID>,
     val maxMtu: Int = ATT_MTU_MAX,
 ): Client<ID> {
 
@@ -117,13 +115,6 @@ abstract class MockClient<ID: Any, C: Client<ID>>(
 
     private val procedureLock = Mutex()
 
-    /**
-     * Returns this client as seen by the GATT server.
-     */
-    @Suppress("UNCHECKED_CAST")
-    val asClient: C
-        get() = this as C
-
     /** `true` if the client is connected. */
     val isConnected: Boolean
         get() = _connectionState.value.isConnected
@@ -162,7 +153,7 @@ abstract class MockClient<ID: Any, C: Client<ID>>(
      */
     suspend fun disconnect(reason: ConnectionState.Disconnected.Reason) {
         if (markDisconnected(reason)) {
-            server.emit(GattServerEvent.ClientDisconnected(asClient))
+            server.emit(GattServerEvent.ClientDisconnected(this))
         }
     }
 
@@ -173,7 +164,7 @@ abstract class MockClient<ID: Any, C: Client<ID>>(
 
     internal fun terminate(reason: ConnectionState.Disconnected.Reason) {
         if (markDisconnected(reason)) {
-            server.tryEmit(GattServerEvent.ClientDisconnected(asClient))
+            server.tryEmit(GattServerEvent.ClientDisconnected(this))
         }
     }
 
@@ -296,7 +287,7 @@ abstract class MockClient<ID: Any, C: Client<ID>>(
 
     private suspend fun readRequest(attribute: Int, offset: Int): ReadResult {
         val response = server.request(this) { requestId ->
-            GattServerEvent.ReadRequested(asClient, requestId, attribute, offset)
+            GattServerEvent.ReadRequested(this, requestId, attribute, offset)
         }
         return if (response.status.isSuccess) {
             ReadResult.Success(response.value.copyOf(minOf(response.value.size, _attMtu.value - 1)))
@@ -464,19 +455,19 @@ abstract class MockClient<ID: Any, C: Client<ID>>(
     ): WriteResult {
         if (!withResponse) {
             server.emit(
-                GattServerEvent.WriteRequested(asClient, server.newRequestId(), attribute, offset, value.copyOf(), prepared, false)
+                GattServerEvent.WriteRequested(this, server.newRequestId(), attribute, offset, value.copyOf(), prepared, false)
             )
             return WriteResult.Success
         }
         val response = server.request(this) { requestId ->
-            GattServerEvent.WriteRequested(asClient, requestId, attribute, offset, value.copyOf(), prepared, true)
+            GattServerEvent.WriteRequested(this, requestId, attribute, offset, value.copyOf(), prepared, true)
         }
         return response.status.toWriteResult()
     }
 
     private suspend fun executeWriteRequest(execute: Boolean): WriteResult {
         val response = server.request(this) { requestId ->
-            GattServerEvent.ExecuteWrite(asClient, requestId, execute)
+            GattServerEvent.ExecuteWrite(this, requestId, execute)
         }
         return response.status.toWriteResult()
     }

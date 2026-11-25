@@ -48,6 +48,7 @@ import no.nordicsemi.kotlin.ble.core.internal.CCCD
 import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
 import no.nordicsemi.kotlin.ble.server.LocalCharacteristic
 import no.nordicsemi.kotlin.ble.server.internal.LocalServerImpl
+import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.mock.MockClient
 import no.nordicsemi.kotlin.ble.server.mock.MockGattServer
 import no.nordicsemi.kotlin.ble.server.mock.ReadResult
@@ -137,7 +138,7 @@ import no.nordicsemi.kotlin.ble.server.mock.WriteResult
 class MockPeripheralServer private constructor(
     scope: CoroutineScope,
     private val gatt: SimulatedGattServer,
-): LocalServerImpl<String, SimulatedClient>(scope, gatt) {
+): LocalServerImpl<String>(scope, gatt) {
 
     /**
      * Creates a server that is not used by any peripheral yet.
@@ -171,7 +172,7 @@ class MockPeripheralServer private constructor(
     private var peripheral: PeripheralSpec<*>? = null
 
     /** The reliable write, or a long write, which has been started, but not executed yet. */
-    private var reliableWrite: MockClient<String, SimulatedClient>.ReliableWrite? = null
+    private var reliableWrite: MockClient<String>.ReliableWrite? = null
 
     /**
      * The client, that is the phone the mock peripheral is connected to.
@@ -182,8 +183,9 @@ class MockPeripheralServer private constructor(
         get() = simulatedClient
 
     /** The clients that are connected: the [client] when the [PeripheralSpec] is connected. */
+    @Suppress("UNCHECKED_CAST") // The only simulated client is the SimulatedClientImpl.
     val connectedClients: StateFlow<List<SimulatedClient>>
-        get() = gatt.connectedClients
+        get() = gatt.connectedClients as StateFlow<List<SimulatedClient>>
 
     /** The definitions of the current services, which are discovered by the clients. */
     internal val definitions: List<ServiceDefinition>
@@ -367,7 +369,7 @@ private fun runImmediately(block: suspend () -> Unit) {
  * The simulated GATT server, which sends the notifications and indications to the client with
  * the delay of the transfer.
  */
-internal class SimulatedGattServer: MockGattServer<String, SimulatedClient>() {
+internal class SimulatedGattServer: MockGattServer<String>() {
 
     /**
      * Delivers the update to the clients of the peripheral, and suspends until it is sent
@@ -375,7 +377,7 @@ internal class SimulatedGattServer: MockGattServer<String, SimulatedClient>() {
      */
     var updateSink: (suspend (attribute: Int, value: ByteArray, indication: Boolean) -> Unit)? = null
 
-    override suspend fun notify(client: SimulatedClient, attribute: Int, value: ByteArray, confirm: Boolean) {
+    override suspend fun notify(client: Client<*>, attribute: Int, value: ByteArray, confirm: Boolean) {
         updateSink?.invoke(attribute, value, confirm)
         super.notify(client, attribute, value, confirm)
     }

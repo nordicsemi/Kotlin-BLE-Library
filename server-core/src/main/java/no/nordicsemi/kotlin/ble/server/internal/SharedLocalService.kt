@@ -48,14 +48,13 @@ import kotlin.uuid.Uuid
  * The service, with all its characteristics, descriptors and included services, is created from
  * the definition. It stays valid until the services are replaced or the manager is closed.
  *
- * @param C The type of the client.
  * @param definition The definition of the service.
  * @param host The services of the manager.
  */
-internal class SharedLocalService<C: Client<*>>(
+internal class SharedLocalService(
     definition: ServiceDefinition,
     manager: LocalServer<*>,
-    host: LocalServerHost<C>,
+    host: LocalServerHost,
 ): LocalService {
     @Volatile
     private var _manager: LocalServer<*>? = manager
@@ -63,9 +62,9 @@ internal class SharedLocalService<C: Client<*>>(
     override val uuid: Uuid = definition.uuid
     override val instanceId: Int = definition.instanceId
     override val manager: LocalServer<*>? get() = _manager
-    override val characteristics: List<SharedLocalCharacteristic<C>> =
+    override val characteristics: List<SharedLocalCharacteristic> =
         definition.characteristics.map { SharedLocalCharacteristic(it, this, host) }
-    override val includedServices: List<SharedLocalIncludedService<C>> =
+    override val includedServices: List<SharedLocalIncludedService> =
         definition.includedServices.map { SharedLocalIncludedService(it, this, host) }
 
     /** Marks the service as removed: [manager] becomes `null`. */
@@ -81,21 +80,20 @@ internal class SharedLocalService<C: Client<*>>(
  *
  * The per-client views in `ClientViews.kt` delegate to it.
  *
- * @param C The type of the client.
  * @param definition The definition of the service.
  * @property service The service that includes this one.
  * @param host The services of the manager.
  */
-internal class SharedLocalIncludedService<C: Client<*>>(
+internal class SharedLocalIncludedService(
     definition: ServiceDefinition,
     override val service: AnyLocalService,
-    host: LocalServerHost<C>,
+    host: LocalServerHost,
 ): LocalIncludedService {
     override val uuid: Uuid = definition.uuid
     override val instanceId: Int = definition.instanceId
-    override val characteristics: List<SharedLocalCharacteristic<C>> =
+    override val characteristics: List<SharedLocalCharacteristic> =
         definition.characteristics.map { SharedLocalCharacteristic(it, this, host) }
-    override val includedServices: List<SharedLocalIncludedService<C>> =
+    override val includedServices: List<SharedLocalIncludedService> =
         definition.includedServices.map { SharedLocalIncludedService(it, this, host) }
 
     override fun toString() = "IncludedService(uuid=$uuid, instanceId=$instanceId)"

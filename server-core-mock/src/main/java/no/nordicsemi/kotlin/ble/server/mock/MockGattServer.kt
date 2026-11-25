@@ -65,22 +65,21 @@ import kotlin.uuid.Uuid
  * indications are delivered immediately, and indications are confirmed automatically.
  *
  * @param ID The type of the client identifier.
- * @param C The type of the client, as seen by the GATT server.
  * @param state The state of Bluetooth on the simulated device. Defaults to always powered on.
  */
-open class MockGattServer<ID: Any, C: Client<ID>>(
+open class MockGattServer<ID: Any>(
     override val state: StateFlow<Manager.State> = MutableStateFlow(Manager.State.POWERED_ON),
-): GattServer<ID, C> {
+): GattServer {
 
-    private class Pending<ID: Any, C: Client<ID>>(
-        val client: MockClient<ID, C>,
+    private class Pending<ID: Any>(
+        val client: MockClient<ID>,
         val response: CompletableDeferred<Response>,
     )
 
     internal class Response(val status: OperationStatus, val value: ByteArray)
 
-    private val _events = MutableSharedFlow<GattServerEvent<C>>(extraBufferCapacity = EVENT_BUFFER_CAPACITY)
-    override val events: SharedFlow<GattServerEvent<C>> = _events.asSharedFlow()
+    private val _events = MutableSharedFlow<GattServerEvent>(extraBufferCapacity = EVENT_BUFFER_CAPACITY)
+    override val events: SharedFlow<GattServerEvent> = _events.asSharedFlow()
 
     private val _services = MutableStateFlow<List<ServiceDefinition>>(emptyList())
 
@@ -89,18 +88,18 @@ open class MockGattServer<ID: Any, C: Client<ID>>(
      */
     val services: StateFlow<List<ServiceDefinition>> = _services.asStateFlow()
 
-    private val _clients = MutableStateFlow<List<MockClient<ID, C>>>(emptyList())
+    private val _clients = MutableStateFlow<List<MockClient<ID>>>(emptyList())
 
     /** The simulated clients that are currently connected. */
-    val connectedMockClients: StateFlow<List<MockClient<ID, C>>> = _clients.asStateFlow()
+    val connectedMockClients: StateFlow<List<MockClient<ID>>> = _clients.asStateFlow()
 
-    private val _connected = MutableStateFlow<List<C>>(emptyList())
+    private val _connected = MutableStateFlow<List<Client<ID>>>(emptyList())
 
     /** The same as [connectedMockClients], but as seen by the GATT server. */
-    val connectedClients: StateFlow<List<C>> = _connected.asStateFlow()
+    val connectedClients: StateFlow<List<Client<ID>>> = _connected.asStateFlow()
 
     private val nextRequestId = MutableStateFlow(1)
-    private val pending = MutableStateFlow<Map<Int, Pending<ID, C>>>(emptyMap())
+    private val pending = MutableStateFlow<Map<Int, Pending<ID>>>(emptyMap())
 
     /**
      * Whether the server has been closed.
@@ -126,13 +125,13 @@ open class MockGattServer<ID: Any, C: Client<ID>>(
         _services.value = services.toList()
     }
 
-    override fun respond(client: C, requestId: Int, status: OperationStatus, offset: Int, value: ByteArray) {
+    override fun respond(client: Client<*>, requestId: Int, status: OperationStatus, offset: Int, value: ByteArray) {
         val request = pending.value[requestId] ?: return
         if (request.client.identifier != client.identifier) return
         request.response.complete(Response(status, value.copyOf()))
     }
 
-    override suspend fun notify(client: C, attribute: Int, value: ByteArray, confirm: Boolean) {
+    override suspend fun notify(client: Client<*>, attribute: Int, value: ByteArray, confirm: Boolean) {
         val target = _clients.value.firstOrNull { it.identifier == client.identifier }
             ?: throw GattOperationException(OperationStatus.RequestFailed)
         target.deliver(MockUpdate(attribute, value.copyOf(), isIndication = confirm))
@@ -232,13 +231,13 @@ open class MockGattServer<ID: Any, C: Client<ID>>(
 
     // ---- API for simulated clients ----
 
-    internal fun attach(client: MockClient<ID, C>) {
+    internal fun attach(client: MockClient<ID>) {
         check(!isClosed) { "The GATT server is closed" }
         _clients.update { it + client }
-        _connected.update { it + client.asClient }
+        _connected.update { it + client  }
     }
 
-    internal fun detach(client: MockClient<ID, C>) {
+    internal fun detach(client: MockClient<ID>) {
         _connected.update { list -> list.filterNot { it.identifier == client.identifier } }
         _clients.update { list -> list.filterNot { it === client } }
         pending.value.values
@@ -246,11 +245,11 @@ open class MockGattServer<ID: Any, C: Client<ID>>(
             .forEach { it.response.complete(Response(OperationStatus.RequestFailed, ByteArray(0))) }
     }
 
-    internal suspend fun emit(event: GattServerEvent<C>) {
+    internal suspend fun emit(event: GattServerEvent) {
         _events.emit(event)
     }
 
-    internal fun tryEmit(event: GattServerEvent<C>) {
+    internal fun tryEmit(event: GattServerEvent) {
         _events.tryEmit(event)
     }
 
@@ -260,8 +259,8 @@ open class MockGattServer<ID: Any, C: Client<ID>>(
      * Emits the event created for a new request ID, and suspends until [respond] is called.
      */
     internal suspend fun request(
-        client: MockClient<ID, C>,
-        event: (requestId: Int) -> GattServerEvent<C>,
+        client: MockClient<ID>,
+        event: (requestId: Int) -> GattServerEvent,
     ): Response {
         val requestId = newRequestId()
         val response = CompletableDeferred<Response>()

@@ -156,7 +156,7 @@ class SetupTest {
 
     @Test
     fun setup_cepdValueIsExtendedProperties() = runTest {
-        val manager = LocalServerImpl(backgroundScope, FakeGattServer())
+        val manager = LocalServerImpl<String>(backgroundScope, FakeGattServer())
         val services = manager.setup {
             Service(SERVICE_UUID) {
                 Characteristic(RW_UUID, CharacteristicProperty.READ, Permission.READ) {
@@ -197,7 +197,7 @@ class SetupTest {
 
     @Test
     fun setup_nestedIncludedServices() = runTest {
-        val manager = LocalServerImpl(backgroundScope, FakeGattServer())
+        val manager = LocalServerImpl<String>(backgroundScope, FakeGattServer())
         val services = manager.setup {
             Service(SERVICE_UUID) {
                 IncludedService(INCLUDED_UUID) {
@@ -216,7 +216,7 @@ class SetupTest {
 
     @Test
     fun setup_multipleServices() = runTest {
-        val manager = LocalServerImpl(backgroundScope, FakeGattServer())
+        val manager = LocalServerImpl<String>(backgroundScope, FakeGattServer())
         val services = manager.setup {
             Service(SERVICE_UUID)
             Service(INCLUDED_UUID)

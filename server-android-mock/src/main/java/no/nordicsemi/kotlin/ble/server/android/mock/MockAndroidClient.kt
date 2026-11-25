@@ -64,9 +64,9 @@ import kotlin.time.Duration
  */
 class MockAndroidClient internal constructor(
     address: String,
-    server: MockGattServer<String, Client>,
+    server: MockGattServer<String>,
     private val environment: MockAndroidEnvironment,
-): MockClient<String, Client>(address, server, environment.maxAttMtu), Client {
+): MockClient<String>(address, server, environment.maxAttMtu), Client {
 
     private val _mtu = MutableStateFlow<Int?>(null)
     private val _phy = MutableStateFlow<PhyInUse?>(null)
