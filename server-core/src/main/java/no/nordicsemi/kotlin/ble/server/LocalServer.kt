@@ -47,6 +47,21 @@ import no.nordicsemi.kotlin.ble.core.ServerScope
  * Define the services using [setup]. They are shared by all remote devices: each request carries
  * the [Client] that sent it.
  *
+ * ### Shared and per-client services
+ * [setup] and [services] give the *shared* services. A characteristic has one value, one set of
+ * handlers ([LocalCharacteristic.onRead], [LocalCharacteristic.onWrite]) and one list of
+ * subscribers, for all clients:
+ * - a write accepted from any client is stored in the shared characteristic and emitted in
+ * [LocalCharacteristic.writes], together with the [Client] that sent it,
+ * - [LocalCharacteristic.update] stores the value and notifies, or indicates, all
+ * [subscribers][LocalCharacteristic.subscribers].
+ *
+ * To work with one client only, use [services]. It returns *per-client views* of the same
+ * services. They delegate to the shared ones, so the values and handlers are the same, but
+ * `writes`, `subscribers` and `update` are limited to the client: `writes` emits only its requests,
+ * `subscribers` contains it, or is empty, and `update` notifies it only and fails if it has not
+ * subscribed.
+ *
  * ### Advertising
  * Advertising is not a part of the local server, use the `advertiser` module.
  *
@@ -78,14 +93,20 @@ interface LocalServer<ID: Any>: Manager {
      * Defines the services of the local GATT server using the [ServerScope] DSL and makes them
      * available to clients.
      *
+     * The returned services are the *shared* services, the same as in [services]: they have one
+     * value and one set of handlers for all clients, see the description of [LocalServer]. Use
+     * [services] to get the per-client views.
+     *
      * Calling it again replaces the previous services, which are then invalidated
-     * ([AnyLocalService.manager] becomes `null`).
+     * ([AnyLocalService.manager] becomes `null`). Use only the services returned last: calling
+     * `update` on a characteristic of an invalidated service throws. The profiles registered with [profile] are started again
+     * with the new services.
      *
      * Handlers and collectors of [LocalCharacteristic.writes] should be set up right after this
      * returns. Until then, read requests return an empty value and write requests are accepted and stored.
      *
      * @param builder The builder for the local services.
-     * @return The services that have been added.
+     * @return The shared services that have been added.
      * @throws no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException if the manager is closed.
      * @throws SecurityException if the required permission is denied.
      * @throws no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException if Bluetooth is
