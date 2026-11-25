@@ -40,11 +40,10 @@ import kotlinx.coroutines.withTimeout
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.client.mock.BondResult
-import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.client.mock.GenericAccessService
 import no.nordicsemi.kotlin.ble.client.mock.GenericAttributeService
 import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
-import no.nordicsemi.kotlin.ble.client.mock.SimulatedClient
+import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.Permission

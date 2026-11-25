@@ -7,9 +7,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import no.nordicsemi.android.kotlin.ble.client.main.callback.ClientBleGatt
-import no.nordicsemi.android.kotlin.ble.core.data.BleGattConnectOptions
 import no.nordicsemi.android.kotlin.ble.core.data.BleGattConnectionPriority
-import no.nordicsemi.android.kotlin.ble.test.utils.BlinkySpecifications
 import no.nordicsemi.android.kotlin.ble.test.utils.TestAddressProvider
 import org.junit.Test
 import org.junit.runner.RunWith

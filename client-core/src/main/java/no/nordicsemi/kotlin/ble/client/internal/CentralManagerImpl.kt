@@ -48,8 +48,8 @@ import no.nordicsemi.kotlin.ble.client.Peripheral
 import no.nordicsemi.kotlin.ble.client.ScanResult
 import no.nordicsemi.kotlin.ble.core.Environment
 import no.nordicsemi.kotlin.ble.core.Manager
-import no.nordicsemi.kotlin.ble.server.LocalServer
 import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
+import no.nordicsemi.kotlin.ble.server.LocalServer
 
 /**
  * Base implementation of [CentralManager].

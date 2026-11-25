@@ -43,11 +43,11 @@ import no.nordicsemi.kotlin.ble.core.ATT_MTU_DEFAULT
 import no.nordicsemi.kotlin.ble.core.ATT_MTU_MAX
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.OperationStatus
+import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
 import no.nordicsemi.kotlin.ble.core.log.Layer
 import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.internal.GattServerEvent
 import no.nordicsemi.kotlin.log.Log
-import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
 import kotlin.uuid.Uuid
 
 /**

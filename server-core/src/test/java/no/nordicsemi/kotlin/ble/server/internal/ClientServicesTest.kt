@@ -31,7 +31,6 @@
 
 package no.nordicsemi.kotlin.ble.server.internal
 
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest

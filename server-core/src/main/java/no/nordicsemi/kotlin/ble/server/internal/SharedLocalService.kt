@@ -33,10 +33,9 @@ package no.nordicsemi.kotlin.ble.server.internal
 
 import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
 import no.nordicsemi.kotlin.ble.server.AnyLocalService
-import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.LocalIncludedService
-import no.nordicsemi.kotlin.ble.server.LocalService
 import no.nordicsemi.kotlin.ble.server.LocalServer
+import no.nordicsemi.kotlin.ble.server.LocalService
 import kotlin.concurrent.Volatile
 import kotlin.uuid.Uuid
 

@@ -53,11 +53,11 @@ import kotlinx.coroutines.withContext
 import no.nordicsemi.kotlin.ble.advertiser.android.AdvertisingPayload
 import no.nordicsemi.kotlin.ble.advertiser.android.BluetoothLeAdvertiser
 import no.nordicsemi.kotlin.ble.android.sample.scanner.profile.LedButtonProfile
-import no.nordicsemi.kotlin.ble.core.PhyInUse
-import no.nordicsemi.kotlin.ble.core.ConnectionState
-import no.nordicsemi.kotlin.ble.core.ConnectionParameters
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
+import no.nordicsemi.kotlin.ble.core.ConnectionParameters
+import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.Permission
+import no.nordicsemi.kotlin.ble.core.PhyInUse
 import no.nordicsemi.kotlin.ble.core.and
 import no.nordicsemi.kotlin.ble.server.android.LocalServer
 import no.nordicsemi.kotlin.ble.server.profile

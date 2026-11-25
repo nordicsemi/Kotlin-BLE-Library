@@ -42,13 +42,13 @@ import no.nordicsemi.kotlin.ble.client.mock.internal.SimulatedClientImpl
 import no.nordicsemi.kotlin.ble.core.Characteristic
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.Descriptor
-import no.nordicsemi.kotlin.ble.core.Service
 import no.nordicsemi.kotlin.ble.core.ServerScope
+import no.nordicsemi.kotlin.ble.core.Service
 import no.nordicsemi.kotlin.ble.core.internal.CCCD
 import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
+import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.LocalCharacteristic
 import no.nordicsemi.kotlin.ble.server.internal.LocalServerImpl
-import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.mock.MockClient
 import no.nordicsemi.kotlin.ble.server.mock.MockGattServer
 import no.nordicsemi.kotlin.ble.server.mock.ReadResult

@@ -49,12 +49,12 @@ import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.Permission
 import no.nordicsemi.kotlin.ble.core.WriteType
 import no.nordicsemi.kotlin.ble.core.and
+import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
 import no.nordicsemi.kotlin.ble.environment.android.mock.LatestApi
 import no.nordicsemi.kotlin.ble.server.WriteRequest
+import no.nordicsemi.kotlin.ble.server.android.LocalServer
 import no.nordicsemi.kotlin.ble.server.android.mock.MockLocalServer
 import no.nordicsemi.kotlin.ble.server.android.mock.mock
-import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
-import no.nordicsemi.kotlin.ble.server.android.LocalServer
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals

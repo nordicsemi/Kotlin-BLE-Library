@@ -31,13 +31,9 @@
 
 package no.nordicsemi.kotlin.ble.client.mock
 
-import no.nordicsemi.kotlin.ble.core.mock.BondingFailure
-import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
-import no.nordicsemi.kotlin.ble.client.mock.internal.MockRemoteCharacteristic
-import no.nordicsemi.kotlin.ble.client.mock.internal.MockRemoteDescriptor
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
-import no.nordicsemi.kotlin.ble.core.exception.BluetoothException
+import no.nordicsemi.kotlin.ble.core.mock.BondingFailure
 import kotlin.time.Duration
 import kotlin.uuid.Uuid
 

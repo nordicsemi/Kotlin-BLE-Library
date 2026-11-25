@@ -31,10 +31,10 @@
 
 package no.nordicsemi.kotlin.ble.client.android.internal
 
-import android.bluetooth.le.ScanFilter as NativeScanFilter
 import android.os.Build
 import android.os.ParcelUuid
 import kotlin.uuid.toJavaUuid
+import android.bluetooth.le.ScanFilter as NativeScanFilter
 
 /**
  * Converts the list of [ScanFilter] to a list of native [ScanFilter][NativeScanFilter].

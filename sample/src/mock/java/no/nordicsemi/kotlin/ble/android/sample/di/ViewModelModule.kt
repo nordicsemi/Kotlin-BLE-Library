@@ -55,7 +55,6 @@ import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.client.mock.Proximity
 import no.nordicsemi.kotlin.ble.client.mock.ServiceDiscoveryResult
 import no.nordicsemi.kotlin.ble.core.AdvertisingDataFlag
-import no.nordicsemi.kotlin.ble.core.mock.AdvertisingDataScope
 import no.nordicsemi.kotlin.ble.core.Bluetooth5AdvertisingSetParameters
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.ConnectionParameters
@@ -63,18 +62,19 @@ import no.nordicsemi.kotlin.ble.core.LegacyAdvertisingSetParameters
 import no.nordicsemi.kotlin.ble.core.Permission
 import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
-import no.nordicsemi.kotlin.ble.server.WriteResponse as ServerWriteResponse
 import no.nordicsemi.kotlin.ble.core.TxPowerLevel
 import no.nordicsemi.kotlin.ble.core.and
+import no.nordicsemi.kotlin.ble.core.mock.AdvertisingDataScope
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
-import no.nordicsemi.kotlin.log.Log
-import no.nordicsemi.kotlin.log.timber.Timber
 import no.nordicsemi.kotlin.ble.server.android.LocalServer
 import no.nordicsemi.kotlin.ble.server.android.mock.mock
+import no.nordicsemi.kotlin.log.Log
+import no.nordicsemi.kotlin.log.timber.Timber
 import timber.log.Timber
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
+import no.nordicsemi.kotlin.ble.server.WriteResponse as ServerWriteResponse
 
 @Module
 @InstallIn(ViewModelComponent::class)

@@ -35,9 +35,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import no.nordicsemi.kotlin.ble.core.Profile
-import no.nordicsemi.kotlin.ble.server.LocalProfile as ServerProfile
-import no.nordicsemi.kotlin.ble.server.LocalService
 import no.nordicsemi.kotlin.ble.server.LocalServer
+import no.nordicsemi.kotlin.ble.server.LocalService
 import no.nordicsemi.kotlin.ble.server.profile
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -45,6 +44,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
+import no.nordicsemi.kotlin.ble.server.LocalProfile as ServerProfile
 
 private class LocalProfile(
     uuid: Uuid,

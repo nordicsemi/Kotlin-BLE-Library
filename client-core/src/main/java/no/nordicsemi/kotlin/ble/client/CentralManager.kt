@@ -37,10 +37,10 @@ import kotlinx.coroutines.flow.Flow
 import no.nordicsemi.kotlin.ble.client.exception.ConnectionFailedException
 import no.nordicsemi.kotlin.ble.client.exception.ScanningException
 import no.nordicsemi.kotlin.ble.core.Manager
-import no.nordicsemi.kotlin.ble.server.LocalServer
 import no.nordicsemi.kotlin.ble.core.Peer
 import no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException
 import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
+import no.nordicsemi.kotlin.ble.server.LocalServer
 import kotlin.time.Duration
 
 /**

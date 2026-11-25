@@ -36,7 +36,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
-import kotlin.time.Duration.Companion.seconds
 import no.nordicsemi.kotlin.ble.client.RemoteCharacteristic
 import no.nordicsemi.kotlin.ble.client.RemoteDescriptor
 import no.nordicsemi.kotlin.ble.client.RemoteService
@@ -46,21 +45,22 @@ import no.nordicsemi.kotlin.ble.client.android.Peripheral
 import no.nordicsemi.kotlin.ble.client.mock.AddressType
 import no.nordicsemi.kotlin.ble.client.mock.BondResult
 import no.nordicsemi.kotlin.ble.client.mock.ConnectionResult
-import no.nordicsemi.kotlin.ble.client.mock.MockServerScope
+import no.nordicsemi.kotlin.ble.client.mock.GattInterceptor
 import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
+import no.nordicsemi.kotlin.ble.client.mock.MockPeripheralServer
+import no.nordicsemi.kotlin.ble.client.mock.MockServerScope
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.client.mock.PrepareWriteResponse
 import no.nordicsemi.kotlin.ble.client.mock.ReadResponse
 import no.nordicsemi.kotlin.ble.client.mock.ServiceDiscoveryResult
 import no.nordicsemi.kotlin.ble.client.mock.WriteResponse
-import no.nordicsemi.kotlin.ble.client.mock.GattInterceptor
-import no.nordicsemi.kotlin.ble.client.mock.MockPeripheralServer
 import no.nordicsemi.kotlin.ble.core.Descriptor
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
 import no.nordicsemi.kotlin.ble.core.util.fromShortUuid
 import no.nordicsemi.kotlin.ble.environment.android.mock.LatestApi
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
+import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 
 // Test support for the Gatt*Test classes. Everything here is prefixed with "Gatt" / "GATT_".

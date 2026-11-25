@@ -32,7 +32,6 @@
 package no.nordicsemi.android.kotlin.ble.profile.cgm
 
 import android.annotation.SuppressLint
-import no.nordicsemi.android.common.core.DataByteArray
 import no.nordicsemi.android.common.core.IntFormat
 import no.nordicsemi.android.kotlin.ble.profile.cgm.data.CGMFeatures
 import no.nordicsemi.android.kotlin.ble.profile.cgm.data.CGMFeaturesEnvelope

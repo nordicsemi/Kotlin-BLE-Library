@@ -34,8 +34,8 @@ package no.nordicsemi.kotlin.ble.client.android.mock.internal
 import no.nordicsemi.kotlin.ble.client.android.AdvertisingData
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
 import no.nordicsemi.kotlin.ble.client.android.ScanResult
-import no.nordicsemi.kotlin.ble.client.mock.internal.MockScanResult
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
+import no.nordicsemi.kotlin.ble.client.mock.internal.MockScanResult
 import no.nordicsemi.kotlin.ble.core.android.AndroidEnvironment
 
 internal fun MockScanResult<String>.toScanResult(

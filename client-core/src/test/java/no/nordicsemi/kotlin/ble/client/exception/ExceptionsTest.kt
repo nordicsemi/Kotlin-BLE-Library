@@ -1,13 +1,13 @@
 package no.nordicsemi.kotlin.ble.client.exception
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.test.runTest
 import no.nordicsemi.kotlin.ble.core.ConnectionState.Disconnected.Reason
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.exception.BluetoothException
 import no.nordicsemi.kotlin.ble.core.exception.GattException
 import no.nordicsemi.kotlin.ble.core.internal.CallSiteException
 import no.nordicsemi.kotlin.ble.core.internal.withCallSite
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

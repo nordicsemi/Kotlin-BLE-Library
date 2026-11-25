@@ -35,9 +35,9 @@ package no.nordicsemi.kotlin.ble.client
 
 import kotlinx.coroutines.CoroutineScope
 import no.nordicsemi.kotlin.ble.core.ConnectionState
-import no.nordicsemi.kotlin.ble.core.Profile as CoreProfile
 import no.nordicsemi.kotlin.ble.server.LocalService
 import kotlin.uuid.Uuid
+import no.nordicsemi.kotlin.ble.core.Profile as CoreProfile
 
 /**
  * A class representing a Bluetooth LE profile.

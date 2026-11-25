@@ -39,8 +39,8 @@ import android.bluetooth.le.ScanSettings
 import android.os.Build
 import android.os.SystemClock
 import androidx.annotation.RequiresApi
-import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.client.android.AdvertisingData
+import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.client.android.ConnectionPriority
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
 import no.nordicsemi.kotlin.ble.client.android.ScanMode

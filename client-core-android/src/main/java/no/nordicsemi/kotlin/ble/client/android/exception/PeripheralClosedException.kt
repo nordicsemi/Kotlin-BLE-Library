@@ -31,8 +31,8 @@
 
 package no.nordicsemi.kotlin.ble.client.android.exception
 
-import no.nordicsemi.kotlin.ble.core.exception.BluetoothException
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
+import no.nordicsemi.kotlin.ble.core.exception.BluetoothException
 
 /**
  * Thrown when the peripheral wasn't connected or has been closed.
