@@ -31,6 +31,7 @@
 
 package no.nordicsemi.kotlin.ble.server.android.mock
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,9 +65,10 @@ import kotlin.time.Duration
  */
 class MockAndroidClient internal constructor(
     address: String,
-    server: MockGattServer<String>,
+    gattServer: MockGattServer<String>,
     private val environment: MockAndroidEnvironment,
-): MockClient<String>(address, server, environment.maxAttMtu), Client {
+    scope: CoroutineScope,
+): MockClient<String>(address, gattServer, environment.maxAttMtu, environment, scope), Client {
 
     private val _mtu = MutableStateFlow<Int?>(null)
     private val _phy = MutableStateFlow<PhyInUse?>(null)

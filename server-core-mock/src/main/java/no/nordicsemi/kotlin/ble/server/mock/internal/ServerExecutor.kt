@@ -30,10 +30,13 @@
  */
 
 
-package no.nordicsemi.kotlin.ble.client.mock.internal
+package no.nordicsemi.kotlin.ble.server.mock.internal
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -71,10 +74,13 @@ internal const val SERVER_IDENTIFIER = "server"
  * @param scope The scope in which the events are forwarded.
  */
 internal class ServerExecutor(
-    private val client: MockClient<String>,
+    private val client: MockClient<*>,
     override val environment: Environment,
-    scope: CoroutineScope,
+    parentScope: CoroutineScope,
 ): Peripheral.Executor<String> {
+    // Collects the events of the client, until the executor is closed.
+    private val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob(parentScope.coroutineContext[Job]))
+
     override val identifier: String = SERVER_IDENTIFIER
     override val name: String? = null
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
@@ -146,19 +152,38 @@ internal class ServerExecutor(
 
     override fun close() {
         isClosed = true
+        scope.cancel()
     }
 }
 
-/** The GATT server of the other device, given to the client role of a mock peripheral. */
-internal class ServerPeripheral(
+/** The GATT server of the phone, as seen by a simulated client. */
+internal class ServerPeripheral private constructor(
     scope: CoroutineScope,
     impl: ServerExecutor,
 ): Peripheral<String, ServerExecutor>(scope, impl) {
+
+    /** Closes the peripheral, which stops forwarding the events of the client. */
+    fun shutdown() = impl.close()
 
     override fun maximumWriteValueLength(type: WriteType): Int = when (type) {
         // Longer values are sent using Long Write.
         WriteType.WITH_RESPONSE -> 512
         WriteType.WITHOUT_RESPONSE -> impl.attMtu - 3
         WriteType.SIGNED -> impl.attMtu - 15
+    }
+
+    companion object {
+        /**
+         * Creates the GATT server of the phone for a connected client.
+         *
+         * @param client The simulated client, which is connected.
+         * @param environment The environment.
+         * @param scope The scope in which the events are forwarded. The peripheral uses a child
+         * of it.
+         */
+        fun create(client: MockClient<*>, environment: Environment, scope: CoroutineScope): ServerPeripheral {
+            val executor = ServerExecutor(client, environment, scope)
+            return ServerPeripheral(CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job])), executor)
+        }
     }
 }

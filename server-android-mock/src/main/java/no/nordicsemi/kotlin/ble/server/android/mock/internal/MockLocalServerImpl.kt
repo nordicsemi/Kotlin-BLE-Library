@@ -93,7 +93,7 @@ internal class MockLocalServerImpl private constructor(
 
     override fun simulateClient(address: String): MockAndroidClient {
         require(address !in clients) { "A client with address $address already exists" }
-        return MockAndroidClient(address, mockServer, environment)
+        return MockAndroidClient(address, mockServer, environment, internalScope)
             .also { clients[address] = it }
     }
 

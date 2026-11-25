@@ -46,6 +46,13 @@ nordicPublishing {
     POM_SCM_DEV_CONNECTION = "scm:git@github.com:nordicsemi/Kotlin-BLE-Library.git"
 }
 
+kotlin {
+    compilerOptions {
+        // The mock modules use the low-level API of the simulated client.
+        optIn.add("no.nordicsemi.kotlin.ble.server.mock.LowLevelMockApi")
+    }
+}
+
 dependencies {
     api(project(":core-mock"))
     api(project(":client-core"))

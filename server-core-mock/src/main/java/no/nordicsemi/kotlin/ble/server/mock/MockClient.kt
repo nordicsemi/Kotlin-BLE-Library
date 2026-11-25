@@ -31,6 +31,7 @@
 
 package no.nordicsemi.kotlin.ble.server.mock
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -41,12 +42,15 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import no.nordicsemi.kotlin.ble.core.ATT_MTU_DEFAULT
 import no.nordicsemi.kotlin.ble.core.ATT_MTU_MAX
+import no.nordicsemi.kotlin.ble.client.Peripheral
 import no.nordicsemi.kotlin.ble.core.ConnectionState
+import no.nordicsemi.kotlin.ble.core.Environment
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
 import no.nordicsemi.kotlin.ble.core.log.Layer
 import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.internal.GattServerEvent
+import no.nordicsemi.kotlin.ble.server.mock.internal.ServerPeripheral
 import no.nordicsemi.kotlin.log.Log
 import kotlin.uuid.Uuid
 
@@ -70,14 +74,18 @@ import kotlin.uuid.Uuid
  *
  * @param ID The type of the client identifier.
  * @property identifier The client identifier.
- * @property server The GATT server to connect to.
+ * @property gattServer The GATT server to connect to.
+ * @param environment The environment of the simulated device. Required by [server].
+ * @param scope The scope in which the events of [server] are forwarded. Required by [server].
  * @property maxMtu The maximum ATT MTU supported by the simulated client (and the simulated local
  * device), 23 to 517.
  */
 abstract class MockClient<ID: Any>(
     final override val identifier: ID,
-    protected val server: MockGattServer<ID>,
+    protected val gattServer: MockGattServer<ID>,
     val maxMtu: Int = ATT_MTU_MAX,
+    private val environment: Environment? = null,
+    private val scope: CoroutineScope? = null,
 ): Client<ID> {
 
     init {
@@ -112,17 +120,46 @@ abstract class MockClient<ID: Any>(
      * A hot flow with no replay: collect it before triggering the update. Indications are
      * confirmed automatically.
      */
+    @LowLevelMockApi
     val updates: SharedFlow<MockUpdate> = _updates.asSharedFlow()
 
     private val procedureLock = Mutex()
+
+    private var remote: ServerPeripheral? = null
+
+    /**
+     * The GATT server of the phone, as seen by this client.
+     *
+     * It has the same API as a peripheral has on the client side: [Peripheral.services] discovers
+     * the services of the server, and the characteristics and descriptors can be read, written and
+     * subscribed to. Requests are sent without simulating the transfer time.
+     *
+     * The instance is valid for the current connection: a new one is created every time
+     * the client connects, and the old one reports disconnection.
+     *
+     * ```kotlin
+     * client.connect()
+     * val led = client.server.services(listOf(LBS_UUID))
+     *     .filterIsInstance<RemoteServices.Discovered>().first()
+     *     .services.single()
+     *     .characteristics.first { it.uuid == LED_UUID }
+     * led.write(byteArrayOf(1))
+     * ```
+     *
+     * @throws IllegalStateException if the client is not connected, or was created without
+     * the environment and the scope.
+     */
+    val server: Peripheral<String, *>
+        get() = checkNotNull(remote) { "Not connected" }
 
     /**
      * The definitions of the services of the GATT server the client is connected to.
      *
      * They change when the services are set up again.
      */
+    @LowLevelMockApi
     val services: StateFlow<List<ServiceDefinition>>
-        get() = server.services
+        get() = gattServer.services
 
     /** `true` if the client is connected. */
     val isConnected: Boolean
@@ -137,9 +174,12 @@ abstract class MockClient<ID: Any>(
      */
     fun connect() {
         check(!isConnected) { "Already connected" }
-        server.attach(this)
+        gattServer.attach(this)
         _attMtu.value = ATT_MTU_DEFAULT
         _connectionState.value = ConnectionState.Connected
+        if (environment != null && scope != null) {
+            remote = ServerPeripheral.create(this, environment, scope)
+        }
         onConnected()
     }
 
@@ -162,7 +202,7 @@ abstract class MockClient<ID: Any>(
      */
     suspend fun disconnect(reason: ConnectionState.Disconnected.Reason) {
         if (markDisconnected(reason)) {
-            server.emit(GattServerEvent.ClientDisconnected(this))
+            gattServer.emit(GattServerEvent.ClientDisconnected(this))
         }
     }
 
@@ -173,14 +213,15 @@ abstract class MockClient<ID: Any>(
 
     internal fun terminate(reason: ConnectionState.Disconnected.Reason) {
         if (markDisconnected(reason)) {
-            server.tryEmit(GattServerEvent.ClientDisconnected(this))
+            gattServer.tryEmit(GattServerEvent.ClientDisconnected(this))
         }
     }
 
     private fun markDisconnected(reason: ConnectionState.Disconnected.Reason): Boolean {
         if (!isConnected) return false
         _connectionState.value = ConnectionState.Disconnected(reason)
-        server.detach(this)
+        remote?.shutdown()
+        gattServer.detach(this)
         onDisconnected()
         return true
     }
@@ -222,22 +263,25 @@ abstract class MockClient<ID: Any>(
     /**
      * Finds a service by UUID, see [MockGattServer.findService].
      */
-    fun findService(uuid: Uuid, index: Int = 0): Int? = server.findService(uuid, index)
+    @LowLevelMockApi
+    fun findService(uuid: Uuid, index: Int = 0): Int? = gattServer.findService(uuid, index)
 
     /**
      * Finds a characteristic by UUID, see [MockGattServer.findCharacteristic].
      *
      * @return The `instanceId` of the characteristic, or `null` if not found.
      */
-    fun findCharacteristic(serviceUuid: Uuid, uuid: Uuid): Int? = server.findCharacteristic(serviceUuid, uuid)
+    @LowLevelMockApi
+    fun findCharacteristic(serviceUuid: Uuid, uuid: Uuid): Int? = gattServer.findCharacteristic(serviceUuid, uuid)
 
     /**
      * Finds a descriptor by UUID, see [MockGattServer.findDescriptor].
      *
      * @return The `instanceId` of the descriptor, or `null` if not found.
      */
+    @LowLevelMockApi
     fun findDescriptor(serviceUuid: Uuid, characteristicUuid: Uuid, uuid: Uuid): Int? =
-        server.findDescriptor(serviceUuid, characteristicUuid, uuid)
+        gattServer.findDescriptor(serviceUuid, characteristicUuid, uuid)
 
     // ---- Read ----
 
@@ -250,6 +294,7 @@ abstract class MockClient<ID: Any>(
      * @param attribute The `instanceId` of the characteristic or descriptor.
      * @throws IllegalStateException if the client is not connected.
      */
+    @LowLevelMockApi
     suspend fun read(attribute: Int): ReadResult = procedure {
         readRequest(attribute, offset = 0)
     }
@@ -261,6 +306,7 @@ abstract class MockClient<ID: Any>(
      * @param offset The offset from which the value is read.
      * @throws IllegalStateException if the client is not connected.
      */
+    @LowLevelMockApi
     suspend fun readBlob(attribute: Int, offset: Int): ReadResult = procedure {
         readRequest(attribute, offset)
     }
@@ -273,6 +319,7 @@ abstract class MockClient<ID: Any>(
      * @return The whole value, or the first error.
      * @throws IllegalStateException if the client is not connected.
      */
+    @LowLevelMockApi
     suspend fun readLong(attribute: Int): ReadResult = procedure {
         var value = ByteArray(0)
         var complete = false
@@ -295,7 +342,7 @@ abstract class MockClient<ID: Any>(
     }
 
     private suspend fun readRequest(attribute: Int, offset: Int): ReadResult {
-        val response = server.request(this) { requestId ->
+        val response = gattServer.request(this) { requestId ->
             GattServerEvent.ReadRequested(this, requestId, attribute, offset)
         }
         return if (response.status.isSuccess) {
@@ -321,6 +368,7 @@ abstract class MockClient<ID: Any>(
      * @throws IllegalArgumentException if [withResponse] is `false` and the value does not fit in
      * `mtu - 3` bytes.
      */
+    @LowLevelMockApi
     suspend fun write(attribute: Int, value: ByteArray, withResponse: Boolean = true): WriteResult {
         val maxLength = _attMtu.value - 3
         return if (withResponse && value.size > maxLength) {
@@ -344,6 +392,7 @@ abstract class MockClient<ID: Any>(
      * @return The result of the Execute Write, or the first error.
      * @throws IllegalStateException if the client is not connected.
      */
+    @LowLevelMockApi
     suspend fun writeLong(attribute: Int, value: ByteArray): WriteResult = procedure {
         val result = prepareWrites(attribute, value)
         if (result is WriteResult.Failure) {
@@ -360,6 +409,7 @@ abstract class MockClient<ID: Any>(
      *
      * @throws IllegalStateException if the client is not connected.
      */
+    @LowLevelMockApi
     fun beginReliableWrite(): ReliableWrite {
         check(isConnected) { "Not connected" }
         return ReliableWrite()
@@ -375,6 +425,7 @@ abstract class MockClient<ID: Any>(
      * @return The result of the Execute Write, or the first error of a queued write request.
      * @throws IllegalStateException if the client is not connected.
      */
+    @LowLevelMockApi
     suspend fun reliableWrite(block: suspend ReliableWrite.() -> Unit): WriteResult {
         val write = beginReliableWrite()
         try {
@@ -390,6 +441,7 @@ abstract class MockClient<ID: Any>(
      * A Reliable Write procedure in progress. Values are queued on the server using Prepare
      * Write Requests, and taken into effect only after [execute].
      */
+    @LowLevelMockApi
     inner class ReliableWrite internal constructor() {
         private var failure: WriteResult.Failure? = null
         private var finished = false
@@ -401,7 +453,8 @@ abstract class MockClient<ID: Any>(
          * @param value The value to write.
          * @return The result of the last Prepare Write.
          */
-        suspend fun write(attribute: Int, value: ByteArray): WriteResult = procedure {
+        @LowLevelMockApi
+    suspend fun write(attribute: Int, value: ByteArray): WriteResult = procedure {
             check(!finished) { "The reliable write has already finished" }
             val result = prepareWrites(attribute, value)
             if (result is WriteResult.Failure && failure == null) {
@@ -463,19 +516,19 @@ abstract class MockClient<ID: Any>(
         withResponse: Boolean,
     ): WriteResult {
         if (!withResponse) {
-            server.emit(
-                GattServerEvent.WriteRequested(this, server.newRequestId(), attribute, offset, value.copyOf(), prepared, false)
+            gattServer.emit(
+                GattServerEvent.WriteRequested(this, gattServer.newRequestId(), attribute, offset, value.copyOf(), prepared, false)
             )
             return WriteResult.Success
         }
-        val response = server.request(this) { requestId ->
+        val response = gattServer.request(this) { requestId ->
             GattServerEvent.WriteRequested(this, requestId, attribute, offset, value.copyOf(), prepared, true)
         }
         return response.status.toWriteResult()
     }
 
     private suspend fun executeWriteRequest(execute: Boolean): WriteResult {
-        val response = server.request(this) { requestId ->
+        val response = gattServer.request(this) { requestId ->
             GattServerEvent.ExecuteWrite(this, requestId, execute)
         }
         return response.status.toWriteResult()
@@ -495,8 +548,9 @@ abstract class MockClient<ID: Any>(
      * characteristic has no Client Characteristic Configuration descriptor.
      * @throws IllegalStateException if the client is not connected.
      */
+    @LowLevelMockApi
     suspend fun subscribe(characteristic: Int, indications: Boolean = false): WriteResult {
-        val cccd = server.findCccd(characteristic)
+        val cccd = gattServer.findCccd(characteristic)
             ?: return WriteResult.Failure(OperationStatus.SubscribeNotPermitted)
         return write(cccd, byteArrayOf(if (indications) 0x02 else 0x01, 0x00), withResponse = true)
     }
@@ -510,8 +564,9 @@ abstract class MockClient<ID: Any>(
      * characteristic has no Client Characteristic Configuration descriptor.
      * @throws IllegalStateException if the client is not connected.
      */
+    @LowLevelMockApi
     suspend fun unsubscribe(characteristic: Int): WriteResult {
-        val cccd = server.findCccd(characteristic)
+        val cccd = gattServer.findCccd(characteristic)
             ?: return WriteResult.Failure(OperationStatus.SubscribeNotPermitted)
         return write(cccd, byteArrayOf(0x00, 0x00), withResponse = true)
     }

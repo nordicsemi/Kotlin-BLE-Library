@@ -30,7 +30,7 @@
  */
 
 
-package no.nordicsemi.kotlin.ble.client.mock.internal
+package no.nordicsemi.kotlin.ble.server.mock.internal
 
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.SharedFlow
@@ -68,7 +68,7 @@ import kotlin.uuid.Uuid
 
 /** A service of the GATT server of the other device. */
 internal class SimulatedRemoteService(
-    client: MockClient<String>,
+    client: MockClient<*>,
     service: ServiceDefinition,
     events: SharedFlow<GattEvent>,
 ): RemoteService() {
@@ -86,7 +86,7 @@ internal class SimulatedRemoteService(
 /** An included service of the GATT server of the other device. */
 internal class SimulatedRemoteIncludedService(
     parent: AnyRemoteService,
-    client: MockClient<String>,
+    client: MockClient<*>,
     service: ServiceDefinition,
     events: SharedFlow<GattEvent>,
 ): RemoteIncludedService {
@@ -105,7 +105,7 @@ internal class SimulatedRemoteIncludedService(
 /** A characteristic of the GATT server of the other device. */
 internal class SimulatedRemoteCharacteristic(
     parent: AnyRemoteService,
-    private val client: MockClient<String>,
+    private val client: MockClient<*>,
     characteristic: CharacteristicDefinition,
     events: SharedFlow<GattEvent>,
 ): BaseRemoteCharacteristic(parent, events) {
@@ -169,7 +169,7 @@ internal class SimulatedRemoteCharacteristic(
 /** A descriptor of the GATT server of the other device. */
 internal class SimulatedRemoteDescriptor(
     parent: RemoteCharacteristic,
-    private val client: MockClient<String>,
+    private val client: MockClient<*>,
     descriptor: DescriptorDefinition,
     events: SharedFlow<GattEvent>,
 ): BaseRemoteDescriptor(parent, events) {

@@ -150,15 +150,10 @@ open class MockExecutor(
             try {
                 client.connect()
                 peripheralSpec.mtu?.let { client.exchangeMtu(it) }
-                val executor = ServerExecutor(client, environment, scope)
-                try {
-                    coroutineScope {
-                        role(this, ServerPeripheral(scope, executor))
-                        // The client stays connected until the peripheral disconnects.
-                        awaitCancellation()
-                    }
-                } finally {
-                    executor.close()
+                coroutineScope {
+                    role(this, client.server)
+                    // The client stays connected until the peripheral disconnects.
+                    awaitCancellation()
                 }
             } finally {
                 withContext(NonCancellable) {
