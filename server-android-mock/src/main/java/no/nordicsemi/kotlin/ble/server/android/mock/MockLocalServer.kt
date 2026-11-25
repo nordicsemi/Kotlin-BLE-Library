@@ -47,7 +47,11 @@ import no.nordicsemi.kotlin.ble.server.mock.MockClientHost
  *
  * val client = manager.simulateClient()
  * client.connect()
- * val value = client.read(client.findCharacteristic(SERVICE_UUID, CHAR_UUID)!!)
+ * val characteristic = client.server.services(listOf(SERVICE_UUID))
+ *     .filterIsInstance<RemoteServices.Discovered>()
+ *     .first { it.services.isNotEmpty() }
+ *     .services.single().characteristics.first { it.uuid == CHAR_UUID }
+ * val value = characteristic.read()
  * ```
  *
  * Bluetooth state is taken from the [MockAndroidEnvironment][no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment].

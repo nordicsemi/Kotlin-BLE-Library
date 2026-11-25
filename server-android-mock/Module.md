@@ -36,8 +36,13 @@ val services = localServer.setup {
 val client = localServer.simulateClient()
 client.connect()
 
-val led = client.findCharacteristic(LBS_UUID, LED_UUID)!!
-client.write(led, byteArrayOf(1))
+// The GATT server of the phone, as seen by the client. It has the API of a client's Peripheral.
+val led = client.server.services(listOf(LBS_UUID))
+    .filterIsInstance<RemoteServices.Discovered>()
+    .first { it.services.isNotEmpty() }
+    .services.single()
+    .characteristics.first { it.uuid == LED_UUID }
+led.write(byteArrayOf(1), WriteType.WITH_RESPONSE)
 ```
 `simulateClient` creates a client with a random or given address. Use `simulatedClient(address)`
 to get an existing one, or to create it if it does not exist. The client is also seen in

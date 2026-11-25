@@ -51,14 +51,17 @@ import kotlin.time.Duration
  *
  * It is the [Client] seen by the app (in requests and in [LocalServer.connectedClients]),
  * and at the same time a [MockClient], which is used to simulate what the client does: connecting,
- * reading, writing, subscribing, and changing the MTU, PHY and connection parameters.
+ * using the services ([server]), and changing the MTU, PHY and connection parameters.
  *
  * ```kotlin
  * val client = localServer.simulateClient()
  * client.connect()
  * client.simulateMtuChange(185)
- * val led = client.findCharacteristic(SERVICE_UUID, LED_UUID)!!
- * client.write(led, byteArrayOf(1))
+ * val led = client.server.services(listOf(SERVICE_UUID))
+ *     .filterIsInstance<RemoteServices.Discovered>()
+ *     .first { it.services.isNotEmpty() }
+ *     .services.single().characteristics.first { it.uuid == LED_UUID }
+ * led.write(byteArrayOf(1), WriteType.WITH_RESPONSE)
  * ```
  *
  * The client is not connected until [connect] is called.
