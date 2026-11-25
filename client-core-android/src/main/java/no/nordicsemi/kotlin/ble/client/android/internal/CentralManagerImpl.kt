@@ -31,7 +31,7 @@
 
 package no.nordicsemi.kotlin.ble.client.android.internal
 
-import no.nordicsemi.kotlin.ble.server.LocalServer
+import no.nordicsemi.kotlin.ble.server.android.LocalServer
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -75,12 +75,13 @@ import kotlin.time.Duration.Companion.seconds
  *
  * @param scope The coroutine scope.
  * @param environment The Android-specific environment to use for the central manager.
- * @param server The local GATT server of this device, or `null`.
+ * @param server The local GATT server of this device, or `null` to create it when it is first
+ * accessed, see [CentralManager.server].
  */
 abstract class CentralManagerImpl(
     scope: CoroutineScope,
     private val environment: AndroidEnvironment,
-    server: LocalServer<String>? = null,
+    server: LocalServer? = null,
 ): CentralManagerImpl<String, Peripheral, Peripheral.Executor, ConjunctionFilterScope, ScanResult>(scope, environment, server),
     CentralManager {
 

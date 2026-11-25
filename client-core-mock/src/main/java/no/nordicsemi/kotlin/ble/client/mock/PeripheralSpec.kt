@@ -2479,8 +2479,9 @@ class PeripheralSpec<ID: Any> private constructor(
          * again when they change. The requests are sent without simulating the transfer time,
          * and reliable writes are not supported.
          *
-         * The phone has to be a mock local server, for example `LocalServer.mock(...)`. For other
-         * servers the block is not called.
+         * The central manager has to be a mock one, as the server it creates, or the one given to
+         * it, has to be a mock local server (`LocalServer.mock(...)`), which simulates the client.
+         * For other servers the block is not called.
          *
          * @param block The block using the server.
          */

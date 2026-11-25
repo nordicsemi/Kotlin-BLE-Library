@@ -437,7 +437,7 @@ sealed class Profile(
      * this device to alert.
      *
      * The local services are not added by the profile. The application defines them when setting
-     * up the local server, which is given to the central manager. The profile is started when the
+     * up the local server of the central manager, see [CentralManager.server]. The profile is started when the
      * required remote services were discovered and the local services are available. See
      * [Peripheral.profile].
      *

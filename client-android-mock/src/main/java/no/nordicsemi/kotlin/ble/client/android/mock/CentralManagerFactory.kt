@@ -33,13 +33,13 @@
 
 package no.nordicsemi.kotlin.ble.client.android.mock
 
-import no.nordicsemi.kotlin.ble.server.LocalServer
 import kotlinx.coroutines.CoroutineScope
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.mock.internal.MockCentralManagerImpl
 import no.nordicsemi.kotlin.ble.client.mock.SimulationProvider
 import no.nordicsemi.kotlin.ble.environment.android.mock.LatestApi
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
+import no.nordicsemi.kotlin.ble.server.android.LocalServer
 import kotlin.time.Clock
 
 /**
@@ -55,12 +55,15 @@ import kotlin.time.Clock
  *
  * @param environment The environment to use for the mock, defaults to the latest supported API.
  * @param scope The coroutine scope.
+ * @param server The local GATT server of this device. Its services are available to the profiles
+ * registered on peripherals, see `Peripheral.profile`. If not set, and [CentralManager.server] is
+ * accessed, the server will be automatically created.
  * @param clock The clock used for timestamps of scan results, defaults to the system clock.
  * Tests using virtual time may pass a clock based on the test scheduler.
  */
 fun CentralManager.Factory.mock(
     environment: MockAndroidEnvironment = LatestApi(),
     scope: CoroutineScope,
+    server: LocalServer? = null,
     clock: Clock = Clock.System,
-    server: LocalServer<String>? = null,
 ): MockCentralManager = MockCentralManagerImpl(scope, environment, clock, server)

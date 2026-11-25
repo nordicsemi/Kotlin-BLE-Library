@@ -31,8 +31,6 @@
 
 package no.nordicsemi.kotlin.ble.client.android.mock.internal
 
-import no.nordicsemi.kotlin.ble.server.LocalServer
-import no.nordicsemi.kotlin.ble.server.android.mock.mock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -66,6 +64,8 @@ import no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException
 import no.nordicsemi.kotlin.ble.core.log.Layer
 import no.nordicsemi.kotlin.ble.environment.android.mock.LatestApi
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
+import no.nordicsemi.kotlin.ble.server.android.LocalServer
+import no.nordicsemi.kotlin.ble.server.android.mock.mock
 import no.nordicsemi.kotlin.log.Log
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -81,12 +81,11 @@ open class MockCentralManagerImpl(
     scope: CoroutineScope,
     private val environment: MockAndroidEnvironment = LatestApi(),
     clock: Clock = Clock.System,
-    server: LocalServer<String>? = null,
+    server: LocalServer? = null,
 ): MockCentralManager, CentralManagerImpl(scope, environment, server) {
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
 
-    override fun createServer(): LocalServer<String> =
-        no.nordicsemi.kotlin.ble.server.android.LocalServer.mock(environment, internalScope)
+    override fun createServer(): LocalServer = LocalServer.mock(environment, internalScope)
 
     /** The number of scans (flows returned by [scan]) that are currently collected. */
     internal val activeScans = MutableStateFlow(0)
@@ -394,7 +393,7 @@ open class MockCentralManagerImpl(
     companion object {
         private const val ADDRESS_LENGTH = 17
 
-        // This implementation is copied from BluetoothAdapter.checkBluetoothAddress(address)..
+        // This implementation is copied from BluetoothAdapter.checkBluetoothAddress(address).
         private fun checkBluetoothAddress(address: String): Boolean {
             if (address.length != ADDRESS_LENGTH) {
                 return false

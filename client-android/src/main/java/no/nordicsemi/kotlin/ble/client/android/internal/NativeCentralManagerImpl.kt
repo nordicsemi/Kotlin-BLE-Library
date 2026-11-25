@@ -31,7 +31,7 @@
 
 package no.nordicsemi.kotlin.ble.client.android.internal
 
-import no.nordicsemi.kotlin.ble.server.LocalServer
+import no.nordicsemi.kotlin.ble.server.android.LocalServer
 import no.nordicsemi.kotlin.ble.server.android.native
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
@@ -109,12 +109,11 @@ private const val NATIVE_SCAN_RESULTS_BUFFER_SIZE = 512
 internal class NativeCentralManagerImpl(
     scope: CoroutineScope,
     private val environment: NativeAndroidEnvironment,
-    server: LocalServer<String>? = null,
+    server: LocalServer? = null,
 ): CentralManagerImpl(scope, environment, server) {
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
 
-    override fun createServer(): LocalServer<String> =
-        no.nordicsemi.kotlin.ble.server.android.LocalServer.native(environment, internalScope)
+    override fun createServer(): LocalServer = LocalServer.native(environment, internalScope)
     override val state = environment.bluetoothState
 
     /** A change of the bond state of the device with the given [address]. */

@@ -1466,8 +1466,9 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      *
      * A [Profile.WithLocalServices] also uses the local services of this device. It is started
      * when the required remote services were discovered and all of its
-     * [local services][Profile.localServiceUuids] are available in the local server given to the
-     * central manager. If the local services are not available yet, the profile waits for them.
+     * [local services][Profile.localServiceUuids] are available in the local server of
+     * the central manager, see [CentralManager.server]. If the local services are not available
+     * yet, the profile waits for them.
      * The services are defined by the application, when it sets up the local server, and they are
      * the views for this peripheral, see [LocalServer.services].
      *

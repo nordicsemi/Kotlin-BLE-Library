@@ -39,7 +39,9 @@ import no.nordicsemi.kotlin.ble.client.Profile
 import no.nordicsemi.kotlin.ble.client.RemoteService
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
-import no.nordicsemi.kotlin.ble.client.mock.MockPeripheralServer
+import no.nordicsemi.kotlin.ble.server.android.LocalServer
+import no.nordicsemi.kotlin.ble.server.android.mock.MockLocalServer
+import no.nordicsemi.kotlin.ble.server.android.mock.mock
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.Permission
 import no.nordicsemi.kotlin.ble.core.and
@@ -92,7 +94,7 @@ class ProfileTest {
     private val readPermission = setOf(Permission.READ)
 
     /** Defines the local service. */
-    private suspend fun MockPeripheralServer.defineService() {
+    private suspend fun MockLocalServer.defineService() {
         val _ = setup {
             Service(LOCAL_SERVICE_UUID) {
                 Characteristic(
@@ -107,7 +109,7 @@ class ProfileTest {
     /** A central manager with the given server, and a peripheral obtained from it. */
     private data class Setup(val manager: MockCentralManager, val peripheral: Peripheral)
 
-    private fun TestScope.setUp(server: MockPeripheralServer?): Setup {
+    private fun TestScope.setUp(server: MockLocalServer?): Setup {
         val fixture = gattSingleCharacteristic(properties = readable, permissions = readPermission)
         val manager = CentralManager.mock(environment = LatestApi(), scope = backgroundScope, server = server)
             .apply { simulatePeripherals(listOf(fixture.spec)) }
@@ -117,7 +119,7 @@ class ProfileTest {
     @Test
     fun `profile starts when the remote and local services are available`() = runTest {
         withTimeout(10.seconds) {
-            val server = MockPeripheralServer(backgroundScope).apply { defineService() }
+            val server = LocalServer.mock(LatestApi(), backgroundScope).apply { defineService() }
             val (manager, peripheral) = setUp(server)
             val profile = RemoteAndLocalProfile()
             peripheral.profile(backgroundScope, profile)
@@ -134,7 +136,7 @@ class ProfileTest {
     @Test
     fun `profile waits for the local service`() = runTest {
         withTimeout(10.seconds) {
-            val server = MockPeripheralServer(backgroundScope)
+            val server = LocalServer.mock(LatestApi(), backgroundScope)
             val (manager, peripheral) = setUp(server)
             val profile = RemoteAndLocalProfile()
             peripheral.profile(backgroundScope, profile)
@@ -152,7 +154,7 @@ class ProfileTest {
     @Test
     fun `profile rejecting the services is reported as unsupported`() = runTest {
         withTimeout(10.seconds) {
-            val server = MockPeripheralServer(backgroundScope).apply { defineService() }
+            val server = LocalServer.mock(LatestApi(), backgroundScope).apply { defineService() }
             val (manager, peripheral) = setUp(server)
             val profile = RemoteAndLocalProfile().apply { reject = true }
             peripheral.profile(backgroundScope, profile, required = false)
