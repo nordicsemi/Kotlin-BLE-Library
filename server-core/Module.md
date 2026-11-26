@@ -105,28 +105,34 @@ class LedButtonServerProfile : LocalProfile.Simple(
     serviceUuid = LBS_UUID,
     name = "LBS",
 ) {
-    private lateinit var led: LocalCharacteristic
-    private lateinit var button: LocalCharacteristic
+    private lateinit var ledCharacteristic: LocalCharacteristic
+    private lateinit var buttonCharacteristic: LocalCharacteristic
 
-    val isLedOn: StateFlow<Boolean>
+    /** The LED is controlled by the client, which writes the LED characteristic. */
+    val ledState: StateFlow<Boolean>
         field = MutableStateFlow(false)
+
+    /** The Button is controlled by the server. A change notifies the subscribed clients. */
+    val buttonState = MutableStateFlow(false)
 
     // Throw NoSuchElementException or IllegalArgumentException to reject the service.
     override fun prepare(server: LocalServer<*>, service: LocalService) {
-        led = service.characteristics.first { it.uuid == LED_UUID }
-        button = service.characteristics.first { it.uuid == BUTTON_UUID }
+        ledCharacteristic = service.characteristics.first { it.uuid == LED_UUID }
+        buttonCharacteristic = service.characteristics.first { it.uuid == BUTTON_UUID }
     }
 
     // Cancelled when the services are replaced or the profile is unregistered.
-    override suspend fun CoroutineScope.initialize(target: LocalServer<*>) {
-        led.setValue(byteArrayOf(0))
-        button.setValue(byteArrayOf(0))
-        led.writes
-            .onEach { request -> isLedOn.update { request.value.first() != 0.toByte() } }
+    override suspend fun CoroutineScope.initialize(server: LocalServer<*>) {
+        ledCharacteristic.setValue(byteArrayOf(0))
+        buttonCharacteristic.setValue(byteArrayOf(0))
+        // The state follows the value of the characteristic, which can also be set by the server.
+        ledCharacteristic.value
+            .onEach { value -> ledState.value = value.singleOrNull() == 1.toByte() }
+            .launchIn(this)
+        buttonState
+            .onEach { pressed -> buttonCharacteristic.update(byteArrayOf(if (pressed) 1 else 0)) }
             .launchIn(this)
     }
-
-    suspend fun setButtonPressed(pressed: Boolean) = button.update(byteArrayOf(if (pressed) 1 else 0))
 }
 
 val profile = LedButtonServerProfile()

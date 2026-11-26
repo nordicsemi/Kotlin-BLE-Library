@@ -38,7 +38,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.update
 import no.nordicsemi.kotlin.ble.android.sample.scanner.profile.LedButtonProfile
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.server.LocalCharacteristic
@@ -51,24 +50,24 @@ import timber.log.Timber
 /**
  * The logic of the Nordic LED Button Service (LBS) hosted by this device.
  *
- * The LED characteristic can be written by the connected client, and the Button characteristic
- * notifies the subscribed clients about the state of the button. The service itself is defined
- * by the application; the profile starts when it appears and restarts if the services are replaced.
+ * The Button is controlled by this device: changing [buttonState] notifies the subscribed
+ * clients. The LED is controlled by the client: when it writes the LED characteristic, [ledState]
+ * changes. The service itself is defined by the application; the profile starts when it appears
+ * and restarts if the services are replaced.
  */
 class LedButtonServerProfile : LocalProfile.Simple(
     serviceUuid = LedButtonProfile.SERVICE_UUID,
     name = "LED Button Server",
 ) {
-    private var led: LocalCharacteristic? = null
-    private var button: LocalCharacteristic? = null
+    private var ledCharacteristic: LocalCharacteristic? = null
+    private var buttonCharacteristic: LocalCharacteristic? = null
 
     /** The state of the LED, set by the client. */
-    val isLedOn: StateFlow<Boolean>
+    val ledState: StateFlow<Boolean>
         field = MutableStateFlow(false)
 
-    /** The state of the Button, set by the user. */
-    val isButtonPressed: StateFlow<Boolean>
-        field = MutableStateFlow(false)
+    /** The state of the Button, set by this device. A change is sent to the subscribed clients. */
+    val buttonState = MutableStateFlow(false)
 
     /** The number of clients subscribed to the Button characteristic. */
     val subscribersCount: StateFlow<Int>
@@ -76,68 +75,61 @@ class LedButtonServerProfile : LocalProfile.Simple(
 
     override fun prepare(server: LocalServer<*>, service: LocalService) {
         val characteristics = service.characteristics
-        led = characteristics.first { it.uuid == LedButtonProfile.LED_CHARACTERISTIC_UUID }
-        button = characteristics.first { it.uuid == LedButtonProfile.BUTTON_CHARACTERISTIC_UUID }
+        ledCharacteristic = characteristics.first { it.uuid == LedButtonProfile.LED_CHARACTERISTIC_UUID }
+        buttonCharacteristic = characteristics.first { it.uuid == LedButtonProfile.BUTTON_CHARACTERISTIC_UUID }
     }
 
-    override suspend fun CoroutineScope.initialize(target: LocalServer<*>) {
-        val led = led!!
-        val button = button!!
+    override suspend fun CoroutineScope.initialize(server: LocalServer<*>) {
+        val ledCharacteristic = ledCharacteristic!!
+        val buttonCharacteristic = buttonCharacteristic!!
 
         // Initial values.
-        isLedOn.update { false }
-        isButtonPressed.update { false }
-        led.setValue(byteArrayOf(0))
-        button.setValue(byteArrayOf(0))
+        buttonState.value = false
+        ledCharacteristic.setValue(byteArrayOf(0))
+        buttonCharacteristic.setValue(byteArrayOf(0))
 
         // The LED accepts exactly one byte.
-        led.onWrite {
+        ledCharacteristic.onWrite {
             if (value.size == 1) {
                 WriteResponse.Success
             } else {
                 WriteResponse.Failure(OperationStatus.InvalidAttributeLength)
             }
         }
-        led.writes
-            .onEach { request ->
-                val on = request.value.first() != 0.toByte()
-                Timber.i("LED turned ${if (on) "ON" else "OFF"} by ${request.client.identifier}")
-                isLedOn.update { on }
+        // The state follows the value of the characteristic, so it is also correct after
+        // the value was set from somewhere else.
+        ledCharacteristic.value
+            .onEach { value -> ledState.value = value.singleOrNull() == 1.toByte() }
+            .launchIn(this)
+        // The writes carry the client that sent them. They are used only for logging here.
+        ledCharacteristic.writes
+            .onEach { request -> Timber.i("LED written by ${request.client.identifier}") }
+            .launchIn(this)
+        // Every change of the button is sent to the clients that subscribed to it.
+        buttonState
+            .map { pressed -> byteArrayOf(if (pressed) 1 else 0) }
+            .onEach { value ->
+                try {
+                    buttonCharacteristic.update(value)
+                } catch (e: Exception) {
+                    Timber.w(e, "Failed to notify about the button state")
+                }
             }
             .launchIn(this)
-        // The button state follows the value of the characteristic, so it
-        // changes also when the value is set from somewhere else.
-        button.value
-            .map { (it.firstOrNull() ?: 0) != 0.toByte() }
-            .onEach { pressed -> isButtonPressed.update { pressed } }
-            .launchIn(this)
-        button.subscribers
+        buttonCharacteristic.subscribers
             .map { it.size }
-            .onEach { count -> subscribersCount.update { count } }
+            .onEach { count -> subscribersCount.value = count }
             .launchIn(this)
 
         try {
             awaitCancellation()
         } finally {
-            isButtonPressed.update { false }
-            subscribersCount.update { 0 }
+            buttonState.value = false
+            subscribersCount.value = 0
         }
     }
 
-    override suspend fun unsupported(target: LocalServer<*>) {
+    override suspend fun unsupported(server: LocalServer<*>) {
         Timber.w("The LED Button Service is not as expected")
-    }
-
-    /**
-     * Sets the state of the button and notifies the subscribed clients.
-     *
-     * Does nothing if the profile is not running.
-     */
-    suspend fun setButtonPressed(pressed: Boolean) {
-        val button = button ?: return
-        val value = byteArrayOf(if (pressed) 1 else 0)
-        // Update the value right away, so that the UI is responsive, then notify.
-        button.setValue(value)
-        button.update(value)
     }
 }

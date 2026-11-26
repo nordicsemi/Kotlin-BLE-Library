@@ -39,8 +39,8 @@ import kotlin.uuid.Uuid
  *
  * A profile can use services of both sides of the connection: the services of the other device,
  * which are discovered after connecting ([R]), and the services of this device, which were defined
- * by the application ([L]). For example, the Proximity Profile of a phone uses the Link Loss
- * and Immediate Alert services of the remote peripheral, and offers its own Immediate Alert service.
+ * by the application ([L]). For example, the Proximity Profile uses the Link Loss and Immediate
+ * Alert services of the other device, and offers its own Link Loss and Immediate Alert services.
  * Profiles using the services of one side only use [Nothing] as the type of the other one.
  *
  * The profile is registered on a manager, which calls [prepare] when all the services were found,
@@ -112,6 +112,7 @@ abstract class Profile<in P: Any, R: PrimaryService<*>, L: PrimaryService<*>>(
      * Calls [prepare], reporting a missing element as [IllegalArgumentException].
      *
      * It is called by the library. It should not be called by the application.
+     * @hide
      */
     fun validate(target: P, remoteServices: List<R>, localServices: List<L>) {
         try {
@@ -125,6 +126,7 @@ abstract class Profile<in P: Any, R: PrimaryService<*>, L: PrimaryService<*>>(
      * Starts the profile, after the services were validated with [validate].
      *
      * It is called by the library. It should not be called by the application.
+     * @hide
      */
     suspend fun start(target: P, scope: CoroutineScope) {
         with(scope) { initialize(target) }
@@ -134,6 +136,7 @@ abstract class Profile<in P: Any, R: PrimaryService<*>, L: PrimaryService<*>>(
      * Reports that the services were not found.
      *
      * It is called by the library. It should not be called by the application.
+     * @hide
      */
     suspend fun reportUnsupported(target: P) = unsupported(target)
 
@@ -141,6 +144,7 @@ abstract class Profile<in P: Any, R: PrimaryService<*>, L: PrimaryService<*>>(
      * Reports that the services could not be discovered.
      *
      * It is called by the library. It should not be called by the application.
+     * @hide
      */
     suspend fun reportFailed(target: P, reason: Any) = failed(target, reason)
 }

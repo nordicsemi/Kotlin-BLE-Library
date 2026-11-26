@@ -89,10 +89,10 @@ class ServerViewModel @Inject constructor(
     private val profile = LedButtonServerProfile()
 
     /** The state of the LED, set by the client. */
-    val isLedOn: StateFlow<Boolean> = profile.isLedOn
+    val ledState: StateFlow<Boolean> = profile.ledState
 
     /** The state of the Button, set by the user. */
-    val isButtonPressed: StateFlow<Boolean> = profile.isButtonPressed
+    val buttonState: StateFlow<Boolean> = profile.buttonState
 
     /** The number of clients subscribed to the Button characteristic. */
     val subscribersCount: StateFlow<Int> = profile.subscribersCount
@@ -184,13 +184,7 @@ class ServerViewModel @Inject constructor(
 
     /** Sets the state of the button and notifies the subscribed clients. */
     fun onButtonPressedChanged(pressed: Boolean) {
-        scope.launch {
-            try {
-                profile.setButtonPressed(pressed)
-            } catch (e: Exception) {
-                Timber.w(e, "Failed to notify about the button state")
-            }
-        }
+        profile.buttonState.value = pressed
     }
 
     private suspend fun advertise() {

@@ -20,7 +20,14 @@ and by `server.services` are **shared**: they have one value and one set of hand
 clients, and `update` notifies all subscribers.
 ```kotlin
 val services = centralManager.server.setup {
-    Service(IMMEDIATE_ALERT_SERVICE_UUID) {
+    Service(LINK_LOSS_UUID) {
+        Characteristic(
+            uuid = ALERT_LEVEL_UUID,
+            properties = CharacteristicProperty.READ and CharacteristicProperty.WRITE,
+            permissions = Permission.READ and Permission.WRITE,
+        )
+    }
+    Service(IMMEDIATE_ALERT_UUID) {
         Characteristic(
             uuid = ALERT_LEVEL_UUID,
             properties = CharacteristicProperty.WRITE_WITHOUT_RESPONSE,
@@ -40,7 +47,8 @@ be obtained with `server.services(peripheral.identifier)`.
 val alertLevel = centralManager.server
     .services(peripheral.identifier)
     .first { it.isNotEmpty() }
-    .first().characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+    .first { it.uuid == IMMEDIATE_ALERT_UUID }
+    .characteristics.first { it.uuid == ALERT_LEVEL_UUID }
 
 // Only the writes of this peripheral.
 alertLevel.writes
@@ -51,35 +59,65 @@ alertLevel.writes
 ### Profiles with local services
 
 A profile that needs both the services of the peripheral and the local ones extends
-`Profile.WithLocalServices`. It starts when the remote services were discovered and the local
-services are available, and its `localServices` are the per-client views of the peripheral:
+`Profile.WithLocalServices`. It starts when the remote services were discovered and all the local
+services are available, and its `localServices` are the per-client views of the peripheral. For
+example, in the Proximity Profile both devices have the Link Loss Service, and may have the
+Immediate Alert Service:
 ```kotlin
-class LinkLossProfile : Profile.WithLocalServices(
-    requiredServiceUuids = listOf(LINK_LOSS_SERVICE_UUID),
-    localServiceUuids = listOf(IMMEDIATE_ALERT_SERVICE_UUID),
-    name = "Link Loss",
-) {
-    private lateinit var linkLossAlertLevel: RemoteCharacteristic
-    private lateinit var immediateAlertLevel: LocalCharacteristic
+enum class AlertLevel(val value: Byte) {
+    NONE(0), MILD(1), HIGH(2);
 
-    override fun prepare(
-        target: Peripheral<*, *>,
-        remoteServices: List<RemoteService>,
-        localServices: List<LocalService>,
-    ) {
-        linkLossAlertLevel = remoteServices.first().characteristics.first { it.uuid == ALERT_LEVEL_UUID }
-        immediateAlertLevel = localServices.first().characteristics.first { it.uuid == ALERT_LEVEL_UUID }
-    }
-
-    override suspend fun CoroutineScope.initialize(target: Peripheral<*, *>) {
-        immediateAlertLevel.writes
-            .onEach { println("The peripheral asks to alert: ${it.value.first()}") }
-            .launchIn(this)
-        linkLossAlertLevel.write(byteArrayOf(HIGH_ALERT))
+    companion object {
+        fun of(value: Byte) = entries.firstOrNull { it.value == value } ?: NONE
     }
 }
 
-peripheral.profile(scope, LinkLossProfile())
+class ProximityProfile : Profile.WithLocalServices(
+    // Both devices have the Link Loss Service, and may have the Immediate Alert and TX Power
+    // services. This sample does not use the TX Power Service.
+    requiredServiceUuids = listOf(LINK_LOSS_UUID),
+    optionalServiceUuids = listOf(IMMEDIATE_ALERT_UUID, TX_POWER_UUID),
+    localServiceUuids = listOf(LINK_LOSS_UUID, IMMEDIATE_ALERT_UUID),
+    name = "Proximity",
+) {
+    private lateinit var linkLossCharacteristic: RemoteCharacteristic
+    private var remoteAlertCharacteristic: RemoteCharacteristic? = null
+    private lateinit var localAlertCharacteristic: LocalCharacteristic
+
+    /** The alert level requested by the other device, which this device should signal. */
+    val localAlertState: StateFlow<AlertLevel>
+        field = MutableStateFlow(AlertLevel.NONE)
+
+    override fun prepare(
+        peripheral: Peripheral<*, *>,
+        remoteServices: List<RemoteService>,
+        localServices: List<LocalService>,
+    ) {
+        linkLossCharacteristic = remoteServices.first { it.uuid == LINK_LOSS_UUID }
+            .characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+        remoteAlertCharacteristic = remoteServices.firstOrNull { it.uuid == IMMEDIATE_ALERT_UUID }
+            ?.characteristics?.first { it.uuid == ALERT_LEVEL_UUID }
+        localAlertCharacteristic = localServices.first { it.uuid == IMMEDIATE_ALERT_UUID }
+            .characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+    }
+
+    override suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>) {
+        // The local characteristic is the view of this peripheral, so only its writes are emitted.
+        localAlertCharacteristic.writes
+            .onEach { localAlertState.value = AlertLevel.of(it.value.first()) }
+            .launchIn(this)
+        // The other device will alert when the link is lost.
+        linkLossCharacteristic.write(byteArrayOf(AlertLevel.HIGH.value), WriteType.WITH_RESPONSE)
+    }
+
+    /** Asks the other device to alert. */
+    suspend fun alert(level: AlertLevel) {
+        val characteristic = checkNotNull(remoteAlertCharacteristic) { "No Immediate Alert Service" }
+        characteristic.write(byteArrayOf(level.value), WriteType.WITHOUT_RESPONSE)
+    }
+}
+
+peripheral.profile(scope, ProximityProfile())
 ```
 The profile does not add the local services, the application does using `setup`. If they
 are replaced, the profile is started again with the new ones. The profiles that use the server

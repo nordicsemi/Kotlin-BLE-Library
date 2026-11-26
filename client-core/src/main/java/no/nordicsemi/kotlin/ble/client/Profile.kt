@@ -29,7 +29,7 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-@file:Suppress("unused")
+@file:Suppress("unused", "PARAMETER_NAME_CHANGED_ON_OVERRIDE")
 
 package no.nordicsemi.kotlin.ble.client
 
@@ -244,7 +244,7 @@ sealed class Profile(
      * @param peripheral The peripheral the profile is being resolved on.
      * @see prepare
      */
-    abstract override suspend fun CoroutineScope.initialize(target: Peripheral<*, *>)
+    abstract override suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>)
 
     /**
      * Notifies the profile implementation, that the peripheral does not support the required
@@ -286,7 +286,7 @@ sealed class Profile(
      * @param peripheral The peripheral the profile is being resolved on.
      * @see Peripheral.profile
      */
-    override suspend fun unsupported(target: Peripheral<*, *>) {
+    override suspend fun unsupported(peripheral: Peripheral<*, *>) {
         // Empty default implementation.
     }
 
@@ -314,8 +314,8 @@ sealed class Profile(
         // Empty default implementation.
     }
 
-    final override suspend fun failed(target: Peripheral<*, *>, reason: Any) =
-        failed(target, reason as RemoteServices.Failed.Reason)
+    final override suspend fun failed(peripheral: Peripheral<*, *>, reason: Any) =
+        failed(peripheral, reason as RemoteServices.Failed.Reason)
 
     /**
      * Runs [prepare] on behalf of [Peripheral.profile], before it commits to reporting
@@ -384,10 +384,10 @@ sealed class Profile(
          * @hide
          */
         final override fun prepare(
-            target: Peripheral<*, *>,
+            peripheral: Peripheral<*, *>,
             remoteServices: List<RemoteService>,
             localServices: List<LocalService>,
-        ) = prepare(target, remoteServices)
+        ) = prepare(peripheral, remoteServices)
 
         /**
          * Validates and prepares the services to be used in [initialize].
@@ -432,43 +432,69 @@ sealed class Profile(
      * A class representing a multiservice GATT profile that also uses local GATT services.
      *
      * This is intended for profiles that use services of the remote peripheral and the services
-     * of this device, i.e. Link Loss, where the remote Link Loss Service is written to configure
-     * the alert, and the local Immediate Alert Service is written by the peripheral when it wants
-     * this device to alert.
+     * of this device, i.e. the Proximity Profile. Both devices have the Link Loss Service, where
+     * the alert that is signalled when the link is lost is set, and may have the Immediate Alert
+     * Service, which is written to make the other device alert, and the TX Power Service.
      *
      * The local services are not added by the profile. The application defines them when setting
-     * up the local server of the central manager, see [CentralManager.server]. The profile is started when the
-     * required remote services were discovered and the local services are available. See
-     * [Peripheral.profile].
+     * up the local server of the central manager, see [CentralManager.server]. The profile is
+     * started when the required remote services were discovered and all the local services are
+     * available. See [Peripheral.profile].
      *
-     * Implement `prepare(target, remoteServices, localServices)`, which validates the services,
+     * Implement `prepare(peripheral, remoteServices, localServices)`, which validates the services,
      * and [initialize].
      *
      * ```kotlin
-     * class LinkLossProfile : Profile.WithLocalServices(
-     *     requiredServiceUuids = listOf(LINK_LOSS_SERVICE_UUID),
-     *     localServiceUuids = listOf(IMMEDIATE_ALERT_SERVICE_UUID),
-     *     name = "Link Loss",
+     * enum class AlertLevel(val value: Byte) {
+     *     NONE(0), MILD(1), HIGH(2);
+     *
+     *     companion object {
+     *         fun of(value: Byte) = entries.firstOrNull { it.value == value } ?: NONE
+     *     }
+     * }
+     *
+     * class ProximityProfile : Profile.WithLocalServices(
+     *     // Both devices have the Link Loss Service, and may have the Immediate Alert and TX Power
+     *     // services. This sample does not use the TX Power Service.
+     *     requiredServiceUuids = listOf(LINK_LOSS_UUID),
+     *     optionalServiceUuids = listOf(IMMEDIATE_ALERT_UUID, TX_POWER_UUID),
+     *     localServiceUuids = listOf(LINK_LOSS_UUID, IMMEDIATE_ALERT_UUID),
+     *     name = "Proximity",
      * ) {
-     *     private lateinit var linkLossAlertLevel: RemoteCharacteristic
-     *     private lateinit var immediateAlertLevel: LocalCharacteristic
+     *     private lateinit var linkLossCharacteristic: RemoteCharacteristic
+     *     private var remoteAlertCharacteristic: RemoteCharacteristic? = null
+     *     private lateinit var localAlertCharacteristic: LocalCharacteristic
+     *
+     *     /** The alert level requested by the other device, which this device should signal. */
+     *     val localAlertState: StateFlow<AlertLevel>
+     *         field = MutableStateFlow(AlertLevel.NONE)
      *
      *     override fun prepare(
-     *         target: Peripheral<*, *>,
+     *         peripheral: Peripheral<*, *>,
      *         remoteServices: List<RemoteService>,
      *         localServices: List<LocalService>,
      *     ) {
-     *         linkLossAlertLevel = remoteServices.first().characteristics.first { it.uuid == ALERT_LEVEL_UUID }
-     *         immediateAlertLevel = localServices.first().characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+     *         linkLossCharacteristic = remoteServices.first { it.uuid == LINK_LOSS_UUID }
+     *             .characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+     *         remoteAlertCharacteristic = remoteServices.firstOrNull { it.uuid == IMMEDIATE_ALERT_UUID }
+     *             ?.characteristics?.first { it.uuid == ALERT_LEVEL_UUID }
+     *         localAlertCharacteristic = localServices.first { it.uuid == IMMEDIATE_ALERT_UUID }
+     *             .characteristics.first { it.uuid == ALERT_LEVEL_UUID }
      *     }
      *
-     *     override suspend fun CoroutineScope.initialize(target: Peripheral<*, *>) {
-     *         // The local characteristic is the view of this peripheral, so only its write requests are
-     *         // emitted.
-     *         immediateAlertLevel.writes
-     *             .onEach { alert(it.value) }
+     *     override suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>) {
+     *         // The local characteristic is the view of this peripheral, so only its writes are emitted.
+     *         localAlertCharacteristic.writes
+     *             .onEach { localAlertState.value = AlertLevel.of(it.value.first()) }
      *             .launchIn(this)
-     *         linkLossAlertLevel.write(byteArrayOf(HIGH_ALERT))
+     *         // The other device will alert when the link is lost.
+     *         linkLossCharacteristic.write(byteArrayOf(AlertLevel.HIGH.value), WriteType.WITH_RESPONSE)
+     *     }
+     *
+     *     /** Asks the other device to alert. */
+     *     suspend fun alert(level: AlertLevel) {
+     *         val characteristic = checkNotNull(remoteAlertCharacteristic) { "No Immediate Alert Service" }
+     *         characteristic.write(byteArrayOf(level.value), WriteType.WITHOUT_RESPONSE)
      *     }
      * }
      * ```
@@ -517,10 +543,10 @@ sealed class Profile(
          * @hide
          */
         final override fun prepare(
-            target: Peripheral<*, *>,
+            peripheral: Peripheral<*, *>,
             remoteServices: List<RemoteService>,
             localServices: List<LocalService>,
-        ) = prepare(target, instance(remoteServices))
+        ) = prepare(peripheral, instance(remoteServices))
 
         /**
          * This method should select a single service instance from the list of identical services

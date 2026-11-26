@@ -29,6 +29,8 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+@file:Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+
 package no.nordicsemi.kotlin.ble.server
 
 import kotlinx.coroutines.CoroutineScope
@@ -48,19 +50,35 @@ import kotlin.uuid.Uuid
  * #### Example
  * ```kotlin
  * class LedButtonServerProfile : LocalProfile.Simple(
- *     serviceUuid = SERVICE_UUID,
+ *     serviceUuid = LBS_UUID,
  *     name = "LBS",
  * ) {
- *     private lateinit var led: LocalCharacteristic
+ *     private lateinit var ledCharacteristic: LocalCharacteristic
+ *     private lateinit var buttonCharacteristic: LocalCharacteristic
  *
+ *     /** The LED is controlled by the client, which writes the LED characteristic. */
+ *     val ledState: StateFlow<Boolean>
+ *         field = MutableStateFlow(false)
+ *
+ *     /** The Button is controlled by the server. A change notifies the subscribed clients. */
+ *     val buttonState = MutableStateFlow(false)
+ *
+ *     // Throw NoSuchElementException or IllegalArgumentException to reject the service.
  *     override fun prepare(server: LocalServer<*>, service: LocalService) {
- *         led = service.characteristics.first { it.uuid == LED_UUID }
+ *         ledCharacteristic = service.characteristics.first { it.uuid == LED_UUID }
+ *         buttonCharacteristic = service.characteristics.first { it.uuid == BUTTON_UUID }
  *     }
  *
- *     override suspend fun CoroutineScope.initialize(target: LocalServer<*>) {
- *         led.setValue(byteArrayOf(0))
- *         led.writes
- *             .onEach { println("LED: ${it.value.first()}") }
+ *     // Cancelled when the services are replaced or the profile is unregistered.
+ *     override suspend fun CoroutineScope.initialize(server: LocalServer<*>) {
+ *         ledCharacteristic.setValue(byteArrayOf(0))
+ *         buttonCharacteristic.setValue(byteArrayOf(0))
+ *         // The state follows the value of the characteristic, which can also be set by the server.
+ *         ledCharacteristic.value
+ *             .onEach { value -> ledState.value = value.singleOrNull() == 1.toByte() }
+ *             .launchIn(this)
+ *         buttonState
+ *             .onEach { pressed -> buttonCharacteristic.update(byteArrayOf(if (pressed) 1 else 0)) }
  *             .launchIn(this)
  *     }
  * }
@@ -91,9 +109,9 @@ sealed class LocalProfile(
      * to release whatever the profile acquired. When the work is done in the coroutines
      * launched in the scope, the profile keeps running until the scope is cancelled.
      *
-     * @param target The server the profile is registered on.
+     * @param server The server the profile is registered on.
      */
-    abstract override suspend fun CoroutineScope.initialize(target: LocalServer<*>)
+    abstract override suspend fun CoroutineScope.initialize(server: LocalServer<*>)
 
     /**
      * Called when the local services were found, but rejected by `prepare`.
@@ -101,7 +119,7 @@ sealed class LocalProfile(
      * Throw [IllegalArgumentException] or [NoSuchElementException] from `prepare` to reject
      * the services, for example when a required characteristic is missing.
      */
-    override suspend fun unsupported(target: LocalServer<*>) {
+    override suspend fun unsupported(server: LocalServer<*>) {
         // Empty default implementation.
     }
 
@@ -119,10 +137,10 @@ sealed class LocalProfile(
         name = name,
     ) {
         final override fun prepare(
-            target: LocalServer<*>,
+            server: LocalServer<*>,
             remoteServices: List<Nothing>,
             localServices: List<LocalService>,
-        ) = prepare(target, localServices.first())
+        ) = prepare(server, localServices.first())
 
         /**
          * Gets the characteristics from the service and validates them.
@@ -150,10 +168,10 @@ sealed class LocalProfile(
         name = name,
     ) {
         final override fun prepare(
-            target: LocalServer<*>,
+            server: LocalServer<*>,
             remoteServices: List<Nothing>,
             localServices: List<LocalService>,
-        ) = prepare(target, localServices)
+        ) = prepare(server, localServices)
 
         /**
          * Gets the characteristics from the services and validates them.
