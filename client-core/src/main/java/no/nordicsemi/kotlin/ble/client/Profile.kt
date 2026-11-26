@@ -48,159 +48,14 @@ import no.nordicsemi.kotlin.ble.core.Profile as CoreProfile
  *
  * Use [Peripheral.profile] to register a profile on a peripheral.
  *
- * ## Example
+ * ## Types of profiles
  *
- * ### Simple profile
- *
- * A profile based on a single GATT service extends [Simple].
- *
- * #### Profile definition
- *
- * ```kotlin
- * /**
- *  * API of the profile.
- *  */
- * interface LedButton {
- *     /** The current button state on the DK. */
- *     val buttonState: StateFlow<Boolean>
- *     /** The LED state. */
- *     val ledState: MutableStateFlow<Boolean>
- * }
- *
- * class LedButtonProfile: Profile.Simple(
- *     serviceUuid = SERVICE_UUID,
- *     name = "LBS",
- * ), LedButton {
- *     companion object {
- *         val SERVICE_UUID = Uuid.parse("00001523-1212-efde-1523-785feabcd123")
- *         val BUTTON_CHARACTERISTIC_UUID = Uuid.parse("00001524-1212-efde-1523-785feabcd123")
- *         val LED_CHARACTERISTIC_UUID = Uuid.parse("00001525-1212-efde-1523-785feabcd123")
- *     }
- *
- *     // GATT characteristics.
- *     private lateinit var buttonCharacteristic: RemoteCharacteristic
- *     private lateinit var ledCharacteristic: RemoteCharacteristic
- *
- *     // Public API.
- *     override val buttonState: StateFlow<Boolean>
- *         field = MutableStateFlow(false)
- *     override val ledState: MutableStateFlow<Boolean> = MutableStateFlow(false)
- *
- *     // Implementation.
- *     override fun prepare(peripheral: Peripheral<*, *>, service: RemoteService) {
- *         // This should always pass.
- *         require(service.uuid == SERVICE_UUID)
- *
- *         // Obtain characteristics from the service.
- *         buttonCharacteristic = service.characteristics.first { it.uuid == BUTTON_CHARACTERISTIC_UUID }
- *         ledCharacteristic = service.characteristics.first { it.uuid == LED_CHARACTERISTIC_UUID }
- *
- *         // Validate properties.
- *         require(buttonCharacteristic.isSubscribable()) { "Button characteristic must be subscribable." }
- *         require(ledCharacteristic.isWritable()) { "LED characteristic must be writable." }
- *     }
- *
- *     override suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>) {
- *         // Subscribe to button characteristic.
- *         buttonCharacteristic
- *             .subscribe()
- *             .map { value -> value.singleOrNull() == 1.toByte() }
- *             .onEach { isPressed -> buttonState.update { isPressed } }
- *             .launchIn(this)
- *
- *         // Read current Button state.
- *         try {
- *             val currentState = buttonCharacteristic.read()
- *             buttonState.update { currentState.singleOrNull() == 1.toByte() }
- *         } catch (e: OperationFailedException) {
- *             println("Reading button characteristic failed: ${e.message}")
- *         }
- *
- *         // Handle LED state updates.
- *         ledState
- *             .map { isOn -> byteArrayOf(if (isOn) 1 else 0) }
- *             .onEach { value ->
- *                 try {
- *                     ledCharacteristic.write(value)
- *                 } catch (e: OperationFailedException) {
- *                     println("Writing LED characteristic failed: ${e.message}")
- *                 }
- *             }
- *             .launchIn(this)
- *     }
- * }
- * ```
- * #### Usage
- * ```kotlin
- * val api: LedButton = LedButtonProfile()
- *    .also { peripheral.profile(it) }
- * ```
- *
- * ### Multiservice profile
- *
- * A profile based on multiple GATT services, some of which may be optional, extends
- * [MultiService].
- *
- * #### Profile definition
- *
- * ```kotlin
- * /**
- *  * API of the profile.
- *  */
- * interface Proximity {
- *     /** Whether the peripheral also exposes the optional Immediate Alert Service. */
- *     val isImmediateAlertSupported: Boolean
- *     /** Writes the given alert level to the Link Loss Service. */
- *     suspend fun setLinkLossAlertLevel(level: Int)
- * }
- *
- * class ProximityProfile : Profile.MultiService(
- *     requiredServiceUuids = listOf(LINK_LOSS_SERVICE_UUID),
- *     optionalServiceUuids = listOf(IMMEDIATE_ALERT_SERVICE_UUID),
- *     name = "Proximity",
- * ), Proximity {
- *     companion object {
- *         val LINK_LOSS_SERVICE_UUID = Uuid.parse("00001803-0000-1000-8000-00805f9b34fb")
- *         val IMMEDIATE_ALERT_SERVICE_UUID = Uuid.parse("00001802-0000-1000-8000-00805f9b34fb")
- *         val ALERT_LEVEL_UUID = Uuid.parse("00002a06-0000-1000-8000-00805f9b34fb")
- *         const val HIGH_ALERT = 2
- *     }
- *
- *     // GATT characteristics.
- *     private lateinit var linkLossAlertLevel: RemoteCharacteristic
- *     private var immediateAlertLevel: RemoteCharacteristic? = null
- *
- *     // Public API.
- *     override val isImmediateAlertSupported: Boolean
- *         get() = immediateAlertLevel != null
- *
- *     // Implementation.
- *     override fun prepare(peripheral: Peripheral<*, *>, services: List<RemoteService>) {
- *         // Link Loss Service is required.
- *         val linkLossService = services.first { it.uuid == LINK_LOSS_SERVICE_UUID }
- *         linkLossAlertLevel = linkLossService.characteristics.first { it.uuid == ALERT_LEVEL_UUID }
- *         require(linkLossAlertLevel.isWritable()) { "Alert Level characteristic must be writable." }
- *
- *         // Immediate Alert Service is optional - only present if the peripheral supports it.
- *         immediateAlertLevel = services.firstOrNull { it.uuid == IMMEDIATE_ALERT_SERVICE_UUID }
- *             ?.characteristics?.first { it.uuid == ALERT_LEVEL_UUID }
- *     }
- *
- *     override suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>) {
- *         // Set the Link Loss Alert Level to High as soon as the profile is initialized.
- *         setLinkLossAlertLevel(HIGH_ALERT)
- *     }
- *
- *     override suspend fun setLinkLossAlertLevel(level: Int) {
- *         linkLossAlertLevel.write(byteArrayOf(level.toByte()))
- *     }
- * }
- * ```
- * #### Usage
- * ```kotlin
- * val api: Proximity = ProximityProfile()
- *    .also { peripheral.profile(it) }
- * ```
+ * Extend one of the classes below. Each of them has a full example.
+ * * [Simple] - a profile based on a single GATT service of the peripheral,
+ * * [MultiService] - a profile based on multiple GATT services of the peripheral, some of which
+ *   may be optional,
+ * * [WithLocalServices] - a profile that also uses the local GATT services of this device, which
+ *   are defined in the server of the central manager.
  *
  * @property requiredServiceUuids A list of UUIDs of required profile GATT services.
  * @property optionalServiceUuids A list of UUIDs of optional profile GATT services.
@@ -365,7 +220,69 @@ sealed class Profile(
      * instances of the same service if returned by the service discovery. For example, if a device
      * has multiple batteries, it may expose their level with a *Battery Service* for each of them.
      *
-     * See [Profile] for a full worked example (`ProximityProfile`).
+     * ## Example
+     *
+     * #### Profile definition
+     *
+     * ```kotlin
+     * /**
+     *  * API of the profile.
+     *  */
+     * interface ProximityMonitor {
+     *     /** Whether the peripheral also exposes the optional Immediate Alert Service. */
+     *     val isImmediateAlertSupported: Boolean
+     *     /** Writes the given alert level to the Link Loss Service. */
+     *     suspend fun setLinkLossAlertLevel(level: Int)
+     * }
+     *
+     * class ProximityMonitorProfile : Profile.MultiService(
+     *     requiredServiceUuids = listOf(LINK_LOSS_SERVICE_UUID),
+     *     optionalServiceUuids = listOf(IMMEDIATE_ALERT_SERVICE_UUID),
+     *     name = "Proximity",
+     * ), ProximityMonitor {
+     *     companion object {
+     *         val LINK_LOSS_SERVICE_UUID = Uuid.parse("00001803-0000-1000-8000-00805f9b34fb")
+     *         val IMMEDIATE_ALERT_SERVICE_UUID = Uuid.parse("00001802-0000-1000-8000-00805f9b34fb")
+     *         val ALERT_LEVEL_UUID = Uuid.parse("00002a06-0000-1000-8000-00805f9b34fb")
+     *         const val HIGH_ALERT = 2
+     *     }
+     *
+     *     // GATT characteristics.
+     *     private lateinit var linkLossCharacteristic: RemoteCharacteristic
+     *     private var immediateAlertCharacteristic: RemoteCharacteristic? = null
+     *
+     *     // Public API.
+     *     override val isImmediateAlertSupported: Boolean
+     *         get() = immediateAlertCharacteristic != null
+     *
+     *     // Implementation.
+     *     override fun prepare(peripheral: Peripheral<*, *>, services: List<RemoteService>) {
+     *         // Link Loss Service is required.
+     *         val linkLossService = services.first { it.uuid == LINK_LOSS_SERVICE_UUID }
+     *         linkLossCharacteristic = linkLossService.characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+     *         require(linkLossCharacteristic.isWritable()) { "Alert Level characteristic must be writable." }
+     *
+     *         // Immediate Alert Service is optional - only present if the peripheral supports it.
+     *         immediateAlertCharacteristic = services.firstOrNull { it.uuid == IMMEDIATE_ALERT_SERVICE_UUID }
+     *             ?.characteristics?.first { it.uuid == ALERT_LEVEL_UUID }
+     *     }
+     *
+     *     override suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>) {
+     *         // Set the Link Loss Alert Level to High as soon as the profile is initialized.
+     *         setLinkLossAlertLevel(HIGH_ALERT)
+     *     }
+     *
+     *     override suspend fun setLinkLossAlertLevel(level: Int) {
+     *         linkLossCharacteristic.write(byteArrayOf(level.toByte()))
+     *     }
+     * }
+     * ```
+     * #### Usage
+     * ```kotlin
+     * val api: ProximityMonitor = ProximityMonitorProfile()
+     *    .also { peripheral.profile(it) }
+     * ```
+     *
      *
      * @param requiredServiceUuids A list of UUIDs of required profile GATT services.
      * @param optionalServiceUuids A list of UUIDs of optional profile GATT services.
@@ -405,18 +322,18 @@ sealed class Profile(
          *
          * #### Example
          *
-         * See [Profile] for a full worked example (`ProximityProfile`); the relevant part of its
+         * See [MultiService] for a full worked example (`ProximityMonitorProfile`); the relevant part of its
          * `prepare` is:
          *
          * ```kotlin
          * override fun prepare(peripheral: Peripheral<*, *>, services: List<RemoteService>) {
          *     // Link Loss Service is required.
          *     val linkLossService = services.first { it.uuid == LINK_LOSS_SERVICE_UUID }
-         *     linkLossAlertLevel = linkLossService.characteristics.first { it.uuid == ALERT_LEVEL_UUID }
-         *     require(linkLossAlertLevel.isWritable()) { "Alert Level characteristic must be writable." }
+         *     linkLossCharacteristic = linkLossService.characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+         *     require(linkLossCharacteristic.isWritable()) { "Alert Level characteristic must be writable." }
          *
          *     // Immediate Alert Service is optional - only present if the peripheral supports it.
-         *     immediateAlertLevel = services.firstOrNull { it.uuid == IMMEDIATE_ALERT_SERVICE_UUID }
+         *     immediateAlertCharacteristic = services.firstOrNull { it.uuid == IMMEDIATE_ALERT_SERVICE_UUID }
          *         ?.characteristics?.first { it.uuid == ALERT_LEVEL_UUID }
          * }
          * ```
@@ -527,7 +444,90 @@ sealed class Profile(
      *
      * Note, that the list of services contains only GATT services with specified service UUID.
      *
-     * See [Profile] for a full worked example (`LedButtonProfile`).
+     * ## Example
+     *
+     * #### Profile definition
+     *
+     * ```kotlin
+     * /**
+     *  * API of the profile.
+     *  */
+     * interface LedButton {
+     *     /** The current button state on the DK. */
+     *     val buttonState: StateFlow<Boolean>
+     *     /** The LED state. */
+     *     val ledState: MutableStateFlow<Boolean>
+     * }
+     *
+     * class LedButtonProfile: Profile.Simple(
+     *     serviceUuid = SERVICE_UUID,
+     *     name = "LBS",
+     * ), LedButton {
+     *     companion object {
+     *         val SERVICE_UUID = Uuid.parse("00001523-1212-efde-1523-785feabcd123")
+     *         val BUTTON_CHARACTERISTIC_UUID = Uuid.parse("00001524-1212-efde-1523-785feabcd123")
+     *         val LED_CHARACTERISTIC_UUID = Uuid.parse("00001525-1212-efde-1523-785feabcd123")
+     *     }
+     *
+     *     // GATT characteristics.
+     *     private lateinit var buttonCharacteristic: RemoteCharacteristic
+     *     private lateinit var ledCharacteristic: RemoteCharacteristic
+     *
+     *     // Public API.
+     *     override val buttonState: StateFlow<Boolean>
+     *         field = MutableStateFlow(false)
+     *     override val ledState: MutableStateFlow<Boolean> = MutableStateFlow(false)
+     *
+     *     // Implementation.
+     *     override fun prepare(peripheral: Peripheral<*, *>, service: RemoteService) {
+     *         // This should always pass.
+     *         require(service.uuid == SERVICE_UUID)
+     *
+     *         // Obtain characteristics from the service.
+     *         buttonCharacteristic = service.characteristics.first { it.uuid == BUTTON_CHARACTERISTIC_UUID }
+     *         ledCharacteristic = service.characteristics.first { it.uuid == LED_CHARACTERISTIC_UUID }
+     *
+     *         // Validate properties.
+     *         require(buttonCharacteristic.isSubscribable()) { "Button characteristic must be subscribable." }
+     *         require(ledCharacteristic.isWritable()) { "LED characteristic must be writable." }
+     *     }
+     *
+     *     override suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>) {
+     *         // Subscribe to button characteristic.
+     *         buttonCharacteristic
+     *             .subscribe()
+     *             .map { value -> value.singleOrNull() == 1.toByte() }
+     *             .onEach { isPressed -> buttonState.update { isPressed } }
+     *             .launchIn(this)
+     *
+     *         // Read current Button state.
+     *         try {
+     *             val currentState = buttonCharacteristic.read()
+     *             buttonState.update { currentState.singleOrNull() == 1.toByte() }
+     *         } catch (e: OperationFailedException) {
+     *             println("Reading button characteristic failed: ${e.message}")
+     *         }
+     *
+     *         // Handle LED state updates.
+     *         ledState
+     *             .map { isOn -> byteArrayOf(if (isOn) 1 else 0) }
+     *             .onEach { value ->
+     *                 try {
+     *                     ledCharacteristic.write(value)
+     *                 } catch (e: OperationFailedException) {
+     *                     println("Writing LED characteristic failed: ${e.message}")
+     *                 }
+     *             }
+     *             .launchIn(this)
+     *     }
+     * }
+     * ```
+     * #### Usage
+     * ```kotlin
+     * val api: LedButton = LedButtonProfile()
+     *    .also { peripheral.profile(it) }
+     * ```
+     *
      *
      * @param serviceUuid The UUID of the GATT service.
      * @param name The name of the profile. This is for convenience, used only in logging.

@@ -1459,8 +1459,8 @@ abstract class Peripheral<ID: Any, EX: Peripheral.Executor<ID>>(
      * connection; it is not rethrown, so it cannot cancel [scope] or any other profile registered
      * on it.
      *
-     * See [Profile] for how to implement one, with examples for both single- and multi-service
-     * profiles.
+     * See [Profile] for how to implement one: [Profile.Simple], [Profile.MultiService] and
+     * [Profile.WithLocalServices] have examples.
      *
      * ## Local services
      *

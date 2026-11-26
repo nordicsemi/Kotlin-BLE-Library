@@ -134,7 +134,6 @@ import kotlin.uuid.Uuid
  * the [eventHandler], or `null`.
  * @param clientRole The block that uses the GATT server of the phone while the peripheral is
  * connected, or `null`, see [Builder.client].
- * @param services The services available after service discovery.
  * @param cachedServices The services cached on the client side.
  * @param isServiceCacheValid Whether the cached services are valid.
  */
