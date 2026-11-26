@@ -69,6 +69,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
@@ -265,8 +266,8 @@ private fun LedPanel(
         },
         label = "LED",
     )
-    val glow by animateColorAsState(
-        targetValue = if (isOn) Nordic.Color.Sun.copy(alpha = 0.25f) else Color.Transparent,
+    val glow by animateFloatAsState(
+        targetValue = if (isOn) 1f else 0f,
         label = "LED glow",
     )
     Panel(
@@ -275,9 +276,16 @@ private fun LedPanel(
         image = {
             Box(
                 modifier = Modifier
-                    .size(112.dp)
-                    .clip(CircleShape)
-                    .background(glow),
+                    .size(128.dp)
+                    // The light fades out from the bulb, like a glow.
+                    .background(
+                        brush = Brush.radialGradient(
+                            0.0f to Nordic.Color.Sun.copy(alpha = 0.55f * glow),
+                            0.45f to Nordic.Color.Sun.copy(alpha = 0.30f * glow),
+                            1.0f to Nordic.Color.Sun.copy(alpha = 0f),
+                        ),
+                        shape = CircleShape,
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -348,10 +356,7 @@ private fun ButtonPanel(
                 )
             }
         },
-        chips = {
-            InfoChip("State", if (isPressed) "Pressed" else "Released")
-            InfoChip("Subscribers", subscribersCount.toString())
-        },
+        chips = { InfoChip("Subscribers", subscribersCount.toString()) },
     )
 }
 
