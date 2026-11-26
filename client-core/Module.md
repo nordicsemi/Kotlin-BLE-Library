@@ -94,8 +94,8 @@ centralManager.server.setup {
     Service(IMMEDIATE_ALERT_UUID) {
         Characteristic(
             uuid = ALERT_LEVEL_UUID,
-            properties = CharacteristicProperty.WRITE_WITHOUT_RESPONSE,
-            permissions = Permission.WRITE,
+            property = CharacteristicProperty.WRITE_WITHOUT_RESPONSE,
+            permission = Permission.WRITE,
         )
     }
 }

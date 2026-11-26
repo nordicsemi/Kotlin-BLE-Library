@@ -71,6 +71,7 @@ led.onWrite {
 }
 
 // Provide the value on demand, for example based on the client that reads.
+var pressed = false
 button.onRead { ReadResponse.Success(byteArrayOf(if (pressed) 1 else 0)) }
 ```
 Accepted writes are emitted in `writes`, together with the client that sent them:

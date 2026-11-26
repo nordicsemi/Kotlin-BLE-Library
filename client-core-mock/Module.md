@@ -85,13 +85,16 @@ button.update(byteArrayOf(1))
 the GATT server: it may deny a connection, reject bonding, fail the service discovery, or react
 to a link loss and a reset.
 ```kotlin
-connectable(
-    name = "Blinky",
-    server = server,
-    eventHandler = object : PeripheralSpecEventHandler {
-        override fun onConnectionRequest(peripheral: MockPeripheral, phy: PrimaryPhy) = ConnectionResult.Deny
-    },
-)
+val spec = PeripheralSpec.simulatePeripheral(identifier = "01:02:03:04:05:06") {
+    advertising { CompleteLocalName("Blinky") }
+    connectable(
+        name = "Blinky",
+        server = server,
+        eventHandler = object : PeripheralSpecEventHandler {
+            override fun onConnectionRequest(peripheral: MockPeripheral, phy: PrimaryPhy) = ConnectionResult.Deny
+        },
+    )
+}
 ```
 The `PeripheralSpec` also simulates the events on the device side, for example
 `simulateProximityChange`, `simulateConnection` and `simulateDisconnection`,
@@ -110,7 +113,7 @@ the services, and the characteristics can be read, written and subscribed to.
 ```kotlin
 val tag = PeripheralSpec.simulatePeripheral("01:02:03:04:05:06") {
     advertising { CompleteLocalName("Tag") }
-    connectable(name = "Tag")
+    connectable(name = "Tag", eventHandler = object : PeripheralSpecEventHandler {}) { }
     client { server ->
         val discovered = server.services(listOf(IMMEDIATE_ALERT_SERVICE_UUID))
             .filterIsInstance<RemoteServices.Discovered>()

@@ -20,7 +20,7 @@ the client sees it, with the same API as a peripheral has in the client modules:
 discovered, and the characteristics are read, written and subscribed to. Requests are sent without
 simulating the transfer time:
 ```kotlin
-val client = server.simulateClient()
+val client = localServer.simulateClient()
 client.connect()
 
 val led = client.server.services(listOf(LBS_UUID))

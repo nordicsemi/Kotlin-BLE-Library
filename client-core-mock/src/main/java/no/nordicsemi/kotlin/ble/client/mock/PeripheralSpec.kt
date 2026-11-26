@@ -737,6 +737,7 @@ class PeripheralSpec<ID: Any> private constructor(
          *         }
          *     }
          * }
+         * ```
          *
          * @param identifier The peripheral identifier.
          * @param addressType The address type of the peripheral, default is [AddressType.RANDOM_STATIC].
@@ -2460,7 +2461,7 @@ class PeripheralSpec<ID: Any> private constructor(
          * ```kotlin
          * val tag = PeripheralSpec.simulatePeripheral("01:02:03:04:05:06") {
          *     advertising { CompleteLocalName("Tag") }
-         *     connectable(name = "Tag")
+         *     connectable(name = "Tag", eventHandler = object : PeripheralSpecEventHandler {}) { }
          *     client { server ->
          *         val discovered = server.services(listOf(IMMEDIATE_ALERT_SERVICE_UUID))
          *             .filterIsInstance<RemoteServices.Discovered>()

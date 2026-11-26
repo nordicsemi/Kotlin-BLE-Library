@@ -12,7 +12,7 @@ runs on a real device and in tests.
 | Type | What it adds to `client-core` |
 |------|-------------------------------|
 | `CentralManager` | Scan filters and `ScanOptions`, `ConnectionOptions` (`Direct` and `AutoConnect`) and the list of bonded peripherals. |
-| `Peripheral` | The MAC `address`, `bondState` and `encryptionState`, the PHY and connection parameters, and requests for the MTU, PHY, connection priority, bonding and clearing the service cache. |
+| `Peripheral` | The MAC `address`, `bondState` and `encryptionState`, the PHY and connection parameters, and requests for the highest value length (MTU), PHY, connection priority, bonding and clearing the service cache. |
 | `ScanResult`, `AdvertisingData` | The Android scan result with its advertising data. |
 
 The server of the central manager, `centralManager.server`, is the Android `LocalServer` of the
@@ -44,8 +44,8 @@ peripheral.bondState
     .launchIn(scope)
 
 peripheral.createBond()
-peripheral.requestMtu(247)
-peripheral.requestPhy(txPhy = Phy.PHY_LE_2M, rxPhy = Phy.PHY_LE_2M, phyOptions = PhyOption.NO_PREFERRED)
+peripheral.requestHighestValueLength()
+peripheral.setPreferredPhy(txPhy = Phy.PHY_LE_2M)
 peripheral.requestConnectionPriority(ConnectionPriority.HIGH)
 ```
 
