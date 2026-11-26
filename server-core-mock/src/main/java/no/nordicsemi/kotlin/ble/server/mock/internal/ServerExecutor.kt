@@ -71,15 +71,15 @@ internal const val SERVER_IDENTIFIER = "server"
  *
  * @param client The simulated client.
  * @param environment The environment.
- * @param scope The scope in which the events are forwarded.
+ * @param scope The scope in which the events are forwarded. The executor uses a child of it.
  */
 internal class ServerExecutor(
     private val client: MockClient<*>,
     override val environment: Environment,
-    parentScope: CoroutineScope,
+    scope: CoroutineScope,
 ): Peripheral.Executor<String> {
     // Collects the events of the client, until the executor is closed.
-    private val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob(parentScope.coroutineContext[Job]))
+    private val collectorScope = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]))
 
     override val identifier: String = SERVER_IDENTIFIER
     override val name: String? = null
@@ -93,7 +93,7 @@ internal class ServerExecutor(
     val attMtu: Int
         get() = client.attMtu.value
 
-    final override val events: SharedFlow<GattEvent>
+    override val events: SharedFlow<GattEvent>
         field = MutableSharedFlow<GattEvent>(extraBufferCapacity = 64)
 
     override var isClosed: Boolean = false
@@ -103,19 +103,19 @@ internal class ServerExecutor(
 
     init {
         // Unconfined and undispatched, so that the events are forwarded as they are emitted.
-        scope.launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+        collectorScope.launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
             client.updates.collect { update ->
                 events.emit(CharacteristicChanged(update.attribute, update.value))
             }
         }
-        scope.launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+        collectorScope.launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
             client.connectionState.collect { state ->
                 if (state is ConnectionState.Disconnected) {
                     events.emit(ConnectionStateChanged(state))
                 }
             }
         }
-        scope.launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
+        collectorScope.launch(Dispatchers.Unconfined, start = CoroutineStart.UNDISPATCHED) {
             var previous = client.services.value
             client.services.collect { services ->
                 // The services were set up again, which is what a Service Changed indication tells.
@@ -152,7 +152,7 @@ internal class ServerExecutor(
 
     override fun close() {
         isClosed = true
-        scope.cancel()
+        collectorScope.cancel()
     }
 }
 

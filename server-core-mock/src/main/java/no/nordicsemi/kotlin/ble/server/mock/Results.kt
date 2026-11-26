@@ -90,7 +90,11 @@ sealed class ReadResult {
  */
 sealed class WriteResult {
 
-    /** The write succeeded. For write commands (without response) this is always returned. */
+    /**
+     * The write operation succeeded.
+     *
+     * For write commands (without response) this is always returned.
+     */
     data object Success: WriteResult()
 
     /**

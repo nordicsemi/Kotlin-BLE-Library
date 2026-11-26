@@ -57,17 +57,17 @@ import kotlin.uuid.Uuid
 /**
  * A simulated client device, which talks to a [MockGattServer].
  *
- * It behaves like a real GATT client: it can read and write attributes using single requests, or
- * using the long read, long write and reliable write procedures, which are fragmented according to
- * the current MTU. It can enable and disable notifications and indications by writing the Client
- * Characteristic Configuration descriptor (the descriptor itself is handled by the server logic).
+ * A client has to be connected using [connect]. Then, [server] is the GATT server of the phone as
+ * the client sees it, with the same API as a peripheral has in the client modules: the services
+ * are discovered, and the characteristics are read, written and subscribed to, using the long
+ * read, long write and reliable write procedures when needed.
  *
  * All operations complete immediately, without any delays, when the server responds. They work
- * with the virtual time of `runTest`. Attributes are identified by their `instanceId`; use
- * [findCharacteristic] and similar methods to find them by UUIDs.
+ * with the virtual time of `runTest`. Requests are executed one at a time, like in a real ATT
+ * bearer.
  *
- * A client has to be connected using [connect] before sending requests. Requests are executed one
- * at a time, like in a real ATT bearer.
+ * The requests identifying attributes by their `instanceId`, like [findCharacteristic], are
+ * the low-level transport of the mock modules, see [LowLevelMockApi].
  *
  * This class is meant to be extended by platform-specific mock clients, which also implement
  * the platform-specific [Client] interface.
