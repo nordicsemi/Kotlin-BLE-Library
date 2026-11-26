@@ -37,6 +37,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import no.nordicsemi.kotlin.ble.core.ATT_MTU_DEFAULT
@@ -93,7 +95,10 @@ internal class NativeClient(
     @Volatile
     private var disconnectRequested = false
 
-    /** The pending request to change the PHY. */
+    /** Only one request to change the PHY can be in flight. */
+    private val phyLock = Mutex()
+
+    /** The pending request to change the PHY, which is completed by `onPhyUpdate`. */
     @Volatile
     private var phyRequest: CompletableDeferred<PhyInUse>? = null
 
@@ -109,15 +114,19 @@ internal class NativeClient(
         if (!state.value.isConnected) {
             throw ClientNotConnectedException()
         }
-        val request = CompletableDeferred<PhyInUse>()
-        phyRequest = request
-        try {
-            return withTimeout(timeout) {
-                server.setPreferredPhy(this@NativeClient, txPhy, rxPhy, phyOptions)
-                request.await()
+        // The request enters the lock of the client, the stack is asked to change the PHY, and
+        // the callback completes the request, the same way as the notifications are sent.
+        return phyLock.withLock {
+            val request = CompletableDeferred<PhyInUse>()
+            phyRequest = request
+            try {
+                withTimeout(timeout) {
+                    server.setPreferredPhy(this@NativeClient, txPhy, rxPhy, phyOptions)
+                    request.await()
+                }
+            } finally {
+                phyRequest = null
             }
-        } finally {
-            phyRequest = null
         }
     }
 
