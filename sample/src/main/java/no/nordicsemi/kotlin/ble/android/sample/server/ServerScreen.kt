@@ -63,7 +63,7 @@ fun ServerScreen() {
     val isAdvertising by vm.isAdvertising.collectAsStateWithLifecycle()
     val isLedOn by vm.ledState.collectAsStateWithLifecycle()
     val isButtonPressed by vm.buttonState.collectAsStateWithLifecycle()
-    val subscribersCount by vm.subscribersCount.collectAsStateWithLifecycle()
+    val subscribers by vm.subscribers.collectAsStateWithLifecycle()
     val clients by vm.clients.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
 
@@ -96,7 +96,7 @@ fun ServerScreen() {
                 isAdvertising = isAdvertising,
                 isLedOn = isLedOn,
                 isButtonPressed = isButtonPressed,
-                subscribersCount = subscribersCount,
+                subscribersCount = subscribers.size,
                 clients = clients,
                 errorMessage = error,
                 onButtonPressedChanged = vm::onButtonPressedChanged,

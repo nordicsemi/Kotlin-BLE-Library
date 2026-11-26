@@ -73,10 +73,6 @@ class LedButtonServerProfile : LocalProfile.Simple(
     val subscribers: StateFlow<Set<String>>
         field = MutableStateFlow(emptySet())
 
-    /** The number of clients subscribed to the Button characteristic. */
-    val subscribersCount: StateFlow<Int>
-        field = MutableStateFlow(0)
-
     override fun prepare(server: LocalServer<*>, service: LocalService) {
         val characteristics = service.characteristics
         ledCharacteristic = characteristics.first { it.uuid == LedButtonProfile.LED_CHARACTERISTIC_UUID }
@@ -121,10 +117,7 @@ class LedButtonServerProfile : LocalProfile.Simple(
             }
             .launchIn(this)
         buttonCharacteristic.subscribers
-            .onEach { clients ->
-                subscribers.value = clients.map { it.identifier.toString() }.toSet()
-                subscribersCount.value = clients.size
-            }
+            .onEach { clients -> subscribers.value = clients.map { it.identifier.toString() }.toSet() }
             .launchIn(this)
 
         try {
@@ -132,7 +125,6 @@ class LedButtonServerProfile : LocalProfile.Simple(
         } finally {
             buttonState.value = false
             subscribers.value = emptySet()
-            subscribersCount.value = 0
         }
     }
 

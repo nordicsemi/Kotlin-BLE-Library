@@ -94,8 +94,8 @@ class ServerViewModel @Inject constructor(
     /** The state of the Button, set by the user. */
     val buttonState: StateFlow<Boolean> = profile.buttonState
 
-    /** The number of clients subscribed to the Button characteristic. */
-    val subscribersCount: StateFlow<Int> = profile.subscribersCount
+    /** The identifiers of the clients subscribed to the Button characteristic. */
+    val subscribers: StateFlow<Set<String>> = profile.subscribers
 
     val error: StateFlow<String?>
         field = MutableStateFlow<String?>(null)
