@@ -44,47 +44,11 @@ import kotlin.uuid.Uuid
  * application, using [LocalServer.setup]. The profile starts when all of its services exist,
  * and it is cancelled and started again when the services are replaced.
  *
- * A profile based on a single service extends [Simple]. A profile based on more services extends
- * [MultiService].
+ * ## Types of profiles
  *
- * #### Example
- * ```kotlin
- * class LedButtonServerProfile : LocalProfile.Simple(
- *     serviceUuid = LBS_UUID,
- *     name = "LBS",
- * ) {
- *     private lateinit var ledCharacteristic: LocalCharacteristic
- *     private lateinit var buttonCharacteristic: LocalCharacteristic
- *
- *     /** The LED is controlled by the client, which writes the LED characteristic. */
- *     val ledState: StateFlow<Boolean>
- *         field = MutableStateFlow(false)
- *
- *     /** The Button is controlled by the server. A change notifies the subscribed clients. */
- *     val buttonState = MutableStateFlow(false)
- *
- *     // Throw NoSuchElementException or IllegalArgumentException to reject the service.
- *     override fun prepare(server: LocalServer<*>, service: LocalService) {
- *         ledCharacteristic = service.characteristics.first { it.uuid == LED_UUID }
- *         buttonCharacteristic = service.characteristics.first { it.uuid == BUTTON_UUID }
- *     }
- *
- *     // Cancelled when the services are replaced or the profile is unregistered.
- *     override suspend fun CoroutineScope.initialize(server: LocalServer<*>) {
- *         ledCharacteristic.setValue(byteArrayOf(0))
- *         buttonCharacteristic.setValue(byteArrayOf(0))
- *         // The state follows the value of the characteristic, which can also be set by the server.
- *         ledCharacteristic.value
- *             .onEach { value -> ledState.value = value.singleOrNull() == 1.toByte() }
- *             .launchIn(this)
- *         buttonState
- *             .onEach { pressed -> buttonCharacteristic.update(byteArrayOf(if (pressed) 1 else 0)) }
- *             .launchIn(this)
- *     }
- * }
- *
- * localServer.profile(scope, LedButtonServerProfile())
- * ```
+ * Extend one of the classes below. Each of them has a full example.
+ * * [Simple] - a profile based on a single local service,
+ * * [MultiService] - a profile based on multiple local services, all of which are required.
  *
  * A profile that also uses the services of a remote device extends the `Profile.WithLocalServices`
  * of the client instead.
@@ -126,6 +90,52 @@ sealed class LocalProfile(
     /**
      * A profile based on a single local service.
      *
+     * ## Example
+     *
+     * #### Profile definition
+     *
+     * ```kotlin
+     * class LedButtonServerProfile : LocalProfile.Simple(
+     *     serviceUuid = LBS_UUID,
+     *     name = "LBS",
+     * ) {
+     *     private lateinit var ledCharacteristic: LocalCharacteristic
+     *     private lateinit var buttonCharacteristic: LocalCharacteristic
+     *
+     *     /** The LED is controlled by the client, which writes the LED characteristic. */
+     *     val ledState: StateFlow<Boolean>
+     *         field = MutableStateFlow(false)
+     *
+     *     /** The Button is controlled by the server. A change notifies the subscribed clients. */
+     *     val buttonState = MutableStateFlow(false)
+     *
+     *     // Throw NoSuchElementException or IllegalArgumentException to reject the service.
+     *     override fun prepare(server: LocalServer<*>, service: LocalService) {
+     *         ledCharacteristic = service.characteristics.first { it.uuid == LED_UUID }
+     *         buttonCharacteristic = service.characteristics.first { it.uuid == BUTTON_UUID }
+     *     }
+     *
+     *     // Cancelled when the services are replaced or the profile is unregistered.
+     *     override suspend fun CoroutineScope.initialize(server: LocalServer<*>) {
+     *         ledCharacteristic.setValue(byteArrayOf(0))
+     *         buttonCharacteristic.setValue(byteArrayOf(0))
+     *         // The state follows the value of the characteristic, which can also be set by the server.
+     *         ledCharacteristic.value
+     *             .onEach { value -> ledState.value = value.singleOrNull() == 1.toByte() }
+     *             .launchIn(this)
+     *         buttonState
+     *             .onEach { pressed -> buttonCharacteristic.update(byteArrayOf(if (pressed) 1 else 0)) }
+     *             .launchIn(this)
+     *     }
+     * }
+     * ```
+     * #### Usage
+     * ```kotlin
+     * val api = LedButtonServerProfile()
+     *    .also { localServer.profile(scope, it) }
+     * ```
+     *
+     *
      * @param serviceUuid The UUID of the service.
      * @param name The name of the profile, used in logging.
      */
@@ -156,6 +166,44 @@ sealed class LocalProfile(
 
     /**
      * A profile based on multiple local services, all of which are required.
+     *
+     * ## Example
+     *
+     * #### Profile definition
+     *
+     * ```kotlin
+     * class ProximityReporterProfile : LocalProfile.MultiService(
+     *     serviceUuids = listOf(LINK_LOSS_UUID, IMMEDIATE_ALERT_UUID),
+     *     name = "Proximity Reporter",
+     * ) {
+     *     private lateinit var linkLossCharacteristic: LocalCharacteristic
+     *     private lateinit var immediateAlertCharacteristic: LocalCharacteristic
+     *
+     *     /** The alert level requested by the client, using the Immediate Alert Service. */
+     *     val alertState: StateFlow<Int>
+     *         field = MutableStateFlow(0)
+     *
+     *     override fun prepare(server: LocalServer<*>, services: List<LocalService>) {
+     *         linkLossCharacteristic = services.first { it.uuid == LINK_LOSS_UUID }
+     *             .characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+     *         immediateAlertCharacteristic = services.first { it.uuid == IMMEDIATE_ALERT_UUID }
+     *             .characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+     *     }
+     *
+     *     override suspend fun CoroutineScope.initialize(server: LocalServer<*>) {
+     *         // The default alert level of the Link Loss Service is "No Alert".
+     *         linkLossCharacteristic.setValue(byteArrayOf(0))
+     *         immediateAlertCharacteristic.value
+     *             .onEach { value -> alertState.value = value.firstOrNull()?.toInt() ?: 0 }
+     *             .launchIn(this)
+     *     }
+     * }
+     * ```
+     * #### Usage
+     * ```kotlin
+     * val api = ProximityReporterProfile()
+     *    .also { localServer.profile(scope, it) }
+     * ```
      *
      * @param serviceUuids The UUIDs of the services.
      * @param name The name of the profile, used in logging.
