@@ -141,7 +141,7 @@ class HostedServerSpecTest {
 
         assertFailsWith<IllegalArgumentException> {
             hostedSpec(server) {
-                connectable(name = "Hosted", staleCachedServices = { }, server = server)
+                connectable(name = "Hosted", cachedServices = { }, server = server)
             }
         }
     }
@@ -174,7 +174,7 @@ class HostedServerSpecTest {
     fun `stale cached services make the cache invalid`() = runTest {
         val (server, _) = hostedServer()
         val spec = hostedSpec(server) {
-            connectable(name = "Hosted", isServiceCached = true, staleCachedServices = { Service(serviceUuid) }, server = server)
+            connectable(name = "Hosted", isServiceCached = true, cachedServices = { Service(serviceUuid) }, server = server)
         }
 
         assertTrue(spec.isKnown)

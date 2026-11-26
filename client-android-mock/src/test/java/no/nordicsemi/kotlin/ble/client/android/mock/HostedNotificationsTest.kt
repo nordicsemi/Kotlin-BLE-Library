@@ -718,7 +718,7 @@ class HostedNotificationsTest {
                 connectable(
                     name = "Stale",
                     isServiceCached = true,
-                    staleCachedServices = {
+                    cachedServices = {
                         Service(HOSTED_SERVICE_UUID) {
                             Characteristic(HOSTED_CHAR_UUID, CharacteristicProperty.READ, Permission.READ)
                         }

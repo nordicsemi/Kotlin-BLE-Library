@@ -113,7 +113,7 @@ the services, and the characteristics can be read, written and subscribed to.
 ```kotlin
 val tag = PeripheralSpec.simulatePeripheral("01:02:03:04:05:06") {
     advertising { CompleteLocalName("Tag") }
-    connectable(name = "Tag", eventHandler = object : PeripheralSpecEventHandler {}) { }
+    connectable(name = "Tag") { }
     client { server ->
         val discovered = server.services(listOf(IMMEDIATE_ALERT_SERVICE_UUID))
             .filterIsInstance<RemoteServices.Discovered>()

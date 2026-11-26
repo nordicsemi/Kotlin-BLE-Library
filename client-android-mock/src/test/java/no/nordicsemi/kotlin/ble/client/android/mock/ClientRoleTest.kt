@@ -92,7 +92,7 @@ class ClientRoleTest {
     ): Pair<MockCentralManager, no.nordicsemi.kotlin.ble.client.android.Peripheral> {
         val spec = PeripheralSpec.simulatePeripheral(identifier = TAG_ADDRESS, addressType = AddressType.PUBLIC) {
             advertising { CompleteLocalName("Tag") }
-            connectable(name = "Tag", eventHandler = object : PeripheralSpecEventHandler {}, services = { })
+            connectable(name = "Tag") { }
             client(role)
         }
         val manager = CentralManager.mock(environment = LatestApi(), scope = backgroundScope, server = server)
@@ -104,7 +104,7 @@ class ClientRoleTest {
         role: suspend kotlinx.coroutines.CoroutineScope.(no.nordicsemi.kotlin.ble.client.Peripheral<String, *>) -> Unit,
     ) = PeripheralSpec.simulatePeripheral(identifier = TAG_ADDRESS, addressType = AddressType.PUBLIC) {
         advertising { CompleteLocalName("Tag") }
-        connectable(name = "Tag", eventHandler = object : PeripheralSpecEventHandler {}, services = { })
+        connectable(name = "Tag") { }
         client(role)
     }
 

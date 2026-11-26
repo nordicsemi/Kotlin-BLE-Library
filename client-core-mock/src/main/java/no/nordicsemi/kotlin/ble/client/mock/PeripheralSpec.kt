@@ -1974,7 +1974,8 @@ class PeripheralSpec<ID: Any> private constructor(
          * @param isPhyLe2MSupported Whether the device supports PHY LE 2M.
          * @param isPhyCodedSupported Whether the device supports PHY LE Coded.
          * @param eventHandler The event handler that will be called for every event emulating
-         * a real peripheral.
+         * a real peripheral. By default, the connections are accepted and the bonding is rejected,
+         * see [PeripheralSpecEventHandler].
          * @param services The services available after service discovery.
          */
         fun connectable(
@@ -1987,7 +1988,7 @@ class PeripheralSpec<ID: Any> private constructor(
             maxL2capMtu: @Range(from = 27L, to = 251L) Int = 27,
             isPhyLe2MSupported: Boolean = false,
             isPhyCodedSupported: Boolean = false,
-            eventHandler: PeripheralSpecEventHandler,
+            eventHandler: PeripheralSpecEventHandler = DefaultEventHandler,
             services: MockServerScope.() -> Unit,
         ) = setConnectionParameters(
             preferredConnectionInterval = preferredConnectionInterval,
@@ -2033,7 +2034,8 @@ class PeripheralSpec<ID: Any> private constructor(
          * @param peripheralHasBond Whether the peripheral has the bond information of the phone.
          * By default, the same as [isBonded].
          * @param eventHandler The event handler that will be called for every event emulating
-         * a real peripheral.
+         * a real peripheral. By default, the connections are accepted and the bonding is rejected,
+         * see [PeripheralSpecEventHandler].
          * @param actualServices The services available after service discovery. If `null` (default),
          * they are set to be equal to [cachedServices].
          * @param cachedServices The services that are cached and will be returned immediately
@@ -2052,7 +2054,7 @@ class PeripheralSpec<ID: Any> private constructor(
             isPhyCodedSupported: Boolean = false,
             isBonded: Boolean = false,
             peripheralHasBond: Boolean = isBonded,
-            eventHandler: PeripheralSpecEventHandler,
+            eventHandler: PeripheralSpecEventHandler = DefaultEventHandler,
             actualServices: (MockServerScope.() -> Unit)? = null,
             cachedServices: (MockServerScope.() -> Unit),
         ) = setConnectionParameters(
@@ -2109,7 +2111,8 @@ class PeripheralSpec<ID: Any> private constructor(
          * @param peripheralHasBond Whether the peripheral has the bond information of the phone.
          * By default, the same as [isBonded].
          * @param eventHandler The event handler that will be called for every event emulating
-         * a real peripheral.
+         * a real peripheral. By default, the connections are accepted and the bonding is rejected,
+         * see [PeripheralSpecEventHandler].
          * @param actualServices The services available after service discovery. If `null` (default),
          * they are set to be equal to [cachedServices].
          * @param cachedServices The services that are cached and will be returned immediately
@@ -2129,7 +2132,7 @@ class PeripheralSpec<ID: Any> private constructor(
             activePhy: PhyInUse = PhyInUse.PHY_LE_1M,
             isBonded: Boolean = false,
             peripheralHasBond: Boolean = isBonded,
-            eventHandler: PeripheralSpecEventHandler,
+            eventHandler: PeripheralSpecEventHandler = DefaultEventHandler,
             actualServices: (MockServerScope.() -> Unit)? = null,
             cachedServices: (MockServerScope.() -> Unit),
         ) = setConnectionParameters(
@@ -2221,12 +2224,13 @@ class PeripheralSpec<ID: Any> private constructor(
          * By default, the same as [isBonded].
          * @param isServiceCached Whether the client has the services of the [server] cached, so
          * they are returned immediately on service discovery. The device is known to the phone.
-         * @param staleCachedServices The services that are cached on the client side, when they
+         * @param cachedServices The services that are cached on the client side, when they
          * differ from the ones of the [server]. The cache is invalid, so accessing the cached
          * services results in INVALID_HANDLE error, until a new service discovery is performed.
          * The device is known to the phone.
          * @param eventHandler The event handler that will be called for the events that do not
-         * concern the GATT server.
+         * concern the GATT server. By default, the connections are accepted and the bonding is rejected,
+         * see [PeripheralSpecEventHandler].
          * @param server The GATT server hosted by the peripheral. A server can be used by one
          * peripheral only.
          */
@@ -2243,7 +2247,7 @@ class PeripheralSpec<ID: Any> private constructor(
             isBonded: Boolean = false,
             peripheralHasBond: Boolean = isBonded,
             isServiceCached: Boolean = false,
-            staleCachedServices: (MockServerScope.() -> Unit)? = null,
+            cachedServices: (MockServerScope.() -> Unit)? = null,
             eventHandler: PeripheralSpecEventHandler = DefaultEventHandler,
             server: MockPeripheralServer,
         ) = setConnectionParameters(
@@ -2256,7 +2260,7 @@ class PeripheralSpec<ID: Any> private constructor(
             isPhyCodedSupported = isPhyCodedSupported,
         ).also {
             require(this.name == null) { "Device is already configured as connectable." }
-            require(isServiceCached || staleCachedServices == null) {
+            require(isServiceCached || cachedServices == null) {
                 "Stale cached services require isServiceCached to be set."
             }
             this.name = name
@@ -2265,11 +2269,11 @@ class PeripheralSpec<ID: Any> private constructor(
             this.server = server
             this.isBonded = isBonded
             this.peripheralHasBond = peripheralHasBond
-            this.cachedServices = staleCachedServices?.let { MockServerScopeImpl().apply(it).build() }
+            this.cachedServices = cachedServices?.let { MockServerScopeImpl().apply(it).build() }
             // If the cached services are stale, mark cache as invalid.
             // Accessing cached services will result in INVALID_HANDLE error and a new service
             // discovery will have to be performed.
-            this.isServiceCacheValid = isServiceCached && staleCachedServices == null
+            this.isServiceCacheValid = isServiceCached && cachedServices == null
             // A bonded device, or one with services cached, was for sure scanned before.
             this.isKnown = isBonded || isServiceCached
         }
@@ -2304,10 +2308,11 @@ class PeripheralSpec<ID: Any> private constructor(
          * @param isBonded Whether the phone has the bond information of the peripheral.
          * @param peripheralHasBond Whether the peripheral has the bond information of the phone.
          * By default, the same as [isBonded].
-         * @param staleCachedServices The services that are cached on the client side, when they
+         * @param cachedServices The services that are cached on the client side, when they
          * differ from the ones of the [server]. By default, the services of the [server] are cached.
          * @param eventHandler The event handler that will be called for the events that do not
-         * concern the GATT server.
+         * concern the GATT server. By default, the connections are accepted and the bonding is rejected,
+         * see [PeripheralSpecEventHandler].
          * @param server The GATT server hosted by the peripheral. A server can be used by one
          * peripheral only.
          */
@@ -2324,7 +2329,7 @@ class PeripheralSpec<ID: Any> private constructor(
             activePhy: PhyInUse = PhyInUse.PHY_LE_1M,
             isBonded: Boolean = false,
             peripheralHasBond: Boolean = isBonded,
-            staleCachedServices: (MockServerScope.() -> Unit)? = null,
+            cachedServices: (MockServerScope.() -> Unit)? = null,
             eventHandler: PeripheralSpecEventHandler = DefaultEventHandler,
             server: MockPeripheralServer,
         ) = connectable(
@@ -2340,7 +2345,7 @@ class PeripheralSpec<ID: Any> private constructor(
             isBonded = isBonded,
             peripheralHasBond = peripheralHasBond,
             isServiceCached = true,
-            staleCachedServices = staleCachedServices,
+            cachedServices = cachedServices,
             eventHandler = eventHandler,
             server = server,
         ).also {
@@ -2461,7 +2466,7 @@ class PeripheralSpec<ID: Any> private constructor(
          * ```kotlin
          * val tag = PeripheralSpec.simulatePeripheral("01:02:03:04:05:06") {
          *     advertising { CompleteLocalName("Tag") }
-         *     connectable(name = "Tag", eventHandler = object : PeripheralSpecEventHandler {}) { }
+         *     connectable(name = "Tag") { }
          *     client { server ->
          *         val discovered = server.services(listOf(IMMEDIATE_ALERT_SERVICE_UUID))
          *             .filterIsInstance<RemoteServices.Discovered>()
