@@ -70,7 +70,15 @@ kotlin {
     }
 }
 
+// Used only by Dokka, to resolve links to the modules that depend on this one.
+val dokkaOnly by configurations.creating {
+    isCanBeConsumed = false
+}
+
 dependencies {
+    dokkaOnly(project(":client-core"))
+    dokkaOnly(project(":server-core"))
+
     // Adds @hide annotation to exclude internal classes from the documentation.
     dokkaPlugin(libs.dokka.android.gradlePlugin)
 }
@@ -88,6 +96,7 @@ nordicPublishing {
 dokka {
     dokkaSourceSets.configureEach {
         includes.from("Module.md")
+        classpath.from(dokkaOnly)
 
         // Profile exposes `protected` methods that subclasses are meant to override, e.g.
         // Profile.prepare/initialize/unsupported/failed. Dokka only documents `public` members

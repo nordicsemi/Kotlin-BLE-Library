@@ -49,6 +49,8 @@ import kotlin.uuid.Uuid
  * Local services are not added by the profile. They are defined by the application when it sets
  * up the server. The profile only receives them, when they are available.
  *
+ * @see no.nordicsemi.kotlin.ble.client.Profile
+ * @see no.nordicsemi.kotlin.ble.server.LocalProfile
  * @param P The type of the object the profile is attached to, for example a peripheral.
  * @param R The type of the services of the other device.
  * @param L The type of the local services.
