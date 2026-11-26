@@ -1,8 +1,77 @@
 # Module client-core
 
-Common types and interfaces for Bluetooth Low Energy clients.
+Platform-independent API of the Bluetooth LE central role: scanning for devices, connecting to
+them and using their GATT services.
 
-This module is used by platform-specific implementations for native and mock environments.
+## Overview
+
+This module contains the base types of the client, which are implemented by the platform-specific
+modules for native and mock environments, for example `client-android`, `client-android-mock`
+and the base modules `client-core-android` and `client-core-mock`. The module itself does not talk
+to any Bluetooth stack. Use it to write code that does not depend on the platform, and get
+an instance of the `CentralManager` from the platform-specific module.
+
+The main types are:
+
+| Type | Description |
+|------|-------------|
+| `CentralManager` | Scans for devices, monitors and ranges them, and connects to a `Peripheral`. |
+| `Peripheral` | A remote device: its connection state, MTU, RSSI, services and profiles. |
+| `RemoteService`, `RemoteCharacteristic`, `RemoteDescriptor` | The GATT attributes of a connected peripheral. They are read, written and subscribed to. |
+| `Profile` | The logic of a service or a set of services, separated from the GATT API. |
+| `ScanResult`, `AdvertisingData` | An advertising packet received during scanning. |
+
+## Usage
+
+### Scanning and connecting
+
+The central manager scans for devices and connects to the peripheral. The `filter` of the scan
+depends on the platform.
+```kotlin
+val peripheral = centralManager.scan(timeout = 10.seconds) { /* a platform-specific filter */ }
+    .first()
+    .peripheral
+
+centralManager.connect(peripheral)
+peripheral.state
+    .onEach { state -> println("State: $state") }
+    .launchIn(scope)
+```
+
+### Using the services
+
+The services of a connected peripheral are discovered with `services`, which is a `StateFlow`.
+Characteristics are read, written and subscribed to:
+```kotlin
+val service = peripheral.services(listOf(LBS_UUID))
+    .filterIsInstance<RemoteServices.Discovered>()
+    .first { it.services.isNotEmpty() }
+    .services.single()
+val led = service.characteristics.first { it.uuid == LED_UUID }
+val button = service.characteristics.first { it.uuid == BUTTON_UUID }
+
+led.write(byteArrayOf(1))
+button.subscribe()
+    .onEach { value -> println("Button: ${value.first()}") }
+    .launchIn(scope)
+```
+
+### Profiles
+
+A profile keeps the logic of a service in one place, so the application does not use
+characteristics directly. It is registered with `Peripheral.profile`, and is started when
+the services of the profile were discovered. Extend one of the types:
+
+* `Profile.Simple` for a single service,
+* `Profile.MultiService` for more services, some of which may be optional,
+* `Profile.WithLocalServices` for a profile that also uses the services of this device.
+
+Each of them has an example in its documentation.
+```kotlin
+val api = LedButtonProfile()
+    .also { peripheral.profile(scope, it) }
+api.ledState.value = true
+```
 
 ## Server
 
@@ -13,20 +82,15 @@ when first accessed, so an application that does not need it does not use its re
 request its permissions, and it is closed together with the manager unless it was given to
 the manager when it was created.
 
-### Defining services
-
-Define the services of the server using `setup`, at any time. The services returned by `setup`
-and by `server.services` are **shared**: they have one value and one set of handlers for all
-clients, and `update` notifies all subscribers.
+The services of the server are defined using `setup`, at any time. The services returned by
+`setup` and by `server.services` are **shared**: they have one value and one set of handlers for
+all clients, and `update` notifies all subscribers. A peripheral that is connected to this
+device can also use them. The services given to a profile of the peripheral are **per-client**
+views of the shared ones: the same values and handlers, but `writes`, `subscribers` and `update`
+are limited to that peripheral. They can also be obtained with
+`server.services(peripheral.identifier)`.
 ```kotlin
-val services = centralManager.server.setup {
-    Service(LINK_LOSS_UUID) {
-        Characteristic(
-            uuid = ALERT_LEVEL_UUID,
-            properties = CharacteristicProperty.READ and CharacteristicProperty.WRITE,
-            permissions = Permission.READ and Permission.WRITE,
-        )
-    }
+centralManager.server.setup {
     Service(IMMEDIATE_ALERT_UUID) {
         Characteristic(
             uuid = ALERT_LEVEL_UUID,
@@ -35,97 +99,28 @@ val services = centralManager.server.setup {
         )
     }
 }
-```
 
-### Per-client services
-
-A peripheral that is connected to this device can also use its server. The services given
-to a profile of the peripheral are **per-client** views of the shared ones: the same values and
-handlers, but `writes`, `subscribers` and `update` are limited to that peripheral. They can also
-be obtained with `server.services(peripheral.identifier)`.
-```kotlin
-val alertLevel = centralManager.server
+// Only the writes of this peripheral.
+centralManager.server
     .services(peripheral.identifier)
     .first { it.isNotEmpty() }
     .first { it.uuid == IMMEDIATE_ALERT_UUID }
     .characteristics.first { it.uuid == ALERT_LEVEL_UUID }
-
-// Only the writes of this peripheral.
-alertLevel.writes
+    .writes
     .onEach { println("Alert level: ${it.value.first()}") }
     .launchIn(scope)
 ```
-
-### Profiles with local services
-
 A profile that needs both the services of the peripheral and the local ones extends
-`Profile.WithLocalServices`. It starts when the remote services were discovered and all the local
-services are available, and its `localServices` are the per-client views of the peripheral. For
-example, in the Proximity Profile both devices have the Link Loss Service, and may have the
-Immediate Alert Service:
-```kotlin
-enum class AlertLevel(val value: Byte) {
-    NONE(0), MILD(1), HIGH(2);
-
-    companion object {
-        fun of(value: Byte) = entries.firstOrNull { it.value == value } ?: NONE
-    }
-}
-
-class ProximityProfile : Profile.WithLocalServices(
-    // Both devices have the Link Loss Service, and may have the Immediate Alert and TX Power
-    // services. This sample does not use the TX Power Service.
-    requiredServiceUuids = listOf(LINK_LOSS_UUID),
-    optionalServiceUuids = listOf(IMMEDIATE_ALERT_UUID, TX_POWER_UUID),
-    localServiceUuids = listOf(LINK_LOSS_UUID, IMMEDIATE_ALERT_UUID),
-    name = "Proximity",
-) {
-    private lateinit var linkLossCharacteristic: RemoteCharacteristic
-    private var remoteAlertCharacteristic: RemoteCharacteristic? = null
-    private lateinit var localAlertCharacteristic: LocalCharacteristic
-
-    /** The alert level requested by the other device, which this device should signal. */
-    val localAlertState: StateFlow<AlertLevel>
-        field = MutableStateFlow(AlertLevel.NONE)
-
-    override fun prepare(
-        peripheral: Peripheral<*, *>,
-        remoteServices: List<RemoteService>,
-        localServices: List<LocalService>,
-    ) {
-        linkLossCharacteristic = remoteServices.first { it.uuid == LINK_LOSS_UUID }
-            .characteristics.first { it.uuid == ALERT_LEVEL_UUID }
-        remoteAlertCharacteristic = remoteServices.firstOrNull { it.uuid == IMMEDIATE_ALERT_UUID }
-            ?.characteristics?.first { it.uuid == ALERT_LEVEL_UUID }
-        localAlertCharacteristic = localServices.first { it.uuid == IMMEDIATE_ALERT_UUID }
-            .characteristics.first { it.uuid == ALERT_LEVEL_UUID }
-    }
-
-    override suspend fun CoroutineScope.initialize(peripheral: Peripheral<*, *>) {
-        // The local characteristic is the view of this peripheral, so only its writes are emitted.
-        localAlertCharacteristic.writes
-            .onEach { localAlertState.value = AlertLevel.of(it.value.first()) }
-            .launchIn(this)
-        // The other device will alert when the link is lost.
-        linkLossCharacteristic.write(byteArrayOf(AlertLevel.HIGH.value), WriteType.WITH_RESPONSE)
-    }
-
-    /** Asks the other device to alert. */
-    suspend fun alert(level: AlertLevel) {
-        val characteristic = checkNotNull(remoteAlertCharacteristic) { "No Immediate Alert Service" }
-        characteristic.write(byteArrayOf(level.value), WriteType.WITHOUT_RESPONSE)
-    }
-}
-
-peripheral.profile(scope, ProximityProfile())
-```
-The profile does not add the local services, the application does using `setup`. If they
-are replaced, the profile is started again with the new ones. The profiles that use the server
-only, without any peripheral, extend `LocalProfile` and are registered using `server.profile`.
+`Profile.WithLocalServices`, which has a full example, the Proximity Profile. The profile does not
+add the local services, the application does using `setup`. If they are replaced, the profile is
+started again with the new ones. The profiles that use the server only, without any peripheral,
+extend `LocalProfile` and are registered using `server.profile`.
 
 # Package no.nordicsemi.kotlin.ble.client
 
-Common types and interfaces for Bluetooth Low Energy clients.
+Common types and interfaces for Bluetooth Low Energy clients: the [CentralManager], the
+[Peripheral] with its remote services, characteristics and descriptors, and the [Profile] with its
+subtypes [Profile.Simple], [Profile.MultiService] and [Profile.WithLocalServices].
 
 # Package no.nordicsemi.kotlin.ble.client.exception
 

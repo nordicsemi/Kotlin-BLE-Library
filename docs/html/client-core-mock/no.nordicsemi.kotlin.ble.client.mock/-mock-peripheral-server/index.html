@@ -1,0 +1,494 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>MockPeripheralServer</title>
+<link href="../../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../../index.html" tabindex="1">
+                    Kotlin BLE Library
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.0-beta11
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":client-core-mock/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":client-core-mock/main" data-filter=":client-core-mock/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    Kotlin BLE Library
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageids="client-core-mock::no.nordicsemi.kotlin.ble.client.mock/MockPeripheralServer///PointingToDeclaration//-1834677258">
+  <div class="breadcrumbs"><a href="../../index.html">client-core-mock</a><span class="delimiter">/</span><a href="../index.html">no.nordicsemi.kotlin.ble.client.mock</a><span class="delimiter">/</span><span class="current">MockPeripheralServer</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Mock</span><wbr><span>Peripheral</span><wbr><span><span>Server</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">MockPeripheralServer</a> : <span data-unresolved-link="no.nordicsemi.kotlin.ble.server.internal/LocalServerImpl///PointingToDeclaration/">LocalServerImpl</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt; </span></div><p class="paragraph">A GATT server hosted by a mock peripheral, <a href="../-peripheral-spec/index.html">PeripheralSpec</a>.</p><p class="paragraph">It is a <a href="../../../server-core/no.nordicsemi.kotlin.ble.server/-local-server/index.html">no.nordicsemi.kotlin.ble.server.LocalServer</a>, the same one that apps use to implement the peripheral role, running on top of a simulated GATT server. Every connectable <a href="../-peripheral-spec/index.html">PeripheralSpec</a> hosts one, also when its services are defined with the DSL of the builder (see <a href="../-peripheral-spec/server.html">PeripheralSpec.server</a>). It answers the requests of the mock clients: read and write requests, long and reliable writes, and subscriptions are handled by the handlers set with <code class="lang-kotlin">onRead</code> and <code class="lang-kotlin">onWrite</code> of the local characteristics and descriptors, and by their values, and notifications and indications are sent with <code class="lang-kotlin">update()</code>.</p><p class="paragraph">The requests of the clients go through the same simulation as the requests to peripherals using other peripherals: they take as much time as the transfer of the value, using the connection interval, the MTU and the PHY of the connection, and are subject to the same checks of permissions, bonding and the validity of cached services.</p><p class="paragraph">Sample code:</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">val server = MockPeripheralServer(scope = backgroundScope)<br>val services = server.setup {<br>    GenericAccessService()<br>    GenericAttributeService()<br>    Service(BLINKY_SERVICE_UUID) {<br>        Characteristic(<br>            uuid = LED_UUID,<br>            properties = CharacteristicProperty.READ and CharacteristicProperty.WRITE,<br>            permissions = Permission.READ and Permission.WRITE,<br>        )<br>        Characteristic(<br>            uuid = BUTTON_UUID,<br>            properties = CharacteristicProperty.READ and CharacteristicProperty.NOTIFY,<br>            permission = Permission.READ,<br>        )<br>    }<br>}<br>val led = services.single { it.uuid == BLINKY_SERVICE_UUID }.characteristics.first { it.uuid == LED_UUID }<br>val button = services.single { it.uuid == BLINKY_SERVICE_UUID }.characteristics.first { it.uuid == BUTTON_UUID }<br>led.onWrite { if (value.size == 1) WriteResponse.Success else WriteResponse.Failure(OperationStatus.InvalidAttributeLength) }<br>led.writes.onEach { println("LED: ${it.value.first()}") }.launchIn(backgroundScope)<br><br>val peripheral = PeripheralSpec.simulatePeripheral(identifier = "01:02:03:04:05:06") {<br>    advertising { CompleteLocalName("Blinky") }<br>    connectable(name = "Blinky", server = server)<br>}<br>// ... later, when a client has subscribed to the button:<br>button.update(byteArrayOf(1))</code></pre><span class="copy-tooltip"><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div><span class="copy-icon"></span></span></div><h3 class="">Services</h3><p class="paragraph">Define the services, like on a real device, using <a href="index.html#1855697653%2FFunctions%2F-1834677258">setup</a>, <strong>before</strong> a client discovers them (the services are discovered from the server when the client asks for them). The services of the Generic Access and Generic Attribute, if needed, are declared with <a href="../-generic-access-service.html">GenericAccessService</a> and <a href="../-generic-attribute-service.html">GenericAttributeService</a>. As with <a href="../-peripheral-spec/-builder/connectable.html">PeripheralSpec.Builder.connectable</a> using <a href="../-peripheral-spec-event-handler/index.html">PeripheralSpecEventHandler</a>, their Device Name, Appearance and Peripheral Preferred Connection Parameters characteristics return the values from the <a href="../-peripheral-spec/index.html">PeripheralSpec</a>, and Service Changed is handled automatically. Use <a href="../-peripheral-spec/simulate-service-change.html">PeripheralSpec.simulateServiceChange</a> to replace the services of a peripheral that is in use: calling <a href="index.html#1855697653%2FFunctions%2F-1834677258">setup</a> again does not notify the clients.</p><h3 class="">Threading and time</h3><p class="paragraph">Requests are processed by the event loop of the manager, which runs in the given scope. The simulated transfers use the dispatcher and the clock of the mock central manager, so in tests using <code class="lang-kotlin">runTest</code>, the scope should use the same test scheduler, for example <code class="lang-kotlin">backgroundScope</code>. Handlers may suspend, for example to simulate a slow peripheral, using virtual time.</p><h3 class="">Limitations</h3><ul><li><p class="paragraph">One server can be used by one <a href="../-peripheral-spec/index.html">PeripheralSpec</a> only.</p></li><li><p class="paragraph">The only client is <a href="client.html">client</a>, the phone. It is the same for all the clients of the peripheral.</p></li><li><p class="paragraph"><a href="../-peripheral-spec/simulate-value-update.html">PeripheralSpec.simulateValueUpdate</a> sends a notification to the clients, but it bypasses the server. Use <code class="lang-kotlin">update()</code> of the local characteristic instead.</p></li></ul><h3 class="">Simulating faults</h3><p class="paragraph">The server handles Prepare Write, Execute Write and Client Characteristic Configuration requests itself. To simulate a fault at the level of ATT requests, set an <a href="../-gatt-interceptor/index.html">interceptor</a>.</p><h4 class="tableheader">Parameters</h4><div class="table"><div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><u><span><span>scope</span></span></u></div></span></div><div><div class="title"><p class="paragraph">The scope of the event loop of the manager, which also runs the handlers.</p></div></div></div></div></div></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="CONSTRUCTOR">
+        <h2 class="tableheader">Constructors</h2>
+        <div class="table"><a data-name="50825216%2FConstructors%2F-1834677258" anchor-label="MockPeripheralServer" id="50825216%2FConstructors%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-togglable="CONSTRUCTOR" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-mock-peripheral-server.html"><span>Mock</span><wbr><span>Peripheral</span><wbr><span><span>Server</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="50825216%2FConstructors%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">scope<span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines/CoroutineScope///PointingToDeclaration/">CoroutineScope</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Creates a server that is not used by any peripheral yet.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="-245238200%2FProperties%2F-1834677258" anchor-label="client" id="-245238200%2FProperties%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="client.html"><span><span>client</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-245238200%2FProperties%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="client.html">client</a><span class="token operator">: </span><a href="../-simulated-client/index.html">SimulatedClient</a></div><div class="brief "><p class="paragraph">The client, that is the phone the mock peripheral is connected to.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-857994668%2FProperties%2F-1834677258" anchor-label="connectedClients" id="-857994668%2FProperties%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="connected-clients.html"><span>connected</span><wbr><span><span>Clients</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-857994668%2FProperties%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="connected-clients.html">connectedClients</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../-simulated-client/index.html">SimulatedClient</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">The clients that are connected: the <a href="client.html">client</a> when the <a href="../-peripheral-spec/index.html">PeripheralSpec</a> is connected.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-625971454%2FProperties%2F-1834677258" anchor-label="interceptor" id="-625971454%2FProperties%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="interceptor.html"><span><span>interceptor</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-625971454%2FProperties%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">var </span><a href="interceptor.html">interceptor</a><span class="token operator">: </span><a href="../-gatt-interceptor/index.html">GattInterceptor</a><span class="token operator">?</span></div><div class="brief "><p class="paragraph">An optional interceptor of the requests of the clients.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1960254421%2FProperties%2F-1834677258" anchor-label="logger" id="-1960254421%2FProperties%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-1960254421%2FProperties%2F-1834677258"><span><span>logger</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1960254421%2FProperties%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">var </span><a href="index.html#-1960254421%2FProperties%2F-1834677258">logger</a><span class="token operator">: </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../../../core/no.nordicsemi.kotlin.ble.core.log/-layer/index.html">Layer</a><span class="token operator">&gt;</span><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2053577315%2FProperties%2F-1834677258" anchor-label="services" id="-2053577315%2FProperties%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-2053577315%2FProperties%2F-1834677258"><span><span>services</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2053577315%2FProperties%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="index.html#-2053577315%2FProperties%2F-1834677258">services</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../../server-core/no.nordicsemi.kotlin.ble.server/-local-service/index.html">LocalService</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="4401294%2FProperties%2F-1834677258" anchor-label="state" id="4401294%2FProperties%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#4401294%2FProperties%2F-1834677258"><span><span>state</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="4401294%2FProperties%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">val </span><a href="index.html#4401294%2FProperties%2F-1834677258">state</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="../../../core/no.nordicsemi.kotlin.ble.core/-manager/-state/index.html">Manager.State</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="-1659461369%2FFunctions%2F-1834677258" anchor-label="close" id="-1659461369%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-1659461369%2FFunctions%2F-1834677258"><span><span>close</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1659461369%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#-1659461369%2FFunctions%2F-1834677258"><span class="token function">close</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="606554635%2FFunctions%2F-1834677258" anchor-label="d" id="606554635%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-simulated-client/index.html#-2050162550%2FFunctions%2F-1834677258"><span><span>d</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="606554635%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-2050162550%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-2050162550%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#-2050162550%2FFunctions%2F-1834677258"><span class="token function">d</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#-2050162550%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a></span></span><span class="token punctuation">)</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#278336781%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#278336781%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#278336781%2FFunctions%2F-1834677258"><span class="token function">d</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#278336781%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">message<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-197708885%2FFunctions%2F-1834677258" anchor-label="debug" id="-197708885%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-simulated-client/index.html#1105736251%2FFunctions%2F-1834677258"><span><span>debug</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-197708885%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#1105736251%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#1105736251%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#1105736251%2FFunctions%2F-1834677258"><span class="token function">debug</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#1105736251%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a></span></span><span class="token punctuation">)</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-614687364%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-614687364%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#-614687364%2FFunctions%2F-1834677258"><span class="token function">debug</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#-614687364%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">message<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1541493483%2FFunctions%2F-1834677258" anchor-label="e" id="1541493483%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-simulated-client/index.html#-1806625687%2FFunctions%2F-1834677258"><span><span>e</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1541493483%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-1806625687%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-1806625687%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#-1806625687%2FFunctions%2F-1834677258"><span class="token function">e</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#-1806625687%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a></span></span><span class="token punctuation">)</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#2093824270%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#2093824270%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#2093824270%2FFunctions%2F-1834677258"><span class="token function">e</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#2093824270%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">message<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1487522955%2FFunctions%2F-1834677258" anchor-label="error" id="1487522955%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-simulated-client/index.html#-2092260378%2FFunctions%2F-1834677258"><span><span>error</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1487522955%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-2092260378%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-2092260378%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#-2092260378%2FFunctions%2F-1834677258"><span class="token function">error</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#-2092260378%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a></span></span><span class="token punctuation">)</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-1476113103%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-1476113103%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#-1476113103%2FFunctions%2F-1834677258"><span class="token function">error</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#-1476113103%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">message<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="986281579%2FFunctions%2F-1834677258" anchor-label="i" id="986281579%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-simulated-client/index.html#-832478235%2FFunctions%2F-1834677258"><span><span>i</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="986281579%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-832478235%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-832478235%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#-832478235%2FFunctions%2F-1834677258"><span class="token function">i</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#-832478235%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a></span></span><span class="token punctuation">)</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#765839634%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#765839634%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#765839634%2FFunctions%2F-1834677258"><span class="token function">i</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#765839634%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">message<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1664625257%2FFunctions%2F-1834677258" anchor-label="info" id="-1664625257%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-simulated-client/index.html#1265161830%2FFunctions%2F-1834677258"><span><span>info</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1664625257%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#1265161830%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#1265161830%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#1265161830%2FFunctions%2F-1834677258"><span class="token function">info</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#1265161830%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a></span></span><span class="token punctuation">)</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-1613337935%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-1613337935%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#-1613337935%2FFunctions%2F-1834677258"><span class="token function">info</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#-1613337935%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">message<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1673659661%2FFunctions%2F-1834677258" anchor-label="log" id="-1673659661%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-2115707208%2FFunctions%2F-1834677258"><span><span>log</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1673659661%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="index.html#-2115707208%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="index.html#-2115707208%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="index.html#-2115707208%2FFunctions%2F-1834677258"><span class="token function">log</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="index.html#-2115707208%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">level<span class="token operator">: </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Level///PointingToDeclaration/">Log.Level</span><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a></span></span><span class="token punctuation">)</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="index.html#-1154992993%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="index.html#-1154992993%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="index.html#-1154992993%2FFunctions%2F-1834677258"><span class="token function">log</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="index.html#-1154992993%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">level<span class="token operator">: </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Level///PointingToDeclaration/">Log.Level</span><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">message<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="253472478%2FFunctions%2F-1834677258" anchor-label="Relay" id="253472478%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#253472478%2FFunctions%2F-1834677258"><span><span>Relay</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="253472478%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="index.html#253472478%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><a href="index.html#253472478%2FFunctions%2F-1834677258"><span class="token function">Relay</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">sink<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="index.html#253472478%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token operator">?</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="index.html#253472478%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1439250627%2FFunctions%2F-1834677258" anchor-label="services" id="1439250627%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#-2000936127%2FFunctions%2F-1834677258"><span><span>services</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1439250627%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><a href="index.html#-2000936127%2FFunctions%2F-1834677258"><span class="token function">services</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">client<span class="token operator">: </span><a href="../../../server-core/no.nordicsemi.kotlin.ble.server/-client/index.html">Client</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../../server-core/no.nordicsemi.kotlin.ble.server/-local-service/index.html">LocalService</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><a href="index.html#-793425206%2FFunctions%2F-1834677258"><span class="token function">services</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">identifier<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../../server-core/no.nordicsemi.kotlin.ble.server/-local-service/index.html">LocalService</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1855697653%2FFunctions%2F-1834677258" anchor-label="setup" id="1855697653%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="index.html#1855697653%2FFunctions%2F-1834677258"><span><span>setup</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1855697653%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">suspend override </span><span class="token keyword">fun </span><a href="index.html#1855697653%2FFunctions%2F-1834677258"><span class="token function">setup</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">builder<span class="token operator">: </span><a href="../../../core/no.nordicsemi.kotlin.ble.core/-server-scope/index.html">ServerScope</a><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-unit/index.html">Unit</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../../server-core/no.nordicsemi.kotlin.ble.server/-local-service/index.html">LocalService</a><span class="token operator">&gt;</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1614292981%2FFunctions%2F-1834677258" anchor-label="t" id="-1614292981%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-simulated-client/index.html#1846427258%2FFunctions%2F-1834677258"><span><span>t</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1614292981%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#1846427258%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#1846427258%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#1846427258%2FFunctions%2F-1834677258"><span class="token function">t</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#1846427258%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a></span></span><span class="token punctuation">)</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-738634467%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-738634467%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#-738634467%2FFunctions%2F-1834677258"><span class="token function">t</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#-738634467%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">message<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="835272811%2FFunctions%2F-1834677258" anchor-label="trace" id="835272811%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-simulated-client/index.html#1475895561%2FFunctions%2F-1834677258"><span><span>trace</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="835272811%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#1475895561%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#1475895561%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#1475895561%2FFunctions%2F-1834677258"><span class="token function">trace</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#1475895561%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a></span></span><span class="token punctuation">)</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-1407582098%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-1407582098%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#-1407582098%2FFunctions%2F-1834677258"><span class="token function">trace</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#-1407582098%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">message<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="255584715%2FFunctions%2F-1834677258" anchor-label="v" id="255584715%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-simulated-client/index.html#-1961466312%2FFunctions%2F-1834677258"><span><span>v</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="255584715%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-1961466312%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-1961466312%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#-1961466312%2FFunctions%2F-1834677258"><span class="token function">v</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#-1961466312%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a></span></span><span class="token punctuation">)</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-1402626785%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-1402626785%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#-1402626785%2FFunctions%2F-1834677258"><span class="token function">v</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#-1402626785%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">message<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1952052299%2FFunctions%2F-1834677258" anchor-label="verbose" id="1952052299%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-simulated-client/index.html#-460899860%2FFunctions%2F-1834677258"><span><span>verbose</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1952052299%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-460899860%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-460899860%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#-460899860%2FFunctions%2F-1834677258"><span class="token function">verbose</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#-460899860%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a></span></span><span class="token punctuation">)</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#1777405931%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#1777405931%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#1777405931%2FFunctions%2F-1834677258"><span class="token function">verbose</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#1777405931%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">message<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1190523563%2FFunctions%2F-1834677258" anchor-label="w" id="1190523563%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-simulated-client/index.html#-1717929449%2FFunctions%2F-1834677258"><span><span>w</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1190523563%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-1717929449%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#-1717929449%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#-1717929449%2FFunctions%2F-1834677258"><span class="token function">w</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#-1717929449%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a></span></span><span class="token punctuation">)</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#412860704%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#412860704%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#412860704%2FFunctions%2F-1834677258"><span class="token function">w</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#412860704%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">message<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1504844985%2FFunctions%2F-1834677258" anchor-label="warn" id="-1504844985%2FFunctions%2F-1834677258" data-filterable-set=":client-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":client-core-mock/main" data-filterable-set=":client-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-simulated-client/index.html#965856654%2FFunctions%2F-1834677258"><span><span>warn</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1504844985%2FFunctions%2F-1834677258"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":client-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#965856654%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#965856654%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#965856654%2FFunctions%2F-1834677258"><span class="token function">warn</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#965856654%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a></span></span><span class="token punctuation">)</span></div><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#1239349385%2FFunctions%2F-1834677258">C</a><span class="token operator"> : </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Category///PointingToDeclaration/">Log.Category</span><span class="token operator">&gt; </span><span data-unresolved-link="no.nordicsemi.kotlin.log/Log.Sink///PointingToDeclaration/">Log.Sink</span><span class="token operator">&lt;</span><a href="../-simulated-client/index.html#1239349385%2FFunctions%2F-1834677258">C</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="../-simulated-client/index.html#1239349385%2FFunctions%2F-1834677258"><span class="token function">warn</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">category<span class="token operator">: </span><a href="../-simulated-client/index.html#1239349385%2FFunctions%2F-1834677258">C</a><span class="token punctuation">, </span></span><span class="parameter ">throwable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-throwable/index.html">Throwable</a><span class="token operator">?</span><span class="token punctuation">, </span></span><span class="parameter ">message<span class="token operator">: </span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator"> -&gt; </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>Copyright © 2022 - 2026 Nordic Semiconductor ASA. All Rights Reserved.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,325 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>no.nordicsemi.kotlin.ble.server</title>
+<link href="../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../styles/style.css" rel="Stylesheet">
+<link href="../../styles/main.css" rel="Stylesheet">
+<link href="../../styles/prism.css" rel="Stylesheet">
+<link href="../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../index.html" tabindex="1">
+                    Kotlin BLE Library
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.0-beta11
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":server-core/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":server-core/main" data-filter=":server-core/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    Kotlin BLE Library
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="package" id="content" pageids="server-core::no.nordicsemi.kotlin.ble.server////PointingToDeclaration//1386094743">
+  <div class="breadcrumbs"><a href="../index.html">server-core</a><span class="delimiter">/</span><span class="current">no.nordicsemi.kotlin.ble.server</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>Package-level</span></span> <span><span>declarations</span></span></h1>
+    <div class="platform-hinted UnderCoverText" data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core/main"><p class="paragraph">Common types and interfaces for the Bluetooth LE GATT server: the <code class="lang-kotlin">LocalServer</code>, its services, characteristics and descriptors, the requests of the clients and the <code class="lang-kotlin">LocalProfile</code>.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="TYPE">Types</button><button class="section-tab" data-togglable="FUNCTION,EXTENSION_FUNCTION">Functions</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="TYPE">
+        <h2 class="tableheader">Types</h2>
+        <div class="table"><a data-name="2041922285%2FClasslikes%2F1386094743" anchor-label="AnyLocalService" id="2041922285%2FClasslikes%2F1386094743" data-filterable-set=":server-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core/main" data-filterable-set=":server-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-any-local-service/index.html"><span>Any</span><wbr><span>Local</span><wbr><span><span>Service</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2041922285%2FClasslikes%2F1386094743"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">interface </span><a href="-any-local-service/index.html">AnyLocalService</a> : <a href="../../core/no.nordicsemi.kotlin.ble.core/-any-service/index.html">AnyService</a><span class="token operator">&lt;</span><a href="-local-characteristic/index.html">LocalCharacteristic</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">A GATT service hosted by the local GATT server.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-810026060%2FClasslikes%2F1386094743" anchor-label="Client" id="-810026060%2FClasslikes%2F1386094743" data-filterable-set=":server-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core/main" data-filterable-set=":server-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-client/index.html"><span><span>Client</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-810026060%2FClasslikes%2F1386094743"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-client/index.html">Client</a><span class="token operator">&lt;</span><a href="-client/index.html">ID</a><span class="token operator"> : </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">&gt;</span> : <a href="../../core/no.nordicsemi.kotlin.ble.core/-peer/index.html">Peer</a><span class="token operator">&lt;</span><a href="-client/index.html">ID</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">A remote device that is using the local GATT server, that is a client of this server.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1314599645%2FClasslikes%2F1386094743" anchor-label="LocalCharacteristic" id="1314599645%2FClasslikes%2F1386094743" data-filterable-set=":server-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core/main" data-filterable-set=":server-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-local-characteristic/index.html"><span>Local</span><wbr><span><span>Characteristic</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1314599645%2FClasslikes%2F1386094743"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-local-characteristic/index.html">LocalCharacteristic</a> : <a href="../../core/no.nordicsemi.kotlin.ble.core/-characteristic/index.html">Characteristic</a><span class="token operator">&lt;</span><a href="-local-descriptor/index.html">LocalDescriptor</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">A characteristic hosted by the local GATT server, which remote clients can read, write to and subscribe to.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1966546167%2FClasslikes%2F1386094743" anchor-label="LocalDescriptor" id="-1966546167%2FClasslikes%2F1386094743" data-filterable-set=":server-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core/main" data-filterable-set=":server-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-local-descriptor/index.html"><span>Local</span><wbr><span><span>Descriptor</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1966546167%2FClasslikes%2F1386094743"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-local-descriptor/index.html">LocalDescriptor</a> : <a href="../../core/no.nordicsemi.kotlin.ble.core/-descriptor/index.html">Descriptor</a></div><div class="brief "><p class="paragraph">A descriptor hosted by the local GATT server.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1431289073%2FClasslikes%2F1386094743" anchor-label="LocalIncludedService" id="1431289073%2FClasslikes%2F1386094743" data-filterable-set=":server-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core/main" data-filterable-set=":server-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-local-included-service/index.html"><span>Local</span><wbr><span>Included</span><wbr><span><span>Service</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1431289073%2FClasslikes%2F1386094743"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-local-included-service/index.html">LocalIncludedService</a> : <a href="../../core/no.nordicsemi.kotlin.ble.core/-included-service/index.html">IncludedService</a><span class="token operator">&lt;</span><a href="-local-characteristic/index.html">LocalCharacteristic</a><span class="token operator">&gt; </span>, <a href="-any-local-service/index.html">AnyLocalService</a></div><div class="brief "><p class="paragraph">A service that is included in another service of the local GATT server.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1150953633%2FClasslikes%2F1386094743" anchor-label="LocalProfile" id="1150953633%2FClasslikes%2F1386094743" data-filterable-set=":server-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core/main" data-filterable-set=":server-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-local-profile/index.html"><span>Local</span><wbr><span><span>Profile</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1150953633%2FClasslikes%2F1386094743"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-local-profile/index.html">LocalProfile</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">localServiceUuids<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.uuid/-uuid/index.html">Uuid</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter ">name<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span> : <a href="../../core/no.nordicsemi.kotlin.ble.core/-profile/index.html">Profile</a><span class="token operator">&lt;</span><a href="-local-server/index.html">LocalServer</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-nothing/index.html">Nothing</a><span class="token punctuation">, </span><a href="-local-service/index.html">LocalService</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">A profile that uses the local services of a <a href="-local-server/index.html">LocalServer</a> only.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-679900875%2FClasslikes%2F1386094743" anchor-label="LocalServer" id="-679900875%2FClasslikes%2F1386094743" data-filterable-set=":server-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core/main" data-filterable-set=":server-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-local-server/index.html"><span>Local</span><wbr><span><span>Server</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-679900875%2FClasslikes%2F1386094743"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-local-server/index.html">LocalServer</a><span class="token operator">&lt;</span><a href="-local-server/index.html">ID</a><span class="token operator"> : </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">&gt;</span> : <a href="../../core/no.nordicsemi.kotlin.ble.core/-manager/index.html">Manager</a></div><div class="brief "><p class="paragraph">The GATT server of this device, which serves the remote devices that are connected to it.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1619226901%2FClasslikes%2F1386094743" anchor-label="LocalService" id="1619226901%2FClasslikes%2F1386094743" data-filterable-set=":server-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core/main" data-filterable-set=":server-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-local-service/index.html"><span>Local</span><wbr><span><span>Service</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1619226901%2FClasslikes%2F1386094743"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-local-service/index.html">LocalService</a> : <a href="../../core/no.nordicsemi.kotlin.ble.core/-primary-service/index.html">PrimaryService</a><span class="token operator">&lt;</span><a href="-local-characteristic/index.html">LocalCharacteristic</a><span class="token operator">&gt; </span>, <a href="-any-local-service/index.html">AnyLocalService</a></div><div class="brief "><p class="paragraph">A primary service of the local GATT server.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-612078070%2FClasslikes%2F1386094743" anchor-label="ReadRequest" id="-612078070%2FClasslikes%2F1386094743" data-filterable-set=":server-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core/main" data-filterable-set=":server-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-read-request/index.html"><span>Read</span><wbr><span><span>Request</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-612078070%2FClasslikes%2F1386094743"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-read-request/index.html">ReadRequest</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>client<span class="token operator">: </span><a href="-client/index.html">Client</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">A request from a client to read the value of a characteristic or a descriptor.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1283191432%2FClasslikes%2F1386094743" anchor-label="ReadResponse" id="1283191432%2FClasslikes%2F1386094743" data-filterable-set=":server-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core/main" data-filterable-set=":server-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-read-response/index.html"><span>Read</span><wbr><span><span>Response</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1283191432%2FClasslikes%2F1386094743"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-read-response/index.html">ReadResponse</a></div><div class="brief "><p class="paragraph">A response to a <a href="-read-request/index.html">ReadRequest</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1381832431%2FClasslikes%2F1386094743" anchor-label="WriteRequest" id="1381832431%2FClasslikes%2F1386094743" data-filterable-set=":server-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core/main" data-filterable-set=":server-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-write-request/index.html"><span>Write</span><wbr><span><span>Request</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1381832431%2FClasslikes%2F1386094743"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-write-request/index.html">WriteRequest</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>client<span class="token operator">: </span><a href="-client/index.html">Client</a><span class="token operator">&lt;</span><span class="token operator">*</span><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>value<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-byte-array/index.html">ByteArray</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>withResponse<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">A request from a client to write the value of a characteristic or a descriptor.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1330092477%2FClasslikes%2F1386094743" anchor-label="WriteResponse" id="-1330092477%2FClasslikes%2F1386094743" data-filterable-set=":server-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core/main" data-filterable-set=":server-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-write-response/index.html"><span>Write</span><wbr><span><span>Response</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1330092477%2FClasslikes%2F1386094743"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-write-response/index.html">WriteResponse</a></div><div class="brief "><p class="paragraph">A response to a <a href="-write-request/index.html">WriteRequest</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="EXTENSION_FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="-135981443%2FFunctions%2F1386094743" anchor-label="profile" id="-135981443%2FFunctions%2F1386094743" data-filterable-set=":server-core/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core/main" data-filterable-set=":server-core/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="profile.html"><span><span>profile</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-135981443%2FFunctions%2F1386094743"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-ignorable-return-value/index.html"><span class="token annotation builtin">IgnorableReturnValue</span></a></div></div><span class="token keyword">suspend </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="profile.html">ID</a><span class="token operator"> : </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">&gt; </span><a href="-local-server/index.html">LocalServer</a><span class="token operator">&lt;</span><a href="profile.html">ID</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="profile.html"><span class="token function">profile</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">profile<span class="token operator">: </span><a href="../../core/no.nordicsemi.kotlin.ble.core/-profile/index.html">Profile</a><span class="token operator">&lt;</span><a href="-local-server/index.html">LocalServer</a><span class="token operator">&lt;</span><a href="profile.html">ID</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-nothing/index.html">Nothing</a><span class="token punctuation">, </span><a href="-local-service/index.html">LocalService</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines/Job///PointingToDeclaration/">Job</span></div><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-ignorable-return-value/index.html"><span class="token annotation builtin">IgnorableReturnValue</span></a></div></div><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="profile.html">ID</a><span class="token operator"> : </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">&gt; </span><a href="-local-server/index.html">LocalServer</a><span class="token operator">&lt;</span><a href="profile.html">ID</a><span class="token operator">&gt;</span><span class="token punctuation">.</span><a href="profile.html"><span class="token function">profile</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">scope<span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines/CoroutineScope///PointingToDeclaration/">CoroutineScope</span><span class="token punctuation">, </span></span><span class="parameter ">profile<span class="token operator">: </span><a href="../../core/no.nordicsemi.kotlin.ble.core/-profile/index.html">Profile</a><span class="token operator">&lt;</span><a href="-local-server/index.html">LocalServer</a><span class="token operator">&lt;</span><a href="profile.html">ID</a><span class="token operator">&gt;</span><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-nothing/index.html">Nothing</a><span class="token punctuation">, </span><a href="-local-service/index.html">LocalService</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines/Job///PointingToDeclaration/">Job</span></div><div class="brief "><p class="paragraph">Registers a profile that uses the local services of this manager.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>Copyright © 2022 - 2026 Nordic Semiconductor ASA. All Rights Reserved.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

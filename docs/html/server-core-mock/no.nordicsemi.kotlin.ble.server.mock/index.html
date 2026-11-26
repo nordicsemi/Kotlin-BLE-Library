@@ -1,0 +1,246 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>no.nordicsemi.kotlin.ble.server.mock</title>
+<link href="../../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../scripts/sourceset_dependencies.js" async></script>
+<link href="../../styles/style.css" rel="Stylesheet">
+<link href="../../styles/main.css" rel="Stylesheet">
+<link href="../../styles/prism.css" rel="Stylesheet">
+<link href="../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../../scripts/main.js" defer></script>
+<script type="text/javascript" src="../../scripts/prism.js" async></script>
+<script type="text/javascript" src="../../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../../index.html" tabindex="1">
+                    Kotlin BLE Library
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.0-beta11
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":server-core-mock/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":server-core-mock/main" data-filter=":server-core-mock/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    Kotlin BLE Library
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="package" id="content" pageids="server-core-mock::no.nordicsemi.kotlin.ble.server.mock////PointingToDeclaration//503738734">
+  <div class="breadcrumbs"><a href="../index.html">server-core-mock</a><span class="delimiter">/</span><span class="current">no.nordicsemi.kotlin.ble.server.mock</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>Package-level</span></span> <span><span>declarations</span></span></h1>
+    <div class="platform-hinted UnderCoverText" data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core-mock/main"><p class="paragraph">This package contains the simulated GATT server and the simulated clients.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="TYPE">Types</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="TYPE">
+        <h2 class="tableheader">Types</h2>
+        <div class="table"><a data-name="208745691%2FClasslikes%2F503738734" anchor-label="GattOperationException" id="208745691%2FClasslikes%2F503738734" data-filterable-set=":server-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core-mock/main" data-filterable-set=":server-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-gatt-operation-exception/index.html"><span>Gatt</span><wbr><span>Operation</span><wbr><span><span>Exception</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="208745691%2FClasslikes%2F503738734"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core-mock/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-gatt-operation-exception/index.html">GattOperationException</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>status<span class="token operator">: </span><a href="../../core/no.nordicsemi.kotlin.ble.core/-operation-status/index.html">OperationStatus</a></span></span><span class="token punctuation">)</span> : <a href="../../core/no.nordicsemi.kotlin.ble.core.exception/-gatt-exception/index.html">GattException</a></div><div class="brief "><p class="paragraph">Thrown by <a href="-read-result/get-or-throw.html">ReadResult.getOrThrow</a> and <a href="-write-result/get-or-throw.html">WriteResult.getOrThrow</a> when the GATT server rejected the request.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1266349221%2FClasslikes%2F503738734" anchor-label="LowLevelMockApi" id="1266349221%2FClasslikes%2F503738734" data-filterable-set=":server-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core-mock/main" data-filterable-set=":server-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-low-level-mock-api/index.html"><span>Low</span><wbr><span>Level</span><wbr><span>Mock</span><wbr><span><span>Api</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1266349221%2FClasslikes%2F503738734"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core-mock/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-requires-opt-in/index.html"><span class="token annotation builtin">RequiresOptIn</span></a><span class="token punctuation">(</span><span>message<span class="token operator"> = </span><span class="breakable-word"><span class="token string">"This is a low-level API of the mock transport. Use MockClient.server instead."</span></span><span class="token punctuation">, </span></span><wbr><span>level<span class="token operator"> = </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-requires-opt-in/-level/-e-r-r-o-r/index.html">RequiresOptIn.Level.ERROR</a></span><wbr><span class="token punctuation">)</span></div></div><span class="token keyword">annotation class </span><a href="-low-level-mock-api/index.html">LowLevelMockApi</a></div><div class="brief "><p class="paragraph">Marks the low-level API of the simulated client: requests that identify attributes by their instance IDs, like the ATT protocol does.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1738630504%2FClasslikes%2F503738734" anchor-label="MockClient" id="1738630504%2FClasslikes%2F503738734" data-filterable-set=":server-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core-mock/main" data-filterable-set=":server-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-mock-client/index.html"><span>Mock</span><wbr><span><span>Client</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1738630504%2FClasslikes%2F503738734"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core-mock/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">class </span><a href="-mock-client/index.html">MockClient</a><span class="token operator">&lt;</span><a href="-mock-client/index.html">ID</a><span class="token operator"> : </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>identifier<span class="token operator">: </span><a href="-mock-client/index.html">ID</a><span class="token punctuation">, </span></span><span class="parameter ">gattServer<span class="token operator">: </span><a href="-mock-gatt-server/index.html">MockGattServer</a><span class="token operator">&lt;</span><a href="-mock-client/index.html">ID</a><span class="token operator">&gt;</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>maxMtu<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a><span class="token operator"> = </span>ATT_MTU_MAX<span class="token punctuation">, </span></span><span class="parameter ">environment<span class="token operator">: </span><a href="../../core/no.nordicsemi.kotlin.ble.core/-environment/index.html">Environment</a><span class="token operator">?</span><span class="token operator"> = </span>null<span class="token punctuation">, </span></span><span class="parameter ">scope<span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines/CoroutineScope///PointingToDeclaration/">CoroutineScope</span><span class="token operator">?</span><span class="token operator"> = </span>null</span></span><span class="token punctuation">)</span> : <a href="../../server-core/no.nordicsemi.kotlin.ble.server/-client/index.html">Client</a><span class="token operator">&lt;</span><a href="-mock-client/index.html">ID</a><span class="token operator">&gt; </span></div><div class="brief "><p class="paragraph">A simulated client device, which talks to a <a href="-mock-gatt-server/index.html">MockGattServer</a>.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="696752416%2FClasslikes%2F503738734" anchor-label="MockClientHost" id="696752416%2FClasslikes%2F503738734" data-filterable-set=":server-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core-mock/main" data-filterable-set=":server-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-mock-client-host/index.html"><span>Mock</span><wbr><span>Client</span><wbr><span><span>Host</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="696752416%2FClasslikes%2F503738734"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core-mock/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="-mock-client-host/index.html">MockClientHost</a><span class="token operator">&lt;</span><a href="-mock-client-host/index.html">ID</a><span class="token operator"> : </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">A local GATT server, which hosts simulated clients (<a href="-mock-client/index.html">MockClient</a>).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2141974454%2FClasslikes%2F503738734" anchor-label="MockGattServer" id="2141974454%2FClasslikes%2F503738734" data-filterable-set=":server-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core-mock/main" data-filterable-set=":server-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-mock-gatt-server/index.html"><span>Mock</span><wbr><span>Gatt</span><wbr><span><span>Server</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2141974454%2FClasslikes%2F503738734"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core-mock/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">class </span><a href="-mock-gatt-server/index.html">MockGattServer</a><span class="token operator">&lt;</span><a href="-mock-gatt-server/index.html">ID</a><span class="token operator"> : </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-any/index.html">Any</a><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>state<span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="../../core/no.nordicsemi.kotlin.ble.core/-manager/-state/index.html">Manager.State</a><span class="token operator">&gt;</span><span class="token operator"> = </span>MutableStateFlow(Manager.State.POWERED_ON)</span></span><span class="token punctuation">)</span> : <span data-unresolved-link="no.nordicsemi.kotlin.ble.server.internal/GattServer///PointingToDeclaration/">GattServer</span></div><div class="brief "><p class="paragraph">A simulated platform layer of the local GATT server.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1928783318%2FClasslikes%2F503738734" anchor-label="MockUpdate" id="-1928783318%2FClasslikes%2F503738734" data-filterable-set=":server-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core-mock/main" data-filterable-set=":server-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-mock-update/index.html"><span>Mock</span><wbr><span><span>Update</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1928783318%2FClasslikes%2F503738734"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core-mock/main"><div class="symbol monospace"><span class="token keyword">class </span><a href="-mock-update/index.html">MockUpdate</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>attribute<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>value<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-byte-array/index.html">ByteArray</a><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>isIndication<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">A notification or an indication received by a simulated client.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1105817654%2FClasslikes%2F503738734" anchor-label="ReadResult" id="-1105817654%2FClasslikes%2F503738734" data-filterable-set=":server-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core-mock/main" data-filterable-set=":server-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-read-result/index.html"><span>Read</span><wbr><span><span>Result</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1105817654%2FClasslikes%2F503738734"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core-mock/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-read-result/index.html">ReadResult</a></div><div class="brief "><p class="paragraph">The result of a read request sent by a simulated client.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="629416649%2FClasslikes%2F503738734" anchor-label="WriteResult" id="629416649%2FClasslikes%2F503738734" data-filterable-set=":server-core-mock/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":server-core-mock/main" data-filterable-set=":server-core-mock/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-write-result/index.html"><span>Write</span><wbr><span><span>Result</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="629416649%2FClasslikes%2F503738734"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core-mock/main"><div class="symbol monospace"><span class="token keyword">sealed </span><span class="token keyword">class </span><a href="-write-result/index.html">WriteResult</a></div><div class="brief "><p class="paragraph">The result of a write request sent by a simulated client.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>Copyright © 2022 - 2026 Nordic Semiconductor ASA. All Rights Reserved.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

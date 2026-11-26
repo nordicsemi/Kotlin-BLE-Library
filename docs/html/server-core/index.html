@@ -1,0 +1,159 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>server-core</title>
+<link href="../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../scripts/sourceset_dependencies.js" async></script>
+<link href="../styles/style.css" rel="Stylesheet">
+<link href="../styles/main.css" rel="Stylesheet">
+<link href="../styles/prism.css" rel="Stylesheet">
+<link href="../styles/logo-styles.css" rel="Stylesheet">
+<link href="../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../scripts/main.js" defer></script>
+<script type="text/javascript" src="../scripts/prism.js" async></script>
+<script type="text/javascript" src="../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../index.html" tabindex="1">
+                    Kotlin BLE Library
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.0-beta11
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":server-core/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":server-core/main" data-filter=":server-core/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    Kotlin BLE Library
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" id="content" pageids="server-core::////PointingToDeclaration//1386094743">
+  <div class="breadcrumbs"></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>server-core</span></span></h1>
+    <div class="platform-hinted UnderCoverText" data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core/main"><p class="paragraph">Common types and interfaces for the Bluetooth LE peripheral role (GATT server).</p><h2 class="">Overview</h2><p class="paragraph">The <code class="lang-kotlin">LocalServer</code> is the GATT server of this device. It hosts local services, which can be read, written and subscribed to by remote devices called <i>clients</i>. A client is the remote device that uses the server. It is not necessarily the central of the connection: both sides of a connection can have a GATT server and use the server of the other side.</p><p class="paragraph">The module is used by platform-specific implementations for native and mock environments: <code class="lang-kotlin">server-android</code> and <code class="lang-kotlin">server-android-mock</code>. Advertising is not a part of the server, use the <code class="lang-kotlin">advertiser</code> modules to let other devices find it.</p><h2 class="">Usage</h2><h3 class="">Defining services</h3><p class="paragraph">Define the services using the <code class="lang-kotlin">setup</code> method. It returns the <i>shared</i> services, which have one value and one set of handlers for all clients.</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">val services = localServer.setup {<br>    Service(LBS_UUID) {<br>        Characteristic(<br>            uuid = BUTTON_UUID,<br>            properties = CharacteristicProperty.READ and CharacteristicProperty.NOTIFY,<br>            permission = Permission.READ,<br>        )<br>        Characteristic(<br>            uuid = LED_UUID,<br>            properties = CharacteristicProperty.READ and CharacteristicProperty.WRITE,<br>            permissions = Permission.READ and Permission.WRITE,<br>        )<br>    }<br>}<br>val characteristics = services.first().characteristics<br>val button = characteristics.first { it.uuid == BUTTON_UUID }<br>val led = characteristics.first { it.uuid == LED_UUID }</code></pre><span class="copy-tooltip"><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div><span class="copy-icon"></span></span></div><p class="paragraph">Calling <code class="lang-kotlin">setup</code> again replaces the services. The old ones are invalidated, so use only the services returned last.</p><h3 class="">Reads and writes</h3><p class="paragraph">Set the initial value of a characteristic with <code class="lang-kotlin">setValue</code>. By default, a read returns the current value and a write is accepted and stored. Use <code class="lang-kotlin">onRead</code> and <code class="lang-kotlin">onWrite</code> to change that:</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">led.setValue(byteArrayOf(0))<br><br>// The LED accepts exactly one byte.<br>led.onWrite {<br>    if (value.size == 1) {<br>        WriteResponse.Success<br>    } else {<br>        WriteResponse.Failure(OperationStatus.InvalidAttributeLength)<br>    }<br>}<br><br>// Provide the value on demand, for example based on the client that reads.<br>button.onRead { ReadResponse.Success(byteArrayOf(if (pressed) 1 else 0)) }</code></pre><span class="copy-tooltip"><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div><span class="copy-icon"></span></span></div><p class="paragraph">Accepted writes are emitted in <code class="lang-kotlin">writes</code>, together with the client that sent them:</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">led.writes<br>    .onEach { request -&gt; println("LED set to ${request.value.first()} by ${request.client.identifier}") }<br>    .launchIn(scope)</code></pre><span class="copy-tooltip"><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div><span class="copy-icon"></span></span></div><h3 class="">Notifications</h3><p class="paragraph"><code class="lang-kotlin">subscribers</code> contains the clients that enabled notifications or indications. <code class="lang-kotlin">update</code> stores the new value and sends it to all of them:</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">button.subscribers<br>    .onEach { println("${it.size} client(s) subscribed") }<br>    .launchIn(scope)<br><br>button.update(byteArrayOf(1))</code></pre><span class="copy-tooltip"><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div><span class="copy-icon"></span></span></div><h3 class="">Shared and per-client services</h3><p class="paragraph">The services given by <code class="lang-kotlin">setup</code> and <code class="lang-kotlin">LocalServer.services</code> are shared by all clients: a value written by one client is read by the others, and <code class="lang-kotlin">update</code> notifies all subscribers. To work with one client only, use <code class="lang-kotlin">services(client)</code>, or <code class="lang-kotlin">services(identifier)</code>, which returns a view of the same services. The values and handlers are the same, but <code class="lang-kotlin">writes</code>, <code class="lang-kotlin">subscribers</code> and <code class="lang-kotlin">update</code> are limited to that client:</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">val clientServices = localServer.services(client)<br>    .first { it.isNotEmpty() }<br>val clientButton = clientServices.single().characteristics.first { it.uuid == BUTTON_UUID }<br><br>// Notifies this client only. Throws if the client has not subscribed.<br>clientButton.update(byteArrayOf(1))</code></pre><span class="copy-tooltip"><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div><span class="copy-icon"></span></span></div><h3 class="">Profiles</h3><p class="paragraph">A profile keeps the logic of a service in one place. A profile using local services of the server only extends <code class="lang-kotlin">LocalProfile.Simple</code> (one service) or <code class="lang-kotlin">LocalProfile.MultiService</code> (more services), and is registered using <code class="lang-kotlin">LocalServer.profile</code>:</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">class LedButtonServerProfile : LocalProfile.Simple(<br>    serviceUuid = LBS_UUID,<br>    name = "LBS",<br>) {<br>    private lateinit var ledCharacteristic: LocalCharacteristic<br>    private lateinit var buttonCharacteristic: LocalCharacteristic<br><br>    /** The LED is controlled by the client, which writes the LED characteristic. */<br>    val ledState: StateFlow&lt;Boolean&gt;<br>        field = MutableStateFlow(false)<br><br>    /** The Button is controlled by the server. A change notifies the subscribed clients. */<br>    val buttonState = MutableStateFlow(false)<br><br>    // Throw NoSuchElementException or IllegalArgumentException to reject the service.<br>    override fun prepare(server: LocalServer&lt;*&gt;, service: LocalService) {<br>        ledCharacteristic = service.characteristics.first { it.uuid == LED_UUID }<br>        buttonCharacteristic = service.characteristics.first { it.uuid == BUTTON_UUID }<br>    }<br><br>    // Cancelled when the services are replaced or the profile is unregistered.<br>    override suspend fun CoroutineScope.initialize(server: LocalServer&lt;*&gt;) {<br>        ledCharacteristic.setValue(byteArrayOf(0))<br>        buttonCharacteristic.setValue(byteArrayOf(0))<br>        // The state follows the value of the characteristic, which can also be set by the server.<br>        ledCharacteristic.value<br>            .onEach { value -&gt; ledState.value = value.singleOrNull() == 1.toByte() }<br>            .launchIn(this)<br>        buttonState<br>            .onEach { pressed -&gt; buttonCharacteristic.update(byteArrayOf(if (pressed) 1 else 0)) }<br>            .launchIn(this)<br>    }<br>}<br><br>val profile = LedButtonServerProfile()<br>localServer.profile(scope, profile)</code></pre><span class="copy-tooltip"><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div><span class="copy-icon"></span></span></div><p class="paragraph">The profile does not define the services. It starts when all of its services exist, and is started again with the new services when <code class="lang-kotlin">setup</code> is called again.</p></div></div>
+  </div>
+  <h2 class="">Packages</h2>
+  <div class="table"><a data-name="-993947713%2FPackages%2F1386094743" anchor-label="no.nordicsemi.kotlin.ble.server" id="-993947713%2FPackages%2F1386094743" data-filterable-set=":server-core/main"></a>
+    <div class="table-row table-row_platform-tagged" data-filterable-current=":server-core/main" data-filterable-set=":server-core/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="no.nordicsemi.kotlin.ble.server/index.html">no.nordicsemi.kotlin.ble.server</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-993947713%2FPackages%2F1386094743"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right platform-tags--wrapper">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div><span class="brief-comment"><a data-name="-993947713%2FPackages%2F1386094743" anchor-label="no.nordicsemi.kotlin.ble.server" id="-993947713%2FPackages%2F1386094743" data-filterable-set=":server-core/main"></a>
+            <p class="paragraph">Common types and interfaces for the Bluetooth LE GATT server: the <code class="lang-kotlin">LocalServer</code>, its services, characteristics and descriptors, the requests of the clients and the <code class="lang-kotlin">LocalProfile</code>.</p>
+          </span></div>
+      </div>
+    </div>
+<a data-name="-629113824%2FPackages%2F1386094743" anchor-label="no.nordicsemi.kotlin.ble.server.exception" id="-629113824%2FPackages%2F1386094743" data-filterable-set=":server-core/main"></a>
+    <div class="table-row table-row_platform-tagged" data-filterable-current=":server-core/main" data-filterable-set=":server-core/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="no.nordicsemi.kotlin.ble.server.exception/index.html">no.nordicsemi.kotlin.ble.server.exception</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-629113824%2FPackages%2F1386094743"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right platform-tags--wrapper">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div><span class="brief-comment"><a data-name="-629113824%2FPackages%2F1386094743" anchor-label="no.nordicsemi.kotlin.ble.server.exception" id="-629113824%2FPackages%2F1386094743" data-filterable-set=":server-core/main"></a>
+            <p class="paragraph">This package contains exceptions that can be thrown by the server when a client is not available or an operation failed.</p>
+          </span></div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>Copyright © 2022 - 2026 Nordic Semiconductor ASA. All Rights Reserved.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>server-core-mock</title>
+<link href="../images/logo-icon.svg" rel="icon" type="image/svg"><script>var pathToRoot = "../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../scripts/sourceset_dependencies.js" async></script>
+<link href="../styles/style.css" rel="Stylesheet">
+<link href="../styles/main.css" rel="Stylesheet">
+<link href="../styles/prism.css" rel="Stylesheet">
+<link href="../styles/logo-styles.css" rel="Stylesheet">
+<link href="../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../scripts/navigation-loader.js" async></script>
+<script type="text/javascript" src="../scripts/platform-content-handler.js" async></script>
+<script type="text/javascript" src="../scripts/main.js" defer></script>
+<script type="text/javascript" src="../scripts/prism.js" async></script>
+<script type="text/javascript" src="../ui-kit/ui-kit.min.js" defer></script></head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+<a class="library-name--link" href="../index.html" tabindex="1">
+                    Kotlin BLE Library
+            </a>        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle" type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">2.0.0-beta11
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true" data-filter=":server-core-mock/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox" data-role="dropdown-toggle" aria-controls="platform-tags-listbox" aria-haspopup="listbox" aria-expanded="false" aria-label="Toggle source sets"></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":server-core-mock/main" data-filter=":server-core-mock/main">
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button" type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config="{&quot;defaultSize&quot;: 280, &quot;minSize&quot;: 200, &quot;maxSize&quot;: 400}">
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list" data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    Kotlin BLE Library
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" id="content" pageids="server-core-mock::////PointingToDeclaration//503738734">
+  <div class="breadcrumbs"></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>server-core-mock</span></span></h1>
+    <div class="platform-hinted UnderCoverText" data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":server-core-mock/main"><p class="paragraph">Common types and interfaces for mock Bluetooth LE GATT servers.</p><h2 class="">Overview</h2><p class="paragraph">This module is used by platform-specific mock implementations. It contains a simulated platform layer of the GATT server, <code class="lang-kotlin">MockGattServer</code>, and <code class="lang-kotlin">MockClient</code>, a simulated remote device that connects to the server and uses it as a client. The logic of the server itself is shared with the native implementations, so the tests exercise the same code.</p><p class="paragraph">All requests of a mock client are executed without delays, which makes them work with the virtual time of <code class="lang-kotlin">runTest</code>.</p><h2 class="">Usage</h2><p class="paragraph">Mock clients are created by the platform-specific servers, see <code class="lang-kotlin">server-android-mock</code>. A client has to be connected before it uses the server. Its <code class="lang-kotlin">server</code> property is the GATT server of the phone as the client sees it, with the same API as a peripheral has in the client modules: the services are discovered, and the characteristics are read, written and subscribed to. Requests are sent without simulating the transfer time:</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">val client = server.simulateClient()<br>client.connect()<br><br>val led = client.server.services(listOf(LBS_UUID))<br>    .filterIsInstance&lt;RemoteServices.Discovered&gt;()<br>    .first { it.services.isNotEmpty() }<br>    .services.single()<br>    .characteristics.first { it.uuid == LED_UUID }<br><br>led.write(byteArrayOf(1), WriteType.WITH_RESPONSE)<br>val value = led.read()</code></pre><span class="copy-tooltip"><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div><span class="copy-icon"></span></span></div><p class="paragraph">Notifications are received by subscribing to the characteristic, which writes the Client Characteristic Configuration descriptor:</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">val button = client.server.services(listOf(LBS_UUID))<br>    .filterIsInstance&lt;RemoteServices.Discovered&gt;()<br>    .first { it.services.isNotEmpty() }<br>    .services.single()<br>    .characteristics.first { it.uuid == BUTTON_UUID }<br><br>button.subscribe().collect { value -&gt; println("Button: ${value.first()}") }</code></pre><span class="copy-tooltip"><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div><span class="copy-icon"></span></span></div><p class="paragraph">A client can also simulate a link loss, or a change of the MTU:</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">client.exchangeMtu(247)<br>client.simulateLinkLoss()</code></pre><span class="copy-tooltip"><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div><span class="copy-icon"></span></span></div><p class="paragraph">The <code class="lang-kotlin">server</code> is valid for one connection: after the client disconnects, it reports the disconnection, and a new one is created when the client connects again. The module depends on <code class="lang-kotlin">client-core</code> for that.</p></div></div>
+  </div>
+  <h2 class="">Packages</h2>
+  <div class="table"><a data-name="-1898094371%2FPackages%2F503738734" anchor-label="no.nordicsemi.kotlin.ble.server.mock" id="-1898094371%2FPackages%2F503738734" data-filterable-set=":server-core-mock/main"></a>
+    <div class="table-row table-row_platform-tagged" data-filterable-current=":server-core-mock/main" data-filterable-set=":server-core-mock/main">
+      <div>
+        <div class="main-subrow ">
+          <div class=""><span class="inline-flex">
+              <div><a href="no.nordicsemi.kotlin.ble.server.mock/index.html">no.nordicsemi.kotlin.ble.server.mock</a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1898094371%2FPackages%2F503738734"></span>
+                <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+              </span></span></div>
+          <div class="pull-right platform-tags--wrapper">
+            <div class="platform-tags no-gutters">
+              <div class="platform-tag jvm-like">jvm</div>
+            </div>
+          </div>
+        </div>
+        <div><span class="brief-comment"><a data-name="-1898094371%2FPackages%2F503738734" anchor-label="no.nordicsemi.kotlin.ble.server.mock" id="-1898094371%2FPackages%2F503738734" data-filterable-set=":server-core-mock/main"></a>
+            <p class="paragraph">This package contains the simulated GATT server and the simulated clients.</p>
+          </span></div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>Copyright © 2022 - 2026 Nordic Semiconductor ASA. All Rights Reserved.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
