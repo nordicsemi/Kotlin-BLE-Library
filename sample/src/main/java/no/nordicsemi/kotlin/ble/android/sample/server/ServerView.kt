@@ -32,6 +32,7 @@
 package no.nordicsemi.kotlin.ble.android.sample.server
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -39,9 +40,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -56,6 +60,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -63,6 +68,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
@@ -117,19 +123,11 @@ fun ServerView(
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
                     text = "Nordic LED Button Service",
                     style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    text = when {
-                        !isRunning -> "The server is stopped. Press Start to open the service."
-                        isAdvertising -> "Advertising and waiting for connections."
-                        else -> "The server is running."
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
                 )
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -137,34 +135,26 @@ fun ServerView(
                 ) {
                     InfoChip("Server", if (isRunning) "Running" else "Stopped")
                     InfoChip("Advertising", if (isAdvertising) "Yes" else "No")
-                    InfoChip("Button subscribers", subscribersCount.toString())
                 }
-            }
-        }
-
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Indicator(
-                    label = "LED",
-                    caption = if (isLedOn) "ON" else "OFF",
-                    color = { if (isLedOn) Nordic.Color.Sun else Nordic.Color.LightGrey },
-                )
-                ButtonTarget(
-                    enabled = isRunning,
-                    isPressed = isButtonPressed,
-                    onPressedChanged = onButtonPressedChanged,
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Max),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    LedPanel(
+                        isOn = isLedOn,
+                        enabled = isRunning,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                    )
+                    ButtonPanel(
+                        enabled = isRunning,
+                        isPressed = isButtonPressed,
+                        subscribersCount = subscribersCount,
+                        onPressedChanged = onButtonPressedChanged,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                    )
+                }
             }
         }
 
@@ -260,44 +250,59 @@ private fun ClientItem(
     }
 }
 
-/** A big circle with a label, filled with the color returned by [color]. */
+/** A panel with the image of the LED, which lights up when the client turns it on. */
 @Composable
-private fun Indicator(
-    label: String,
-    caption: String,
-    color: () -> Color,
+private fun LedPanel(
+    isOn: Boolean,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
 ) {
-    val animated by animateColorAsState(targetValue = color(), label = label)
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(animated),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = caption,
-                style = MaterialTheme.typography.titleLarge,
-                color = Nordic.Color.DarkGrey,
-            )
-        }
-        Text(text = label, style = MaterialTheme.typography.titleMedium)
-    }
+    val tint by animateColorAsState(
+        targetValue = when {
+            isOn -> Nordic.Color.Sun
+            enabled -> Nordic.Color.MiddleGrey
+            else -> Nordic.Color.LightGrey
+        },
+        label = "LED",
+    )
+    val glow by animateColorAsState(
+        targetValue = if (isOn) Nordic.Color.Sun.copy(alpha = 0.25f) else Color.Transparent,
+        label = "LED glow",
+    )
+    Panel(
+        title = "LED",
+        modifier = modifier,
+        image = {
+            Box(
+                modifier = Modifier
+                    .size(112.dp)
+                    .clip(CircleShape)
+                    .background(glow),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Nordic.Icons.Led,
+                    contentDescription = if (isOn) "LED on" else "LED off",
+                    tint = tint,
+                    modifier = Modifier.size(80.dp),
+                )
+            }
+        },
+        chips = { InfoChip("State", if (isOn) "ON" else "OFF") },
+    )
 }
 
-/** A big circle which is pressed as long as the user is holding it. */
+/** A panel with the image of a button, which is pressed as long as the user is holding it. */
 @Composable
-private fun ButtonTarget(
+private fun ButtonPanel(
     enabled: Boolean,
     isPressed: Boolean,
+    subscribersCount: Int,
     onPressedChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val currentOnPressedChanged by rememberUpdatedState(onPressedChanged)
-    val color by animateColorAsState(
+    val tint by animateColorAsState(
         targetValue = when {
             !enabled -> Nordic.Color.LightGrey
             isPressed -> Nordic.Color.Lake
@@ -305,38 +310,80 @@ private fun ButtonTarget(
         },
         label = "Button",
     )
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.88f else 1f,
+        label = "Button scale",
+    )
+    Panel(
+        title = "Button",
+        modifier = modifier,
+        image = {
+            Box(
+                modifier = Modifier
+                    .size(112.dp)
+                    .clip(CircleShape)
+                    .pointerInput(enabled) {
+                        if (enabled) {
+                            detectTapGestures(
+                                onPress = {
+                                    currentOnPressedChanged(true)
+                                    try {
+                                        tryAwaitRelease()
+                                    } finally {
+                                        currentOnPressedChanged(false)
+                                    }
+                                },
+                            )
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Nordic.Icons.PushButton,
+                    contentDescription = if (isPressed) "Button pressed" else "Hold to press the button",
+                    tint = tint,
+                    modifier = Modifier
+                        .size(88.dp)
+                        .scale(scale),
+                )
+            }
+        },
+        chips = {
+            InfoChip("State", if (isPressed) "Pressed" else "Released")
+            InfoChip("Subscribers", subscribersCount.toString())
+        },
+    )
+}
+
+/** A panel with an image, a title and a few chips below. */
+@Composable
+private fun Panel(
+    title: String,
+    image: @Composable () -> Unit,
+    chips: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
-        Box(
+        Column(
             modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(color)
-                .pointerInput(enabled) {
-                    if (enabled) {
-                        detectTapGestures(
-                            onPress = {
-                                currentOnPressedChanged(true)
-                                try {
-                                    tryAwaitRelease()
-                                } finally {
-                                    currentOnPressedChanged(false)
-                                }
-                            },
-                        )
-                    }
-                },
-            contentAlignment = Alignment.Center,
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = if (isPressed) "Pressed" else "Hold",
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White,
-            )
+            image()
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                chips()
+            }
         }
-        Text(text = "Button", style = MaterialTheme.typography.titleMedium)
     }
 }
 
