@@ -35,8 +35,11 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import no.nordicsemi.kotlin.ble.core.Manager
 import no.nordicsemi.kotlin.ble.core.OperationStatus
+import no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException
 import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
 import no.nordicsemi.kotlin.ble.server.Client
+import no.nordicsemi.kotlin.ble.server.exception.ClientNotConnectedException
+import no.nordicsemi.kotlin.ble.server.exception.OperationFailedException
 
 /**
  * The platform layer of the local GATT server: a native one, or a mock.
@@ -64,8 +67,7 @@ interface GattServer {
      *
      * Called before the new services are added using [addService].
      *
-     * @throws no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException if Bluetooth is
-     * not available.
+     * @throws BluetoothUnavailableException if Bluetooth is not available.
      * @throws SecurityException if the required permission is denied.
      */
     fun clearServices()
@@ -79,10 +81,8 @@ interface GattServer {
      *
      * @param definition The definition of the service.
      * @param primary `true` for a primary service, `false` for a service that is included in another one.
-     * @throws no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException if Bluetooth is
-     * not available.
-     * @throws no.nordicsemi.kotlin.ble.server.exception.OperationFailedException if adding could not
-     * be started. No event is emitted then.
+     * @throws BluetoothUnavailableException if Bluetooth is not available.
+     * @throws OperationFailedException if adding could not be started. No event is emitted then.
      */
     fun addService(definition: ServiceDefinition, primary: Boolean)
 
@@ -111,10 +111,8 @@ interface GattServer {
      * @param attribute The `instanceId` of the characteristic.
      * @param value The value, no longer than [Client.maximumUpdateValueLength].
      * @param confirm `true` to send an indication, `false` for a notification.
-     * @throws no.nordicsemi.kotlin.ble.server.exception.ClientNotConnectedException if the client is
-     * not connected.
-     * @throws no.nordicsemi.kotlin.ble.server.exception.OperationFailedException if sending could
-     * not be started. No event is emitted then.
+     * @throws ClientNotConnectedException if the client is not connected.
+     * @throws OperationFailedException if sending could not be started. No event is emitted then.
      */
     fun notify(client: Client<*>, attribute: Int, value: ByteArray, confirm: Boolean)
 

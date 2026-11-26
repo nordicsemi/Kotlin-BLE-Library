@@ -173,7 +173,7 @@ class ServerViewModel @Inject constructor(
                 // Remove the services.
                 withContext(NonCancellable) {
                     try {
-                        localServer.setup { }
+                        localServer.removeServices()
                     } catch (e: Exception) {
                         Timber.w(e, "Failed to remove the services")
                     }

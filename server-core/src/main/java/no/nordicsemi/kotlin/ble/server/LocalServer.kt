@@ -36,6 +36,8 @@ package no.nordicsemi.kotlin.ble.server
 import kotlinx.coroutines.flow.StateFlow
 import no.nordicsemi.kotlin.ble.core.Manager
 import no.nordicsemi.kotlin.ble.core.ServerScope
+import no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException
+import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
 
 /**
  * The GATT server of this device, which serves the remote devices that are connected to it.
@@ -107,10 +109,10 @@ interface LocalServer<ID: Any>: Manager {
      *
      * @param builder The builder for the local services.
      * @return The shared services that have been added.
-     * @throws no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException if the manager is closed.
+     * @throws ManagerClosedException if the manager is closed.
      * @throws SecurityException if the required permission is denied.
-     * @throws no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException if Bluetooth is
-     * not available.
+     * @throws BluetoothUnavailableException if Bluetooth is not available.
+     * @see removeServices
      */
     suspend fun setup(builder: ServerScope.() -> Unit): List<LocalService>
 
@@ -128,10 +130,9 @@ interface LocalServer<ID: Any>: Manager {
      *
      * Does nothing if there are no services.
      *
-     * @throws no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException if the manager is closed.
+     * @throws ManagerClosedException if the manager is closed.
      * @throws SecurityException if the required permission is denied.
-     * @throws no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException if Bluetooth is
-     * not available.
+     * @throws BluetoothUnavailableException if Bluetooth is not available.
      */
     suspend fun removeServices()
 
