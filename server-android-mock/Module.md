@@ -60,7 +60,7 @@ a `MockLocalServer`. A simulated peripheral can use it as a client:
 ```kotlin
 val tag = PeripheralSpec.simulatePeripheral("01:02:03:04:05:06") {
     advertising { CompleteLocalName("Tag") }
-    connectable(name = "Tag", eventHandler = object : PeripheralSpecEventHandler {}) { }
+    connectable(name = "Tag") { }
     client { server ->
         // Runs every time the peripheral is connected. The server is the GATT server of the phone.
         val discovered = server.services(listOf(LBS_UUID))
