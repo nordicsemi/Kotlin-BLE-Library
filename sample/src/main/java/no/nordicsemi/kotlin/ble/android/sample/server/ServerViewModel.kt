@@ -102,8 +102,8 @@ class ServerViewModel @Inject constructor(
 
     /** The clients connected to the server, together with their connection details. */
     @OptIn(ExperimentalCoroutinesApi::class)
-    val clients: StateFlow<List<ClientInfo>> = localServer.connectedClients
-        .flatMapLatest { clients ->
+    val clients: StateFlow<List<ClientInfo>> = combine(
+        localServer.connectedClients.flatMapLatest { clients ->
             if (clients.isEmpty()) {
                 flowOf(emptyList())
             } else {
@@ -126,7 +126,11 @@ class ServerViewModel @Inject constructor(
                     }
                 ) { it.toList() }
             }
-        }
+        },
+        profile.subscribers,
+    ) { clients, subscribers ->
+        clients.map { it.copy(isSubscribed = it.address in subscribers) }
+    }
         .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     private var serverJob: Job? = null
@@ -222,6 +226,7 @@ class ServerViewModel @Inject constructor(
  * @property mtu The ATT MTU, or `null` if not known.
  * @property phy The PHY in use, or `null` if not known.
  * @property connectionParameters The connection parameters, or `null` if not known.
+ * @property isSubscribed Whether the client subscribed to the Button characteristic.
  */
 data class ClientInfo(
     val address: String,
@@ -229,4 +234,5 @@ data class ClientInfo(
     val mtu: Int?,
     val phy: PhyInUse?,
     val connectionParameters: ConnectionParameters.Specified?,
+    val isSubscribed: Boolean = false,
 )

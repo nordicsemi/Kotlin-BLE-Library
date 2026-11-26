@@ -210,6 +210,16 @@ private fun ClientItem(
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 headlineContent = { Text(text = client.address) },
                 supportingContent = { Text(text = client.state.toString()) },
+                trailingContent = {
+                    // The client subscribed to the Button, so it is notified about its changes.
+                    if (client.isSubscribed) {
+                        Icon(
+                            imageVector = Nordic.Icons.Link,
+                            contentDescription = "Subscribed to the button",
+                            tint = Nordic.Color.Lake,
+                        )
+                    }
+                },
                 leadingContent = {
                     Icon(
                         imageVector = Nordic.Icons.Bluetooth,
@@ -296,7 +306,6 @@ private fun LedPanel(
                 )
             }
         },
-        chips = { InfoChip("State", if (isOn) "ON" else "OFF") },
     )
 }
 
@@ -365,8 +374,8 @@ private fun ButtonPanel(
 private fun Panel(
     title: String,
     image: @Composable () -> Unit,
-    chips: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    chips: @Composable () -> Unit = {},
 ) {
     Surface(
         modifier = modifier,
@@ -413,6 +422,7 @@ private fun ServerViewPreview() {
                         latency = 0,
                         supervisionTimeout = 400,
                     ),
+                    isSubscribed = true,
                 ),
             ),
             errorMessage = null,

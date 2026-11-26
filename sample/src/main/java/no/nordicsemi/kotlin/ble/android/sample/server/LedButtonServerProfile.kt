@@ -69,6 +69,10 @@ class LedButtonServerProfile : LocalProfile.Simple(
     /** The state of the Button, set by this device. A change is sent to the subscribed clients. */
     val buttonState = MutableStateFlow(false)
 
+    /** The identifiers of the clients subscribed to the Button characteristic. */
+    val subscribers: StateFlow<Set<String>>
+        field = MutableStateFlow(emptySet())
+
     /** The number of clients subscribed to the Button characteristic. */
     val subscribersCount: StateFlow<Int>
         field = MutableStateFlow(0)
@@ -117,14 +121,17 @@ class LedButtonServerProfile : LocalProfile.Simple(
             }
             .launchIn(this)
         buttonCharacteristic.subscribers
-            .map { it.size }
-            .onEach { count -> subscribersCount.value = count }
+            .onEach { clients ->
+                subscribers.value = clients.map { it.identifier.toString() }.toSet()
+                subscribersCount.value = clients.size
+            }
             .launchIn(this)
 
         try {
             awaitCancellation()
         } finally {
             buttonState.value = false
+            subscribers.value = emptySet()
             subscribersCount.value = 0
         }
     }
