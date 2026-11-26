@@ -40,6 +40,7 @@ import no.nordicsemi.kotlin.ble.client.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.exception.ScanningFailedToStartException
 import no.nordicsemi.kotlin.ble.client.exception.ConnectionFailedException
 import no.nordicsemi.kotlin.ble.client.exception.ScanningException
+import no.nordicsemi.kotlin.ble.server.android.LocalServer
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
 import no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException
@@ -178,6 +179,13 @@ interface CentralManager:
     ): Flow<ScanResult>
 
     // TODO Add scan with Pending Intent (Android 8+, or for compat for legacy?)
+
+    /**
+     * The local GATT server of this device, see [no.nordicsemi.kotlin.ble.client.CentralManager.server].
+     *
+     * On Android it is the Android [LocalServer], which also reports the connected clients.
+     */
+    override val server: LocalServer
 
     companion object Factory
     

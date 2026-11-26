@@ -65,6 +65,7 @@ import no.nordicsemi.kotlin.ble.core.log.Layer
 import no.nordicsemi.kotlin.ble.environment.android.mock.LatestApi
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import no.nordicsemi.kotlin.ble.server.android.LocalServer
+import no.nordicsemi.kotlin.ble.server.android.mock.MockLocalServer
 import no.nordicsemi.kotlin.ble.server.android.mock.mock
 import no.nordicsemi.kotlin.log.Log
 import kotlin.time.Clock
@@ -81,11 +82,15 @@ open class MockCentralManagerImpl(
     scope: CoroutineScope,
     private val environment: MockAndroidEnvironment = LatestApi(),
     clock: Clock = Clock.System,
-    server: LocalServer? = null,
+    server: MockLocalServer? = null,
 ): MockCentralManager, CentralManagerImpl(scope, environment, server) {
+
+    override val server: MockLocalServer
+        get() = super.server as MockLocalServer
+
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
 
-    override fun createServer(): LocalServer = LocalServer.mock(environment, internalScope)
+    override fun createServer(): MockLocalServer = LocalServer.mock(environment, internalScope)
 
     /** The number of scans (flows returned by [scan]) that are currently collected. */
     internal val activeScans = MutableStateFlow(0)

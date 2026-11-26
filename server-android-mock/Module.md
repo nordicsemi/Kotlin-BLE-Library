@@ -56,7 +56,7 @@ client.disconnect(ConnectionState.Disconnected.Reason.LinkLoss)
 ### Using the server with a mock central manager
 
 The mock central manager creates a mock server when `centralManager.server` is accessed. It is
-available as `centralManager.mockServer`. A simulated peripheral can use it as a client:
+a `MockLocalServer`. A simulated peripheral can use it as a client:
 ```kotlin
 val tag = PeripheralSpec.simulatePeripheral("01:02:03:04:05:06") {
     advertising { CompleteLocalName("Tag") }

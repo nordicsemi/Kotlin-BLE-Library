@@ -143,8 +143,14 @@ open class MockExecutor(
     private fun startClientRole() {
         if (clientRoleJob?.isActive == true) return
         val role = peripheralSpec.clientRole ?: return
+        val server = serverProvider?.invoke() ?: return
         @Suppress("UNCHECKED_CAST")
-        val host = serverProvider?.invoke() as? MockClientHost<String> ?: return
+        val host = server as? MockClientHost<String> ?: run {
+            logger?.warn(Layer.GATT) {
+                "The client role of ${peripheralSpec.identifier} is not started: the local server is not a mock one"
+            }
+            return
+        }
         val client = host.simulatedClient(peripheralSpec.identifier)
         clientRoleJob = scope.launch {
             try {

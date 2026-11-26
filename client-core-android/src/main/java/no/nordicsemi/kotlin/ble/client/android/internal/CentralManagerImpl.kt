@@ -85,6 +85,10 @@ abstract class CentralManagerImpl(
 ): CentralManagerImpl<String, Peripheral, Peripheral.Executor, ConjunctionFilterScope, ScanResult>(scope, environment, server),
     CentralManager {
 
+    // The server is either given to the factory, or created by createServer(), as an Android one.
+    override val server: LocalServer
+        get() = super.server as LocalServer
+
     /**
      * Checks whether the BLUETOOTH_CONNECT permission is granted.
      *

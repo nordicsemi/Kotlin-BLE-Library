@@ -26,11 +26,11 @@ centralManager.simulatePeripherals(listOf(blinky)) // See PeripheralSpec in clie
 val peripheral = centralManager.scan().first().peripheral
 centralManager.connect(peripheral)
 ```
-The local GATT server is a mock server, `centralManager.mockServer`. It is created when first
+The local GATT server is a mock server, `centralManager.server`. It is created when first
 accessed, or can be given to the manager. The simulated peripherals can use it as clients, see
 `PeripheralSpec.Builder.client`:
 ```kotlin
-centralManager.mockServer.setup {
+centralManager.server.setup {
     Service(IMMEDIATE_ALERT_UUID) { /* characteristics */ }
 }
 ```

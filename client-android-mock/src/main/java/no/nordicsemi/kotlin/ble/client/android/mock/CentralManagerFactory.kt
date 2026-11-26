@@ -39,7 +39,7 @@ import no.nordicsemi.kotlin.ble.client.android.mock.internal.MockCentralManagerI
 import no.nordicsemi.kotlin.ble.client.mock.SimulationProvider
 import no.nordicsemi.kotlin.ble.environment.android.mock.LatestApi
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
-import no.nordicsemi.kotlin.ble.server.android.LocalServer
+import no.nordicsemi.kotlin.ble.server.android.mock.MockLocalServer
 import kotlin.time.Clock
 
 /**
@@ -64,6 +64,6 @@ import kotlin.time.Clock
 fun CentralManager.Factory.mock(
     environment: MockAndroidEnvironment = LatestApi(),
     scope: CoroutineScope,
-    server: LocalServer? = null,
+    server: MockLocalServer? = null,
     clock: Clock = Clock.System,
 ): MockCentralManager = MockCentralManagerImpl(scope, environment, clock, server)

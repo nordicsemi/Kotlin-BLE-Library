@@ -178,7 +178,7 @@ class ProfileTest {
             gattSettle()
             assertFalse(profile.initialized)
 
-            val _ = manager.mockServer.setup {
+            val _ = manager.server.setup {
                 Service(LOCAL_SERVICE_UUID) {
                     Characteristic(
                         LOCAL_CHARACTERISTIC_UUID,

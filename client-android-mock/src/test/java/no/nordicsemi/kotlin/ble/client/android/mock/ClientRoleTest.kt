@@ -233,9 +233,8 @@ class ClientRoleTest {
                 })) }
             val requests = mutableListOf<WriteRequest>()
             // Services of the manager's own server, defined after the manager was created.
-            manager.mockServer.defineServices()
-            assertSame(manager.mockServer, manager.server)
-            manager.mockServer.services.value.single().characteristics.single().writes
+            manager.server.defineServices()
+            manager.server.services.value.single().characteristics.single().writes
                 .onEach { requests += it }
                 .launchIn(backgroundScope)
 
@@ -251,7 +250,7 @@ class ClientRoleTest {
     fun `the manager closes the server it created, but not the one it was given`() = runTest {
         withTimeout(10.seconds) {
             val own = CentralManager.mock(environment = LatestApi(), scope = backgroundScope)
-            val ownServer = own.mockServer
+            val ownServer = own.server
             own.close()
             assertFailsWith<ManagerClosedException> { ownServer.setup { } }
 

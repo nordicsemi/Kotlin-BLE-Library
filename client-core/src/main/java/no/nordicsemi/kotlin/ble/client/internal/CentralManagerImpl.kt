@@ -85,7 +85,7 @@ abstract class CentralManagerImpl<
     protected open fun createServer(): LocalServer<ID> =
         throw UnsupportedOperationException("This central manager has no local GATT server")
 
-    final override val server: LocalServer<ID> by lazy {
+    override val server: LocalServer<ID> by lazy {
         givenServer ?: createServer().also { ownedServer = it }
     }
 

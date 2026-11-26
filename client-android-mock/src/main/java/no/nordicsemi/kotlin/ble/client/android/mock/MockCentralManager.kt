@@ -40,15 +40,12 @@ import no.nordicsemi.kotlin.ble.server.android.mock.MockLocalServer
  *
  * Use [simulatePeripherals] to set up mock peripherals.
  */
-interface MockCentralManager: CentralManager, SimulationProvider<String>
+interface MockCentralManager: CentralManager, SimulationProvider<String> {
 
-/**
- * The local GATT server of the mock central manager as a [MockLocalServer], which can simulate
- * clients.
- *
- * It is the server created by the manager, or the one given to it when it is a [MockLocalServer].
- *
- * @throws IllegalStateException if another kind of server was given to the manager.
- */
-val MockCentralManager.mockServer: MockLocalServer
-    get() = checkNotNull(server as? MockLocalServer) { "The server of the manager is not a MockLocalServer" }
+    /**
+     * The local GATT server of the mock central manager, which can simulate clients.
+     *
+     * It is the server given to the manager, or the one created when it is first accessed.
+     */
+    override val server: MockLocalServer
+}
