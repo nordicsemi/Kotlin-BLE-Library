@@ -246,6 +246,12 @@ open class LocalServerImpl<ID: Any>(
         }
     }
 
+    override suspend fun removeServices() {
+        if (closed.value) throw ManagerClosedException()
+        if (_services.value.isEmpty()) return
+        val _ = setup { }
+    }
+
     /**
      * Adds the service, and the services it includes, and waits for the platform to confirm it.
      */

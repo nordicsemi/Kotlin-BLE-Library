@@ -41,6 +41,19 @@ val led = characteristics.first { it.uuid == LED_UUID }
 Calling `setup` again replaces the services. The old ones are invalidated, so use only the
 services returned last.
 
+### Removing the services
+
+`removeServices` removes the services defined using `setup`, so the clients can no longer use them.
+The server stays open and the clients stay connected, but they are told that the services have
+changed (on Android 14 and newer, using a Service Changed indication). Only the services of this
+instance are removed, not the ones of other servers or other apps. `setup` can be called again to
+host new services.
+```kotlin
+localServer.removeServices()
+```
+To release the server, call `close`. It also disconnects all the clients, and the server cannot be
+used afterwards: `setup` throws `ManagerClosedException`.
+
 ### Reads and writes
 
 Set the initial value of a characteristic with `setValue`. By default, a read returns the current

@@ -115,6 +115,27 @@ interface LocalServer<ID: Any>: Manager {
     suspend fun setup(builder: ServerScope.() -> Unit): List<LocalService>
 
     /**
+     * Removes the services defined with [setup], so the clients can no longer use them.
+     *
+     * The server stays open: it can host new services after another call to [setup], and
+     * the clients that are connected remain connected. The services are invalidated
+     * ([AnyLocalService.manager] becomes `null`), and [services] becomes empty. The platform may
+     * tell the connected clients that the services have changed.
+     *
+     * Only the services of this instance are removed: other [LocalServer]s, and the GATT servers
+     * of other apps, are not affected. Use [close] to release the server, which also disconnects
+     * all the clients and can not be undone.
+     *
+     * Does nothing if there are no services.
+     *
+     * @throws no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException if the manager is closed.
+     * @throws SecurityException if the required permission is denied.
+     * @throws no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException if Bluetooth is
+     * not available.
+     */
+    suspend fun removeServices()
+
+    /**
      * The local services, as seen by the client with the given identifier.
      *
      * The services are the same as in [services], they share the values and the handlers, but

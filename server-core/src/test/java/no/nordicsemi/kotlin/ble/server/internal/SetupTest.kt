@@ -243,6 +243,48 @@ class SetupTest {
     }
 
     @Test
+    fun removeServices_removesAndInvalidatesTheServices() = runTest {
+        val fixture = Fixture(this)
+        val old = fixture.setup()
+
+        fixture.manager.removeServices()
+
+        assertTrue(fixture.manager.services.value.isEmpty())
+        assertNull(old[0].manager)
+        assertTrue(fixture.server.setServicesCalls.last().isEmpty())
+        assertEquals(0, fixture.server.closeCount)
+    }
+
+    @Test
+    fun removeServices_serverCanHostServicesAgain() = runTest {
+        val fixture = Fixture(this)
+        val _ = fixture.setup()
+        fixture.manager.removeServices()
+
+        val new = fixture.manager.setup { Service(INCLUDED_UUID) }
+
+        assertEquals(new, fixture.manager.services.value)
+        assertSame(fixture.manager, new[0].manager)
+    }
+
+    @Test
+    fun removeServices_withoutServicesDoesNothing() = runTest {
+        val fixture = Fixture(this)
+
+        fixture.manager.removeServices()
+
+        assertTrue(fixture.server.setServicesCalls.isEmpty())
+    }
+
+    @Test
+    fun removeServices_onClosedManagerThrows() = runTest {
+        val fixture = Fixture(this)
+        fixture.manager.close()
+
+        assertFailsWith<ManagerClosedException> { fixture.manager.removeServices() }
+    }
+
+    @Test
     fun setup_failureKeepsPreviousServices() = runTest {
         val fixture = Fixture(this)
         val old = fixture.setup()
