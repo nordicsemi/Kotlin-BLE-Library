@@ -46,14 +46,14 @@ import kotlin.test.assertTrue
 class ClientServicesTest {
 
     @Test
-    fun services_areEmptyBeforeSetup() = runTest {
+    fun `client services are empty before setup`() = runTest {
         val fixture = Fixture(this)
 
         assertTrue(fixture.manager.services(fixture.client).value.isEmpty())
     }
 
     @Test
-    fun services_haveTheSameStructureAsTheServicesOfTheServer() = runTest {
+    fun `client services have the same structure as the services of the server`() = runTest {
         val fixture = Fixture(this)
         val services = fixture.setup()
 
@@ -65,7 +65,7 @@ class ClientServicesTest {
     }
 
     @Test
-    fun services_areTheSameWhenAskedAgain() = runTest {
+    fun `client services are the same when asked again`() = runTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
 
@@ -74,7 +74,7 @@ class ClientServicesTest {
     }
 
     @Test
-    fun services_areReplacedWhenServerIsSetUpAgain() = runTest {
+    fun `client services are replaced when the server is set up again`() = runTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
         val before = fixture.manager.services(fixture.client).value
@@ -85,7 +85,7 @@ class ClientServicesTest {
     }
 
     @Test
-    fun writes_areLimitedToTheClient() = runTest {
+    fun `writes of a client view are limited to the client`() = runTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
         val view = fixture.manager.services(fixture.client).value.single().characteristics.first { it.uuid == RW_UUID }
@@ -102,7 +102,7 @@ class ClientServicesTest {
     }
 
     @Test
-    fun descriptorWrites_areLimitedToTheClient() = runTest {
+    fun `descriptor writes of a client view are limited to the client`() = runTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
         val view = fixture.manager.services(fixture.client2).value.single().characteristics
@@ -119,7 +119,7 @@ class ClientServicesTest {
     }
 
     @Test
-    fun subscribers_areLimitedToTheClient() = runTest {
+    fun `subscribers of a client view are limited to the client`() = runTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
         val view = fixture.manager.services(fixture.client).value.single().characteristics.first { it.uuid == NOTIFY_UUID }
@@ -133,7 +133,7 @@ class ClientServicesTest {
     }
 
     @Test
-    fun update_isSentToTheClientOnly() = runTest {
+    fun `update of a client view is sent to the client only`() = runTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
         fixture.subscribe(fixture.notify, from = fixture.client)
@@ -146,7 +146,7 @@ class ClientServicesTest {
     }
 
     @Test
-    fun update_notSubscribedClient_throws() = runTest {
+    fun `update throws when the client is not subscribed`() = runTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
         fixture.subscribe(fixture.notify, from = fixture.client)
@@ -157,7 +157,7 @@ class ClientServicesTest {
     }
 
     @Test
-    fun values_areShared() = runTest {
+    fun `values are shared between the clients`() = runTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
         val view = fixture.manager.services(fixture.client).value.single().characteristics.first { it.uuid == RW_UUID }

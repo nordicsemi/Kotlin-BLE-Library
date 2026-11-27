@@ -48,7 +48,7 @@ import kotlin.time.Duration.Companion.seconds
 class UpdateTest {
 
     @Test
-    fun update_notifiesAllSubscribers() = runTest {
+    fun `update notifies all subscribers`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify, 1, fixture.client)
         fixture.subscribe(fixture.notify, 1, fixture.client2)
@@ -66,7 +66,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_notifiesOnlyTheGivenClient() = runTest {
+    fun `update notifies only the given client`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify, 1, fixture.client)
         fixture.subscribe(fixture.notify, 1, fixture.client2)
@@ -78,7 +78,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_storesValue() = runTest {
+    fun `update stores the value`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
 
@@ -89,7 +89,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_indicateOnlyUsesIndications() = runTest {
+    fun `update of an indicate only characteristic uses indications`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.indicate, 2)
 
@@ -99,7 +99,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_notifyAndIndicateUsesNotification() = runTest {
+    fun `update of a characteristic with notify and indicate uses notifications`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.both, 2)
 
@@ -110,7 +110,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_noSubscribers_storesValueOnly() = runTest {
+    fun `update without subscribers only stores the value`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         fixture.notify.update(bytes(1, 2))
@@ -120,7 +120,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_afterUnsubscribe_doesNotNotify() = runTest {
+    fun `update after unsubscribe does not notify`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
         val _ = fixture.writeCccd(fixture.notify, 0)
@@ -131,7 +131,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_afterDisconnect_doesNotNotify() = runTest {
+    fun `update after disconnect does not notify`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
         fixture.emit(GattServerEvent.ClientDisconnected(fixture.client))
@@ -142,7 +142,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_notSubscribedClient_throws() = runTest {
+    fun `update throws when the client is not subscribed`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify, 1, fixture.client)
 
@@ -151,7 +151,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_unsupportedCharacteristic_throws() = runTest {
+    fun `update of a characteristic without notify or indicate throws`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         assertFailsWith<IllegalStateException> { fixture.ro.update(bytes(1)) }
@@ -160,7 +160,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_tooLongForClient_throws() = runTest {
+    fun `update throws when the value is too long for the client`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
 
@@ -171,7 +171,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_maxLengthForClient_accepted() = runTest {
+    fun `update accepts the maximum length for the client`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
 
@@ -181,7 +181,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_tooLongForOneOfClients_throwsAndDoesNotNotifyAny() = runTest {
+    fun `update too long for one of the clients throws and does not notify any`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.client2.maximumUpdateValueLength = 10
         fixture.subscribe(fixture.notify, 1, fixture.client)
@@ -196,7 +196,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_largerThan512_throws() = runTest {
+    fun `update larger than 512 bytes throws`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.client.maximumUpdateValueLength = 1000
         fixture.subscribe(fixture.notify)
@@ -205,7 +205,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_usesCurrentMaximumUpdateValueLength() = runTest {
+    fun `update uses the current maximum update value length`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
         fixture.client.maximumUpdateValueLength = 100
@@ -216,7 +216,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_targetsAreNotifiedConcurrently() = runTest {
+    fun `update notifies the targets concurrently`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify, 1, fixture.client)
         fixture.subscribe(fixture.notify, 1, fixture.client2)
@@ -234,7 +234,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_failure_isRethrownAfterAllAttempted() = runTest {
+    fun `failure of update is rethrown after all clients were attempted`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify, 1, fixture.client)
         fixture.subscribe(fixture.notify, 1, fixture.client2)
@@ -249,7 +249,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_onReplacedService_throws() = runTest {
+    fun `update on a replaced service throws`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val old = fixture.notify
         fixture.subscribe(old)
@@ -261,7 +261,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_onCharacteristicWithoutReadProperty_works() = runTest {
+    fun `update works on a characteristic without the read property`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val notifyOnly = fixture.characteristic(NOTIFY2_UUID)
         fixture.subscribe(notifyOnly)
@@ -272,7 +272,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_nextNotificationOfTheSameClientWaitsForThePrevious() = runTest {
+    fun `next notification of the same client waits for the previous one`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
         fixture.server.autoConfirmNotifications = false
@@ -292,7 +292,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_failedNotificationIsReportedAsException() = runTest {
+    fun `failed notification is reported as an exception`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
         fixture.server.autoConfirmNotifications = false
@@ -305,7 +305,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_disconnectionWhileWaitingIsReportedAsException() = runTest {
+    fun `disconnection while waiting is reported as an exception`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
         fixture.server.autoConfirmNotifications = false
@@ -318,7 +318,7 @@ class UpdateTest {
     }
 
     @Test
-    fun update_notificationNotReportedIsTimedOut() = runTest {
+    fun `notification that is not reported times out`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
         fixture.server.autoConfirmNotifications = false

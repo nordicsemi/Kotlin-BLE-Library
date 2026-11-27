@@ -54,7 +54,7 @@ class ReadWriteTest {
     // ----- Reads -----
 
     @Test
-    fun read_returnsValue() = runTest {
+    fun `read returns the value`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.ro.setValue(bytes(1, 2, 3))
 
@@ -67,7 +67,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_echoesRequestId() = runTest {
+    fun `read echoes the request id`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.emit(GattServerEvent.ReadRequested(fixture.client, 42, fixture.ro.instanceId, 0))
 
@@ -75,7 +75,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_emptyValueByDefault() = runTest {
+    fun `read returns an empty value by default`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         val response = fixture.read(fixture.ro.instanceId)
@@ -85,21 +85,21 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_unknownAttribute_invalidHandle() = runTest {
+    fun `read of an unknown attribute fails with InvalidHandle`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         assertEquals(OperationStatus.InvalidHandle, fixture.read(9999).status)
     }
 
     @Test
-    fun read_beforeSetup_invalidHandle() = runTest {
+    fun `read before setup fails with InvalidHandle`() = runTest {
         val fixture = Fixture(this)
 
         assertEquals(OperationStatus.InvalidHandle, fixture.read(1).status)
     }
 
     @Test
-    fun read_withoutReadProperty_notPermitted() = runTest {
+    fun `read without the read property fails with ReadNotPermitted`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         assertEquals(OperationStatus.ReadNotPermitted, fixture.read(fixture.wo.instanceId).status)
@@ -107,7 +107,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_longRead_slicesFromOffset() = runTest {
+    fun `long read slices the value from the offset`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.ro.setValue(bytes(0, 1, 2, 3, 4, 5))
 
@@ -119,7 +119,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_offsetEqualToSize_returnsEmpty() = runTest {
+    fun `read with the offset equal to the size returns an empty value`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.ro.setValue(bytes(0, 1, 2))
 
@@ -130,7 +130,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_offsetBeyondSize_invalidOffset() = runTest {
+    fun `read with the offset beyond the size fails with InvalidOffset`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.ro.setValue(bytes(0, 1, 2))
 
@@ -138,7 +138,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_handlerProvidesValue() = runTest {
+    fun `read handler provides the value`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.ro.setValue(bytes(1))
         fixture.ro.onRead { ReadResponse.Success(bytes(9, 8)) }
@@ -147,7 +147,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_valueProviderIsCalledForEachRead() = runTest {
+    fun `read handler is called for each read`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         var counter = 0
         fixture.ro.provideValue { bytes((++counter).toByte().toInt()) }
@@ -157,7 +157,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_handlerSeesClient() = runTest {
+    fun `read handler sees the client`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.ro.onRead { ReadResponse.Success(client.identifier.toString().encodeToByteArray()) }
 
@@ -166,7 +166,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_handlerCanSuspend() = runTest {
+    fun `read handler can suspend`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.ro.onRead {
             kotlinx.coroutines.delay(1000)
@@ -182,7 +182,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_handlerLongValueIsSlicedByLibrary() = runTest {
+    fun `long value of the read handler is sliced by the library`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.ro.onRead { ReadResponse.Success(bytes(1, 2, 3, 4)) }
 
@@ -190,7 +190,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_handlerFailure_returnsStatus() = runTest {
+    fun `read returns the status of a failed handler`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.ro.onRead { ReadResponse.Failure(OperationStatus.InsufficientAuthorization) }
 
@@ -201,7 +201,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_handlerException_unlikelyError() = runTest {
+    fun `read returns UnlikelyError when the handler throws`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.ro.onRead { throw IllegalStateException("Boom") }
 
@@ -213,7 +213,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_handlerRemoved_returnsStoredValue() = runTest {
+    fun `read returns the stored value after the handler was removed`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.ro.setValue(bytes(5))
         fixture.ro.onRead { ReadResponse.Success(bytes(6)) }
@@ -223,7 +223,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_descriptor_returnsValue() = runTest {
+    fun `read of a descriptor returns the value`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val cud = fixture.rw.descriptors.first { it.uuid == Descriptor.CHAR_USER_DESC_UUID }
 
@@ -234,7 +234,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_descriptorHandler() = runTest {
+    fun `read of a descriptor uses the handler`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val descriptor = fixture.rw.descriptors.first { it.uuid == CUSTOM_DESCRIPTOR_UUID }
         descriptor.onRead { ReadResponse.Success(bytes(4)) }
@@ -243,7 +243,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun read_includedServiceCharacteristic() = runTest {
+    fun `read of a characteristic of an included service`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val included = fixture.services[0].includedServices[0].characteristics[0]
         included.setValue(bytes(3))
@@ -254,7 +254,7 @@ class ReadWriteTest {
     // ----- Writes -----
 
     @Test
-    fun write_defaultStoresAndEmits() = runTest {
+    fun `write stores the value and emits it by default`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val writes = mutableListOf<WriteRequest>()
         backgroundScope.launch { fixture.rw.writes.toList(writes) }
@@ -273,7 +273,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_thenReadReturnsWrittenValue() = runTest {
+    fun `read after write returns the written value`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         val _ = fixture.write(fixture.rw.instanceId, bytes(5, 6))
@@ -282,14 +282,14 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_unknownAttribute_invalidHandle() = runTest {
+    fun `write to an unknown attribute fails with InvalidHandle`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         assertEquals(OperationStatus.InvalidHandle, fixture.write(9999, bytes(1))?.status)
     }
 
     @Test
-    fun write_withoutWriteProperty_notPermitted() = runTest {
+    fun `write without the write property fails with WriteNotPermitted`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         assertEquals(OperationStatus.WriteNotPermitted, fixture.write(fixture.ro.instanceId, bytes(1))?.status)
@@ -297,7 +297,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_withoutResponse_notRespondedTo() = runTest {
+    fun `write without response is not responded to`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         val response = fixture.write(fixture.rw.instanceId, bytes(1), responseNeeded = false)
@@ -307,7 +307,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_withoutResponse_requiresWriteWithoutResponseProperty() = runTest {
+    fun `write without response requires the write without response property`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         // WO has only WRITE.
@@ -318,7 +318,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_withResponse_requiresWriteProperty() = runTest {
+    fun `write with response requires the write property`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val writeOnlyWithoutResponse = fixture.services[0].characteristics.first { it.uuid == NONE_UUID }
 
@@ -329,7 +329,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_withoutResponse_handlerSeesWithResponseFalse() = runTest {
+    fun `handler sees withResponse false for write without response`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         var seen: Boolean? = null
         fixture.rw.onWrite { seen = withResponse; WriteResponse.Success }
@@ -340,7 +340,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_tooLong_invalidAttributeLength() = runTest {
+    fun `write of a too long value fails with InvalidAttributeLength`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         val response = fixture.write(fixture.rw.instanceId, ByteArray(513))
@@ -350,7 +350,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_maxLengthAccepted() = runTest {
+    fun `write of the maximum length is accepted`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         val response = fixture.write(fixture.rw.instanceId, ByteArray(512))
@@ -360,7 +360,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_tooLongWithoutResponse_notRespondedTo() = runTest {
+    fun `too long write without response is not responded to`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         assertNull(fixture.write(fixture.rw.instanceId, ByteArray(513), responseNeeded = false))
@@ -368,7 +368,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_handlerSuccess_storesAndEmits() = runTest {
+    fun `write accepted by the handler is stored and emitted`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.rw.onWrite { WriteResponse.Success }
         val writes = mutableListOf<WriteRequest>()
@@ -384,7 +384,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_handlerFailure_rejectsAndDoesNotStore() = runTest {
+    fun `write rejected by the handler is not stored`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.rw.setValue(bytes(1))
         fixture.rw.onWrite { WriteResponse.Failure(OperationStatus.ValueNotAllowed) }
@@ -401,7 +401,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_handlerException_unlikelyError() = runTest {
+    fun `write returns UnlikelyError when the handler throws`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.rw.onWrite { throw RuntimeException("Boom") }
 
@@ -416,7 +416,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_handlerSeesValueAndClient() = runTest {
+    fun `write handler sees the value and the client`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         var request: WriteRequest? = null
         fixture.rw.onWrite { request = this; WriteResponse.Success }
@@ -428,7 +428,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_handlerCancellationException_failsOnlyTheRequest() = runTest {
+    fun `CancellationException in the write handler fails only the request`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.rw.onWrite { throw CancellationException("Cancelled") }
 
@@ -440,7 +440,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_descriptor_stored() = runTest {
+    fun `write to a descriptor is stored`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val descriptor = fixture.rw.descriptors.first { it.uuid == CUSTOM_DESCRIPTOR_UUID }
 
@@ -451,7 +451,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_readOnlyDescriptor_notPermitted() = runTest {
+    fun `write to a read only descriptor fails with WriteNotPermitted`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val cud = fixture.rw.descriptors.first { it.uuid == Descriptor.CHAR_USER_DESC_UUID }
 
@@ -462,7 +462,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_descriptorHandlerFailure() = runTest {
+    fun `write to a descriptor rejected by the handler fails`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val descriptor = fixture.rw.descriptors.first { it.uuid == CUSTOM_DESCRIPTOR_UUID }
         descriptor.onWrite { WriteResponse.Failure(OperationStatus.WriteRequestRejected) }
@@ -472,7 +472,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun write_descriptorWithoutResponse_notPermitted() = runTest {
+    fun `write to a descriptor without response fails with WriteNotPermitted`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val descriptor = fixture.rw.descriptors.first { it.uuid == CUSTOM_DESCRIPTOR_UUID }
 
@@ -482,7 +482,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun handlersOnCccd_throw() = runTest {
+    fun `handlers on a CCCD throw`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val cccd = fixture.cccd(NOTIFY_UUID)
 
@@ -493,7 +493,7 @@ class ReadWriteTest {
     // ----- setValue -----
 
     @Test
-    fun setValue_storesWithoutNotifying() = runTest {
+    fun `setValue stores the value without notifying`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
 
@@ -504,7 +504,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun setValue_maxLengthAccepted() = runTest {
+    fun `setValue accepts the maximum length`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         fixture.ro.setValue(ByteArray(512))
@@ -513,7 +513,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun setValue_tooLong_throws() = runTest {
+    fun `setValue throws when the value is too long`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
 
         assertFailsWith<IllegalArgumentException> { fixture.ro.setValue(ByteArray(513)) }
@@ -521,7 +521,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun setValue_copiesTheArray() = runTest {
+    fun `setValue copies the array`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val array = bytes(1, 2)
 
@@ -532,7 +532,7 @@ class ReadWriteTest {
     }
 
     @Test
-    fun setValue_descriptorTooLong_throws() = runTest {
+    fun `setValue of a descriptor throws when the value is too long`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val descriptor = fixture.rw.descriptors.first { it.uuid == CUSTOM_DESCRIPTOR_UUID }
 

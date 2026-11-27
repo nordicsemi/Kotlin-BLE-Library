@@ -52,7 +52,7 @@ import kotlin.test.assertTrue
 class SetupTest {
 
     @Test
-    fun setup_buildsServices() = runTest {
+    fun `setup builds the services`() = runTest {
         val fixture = Fixture(this)
         val services = fixture.setup()
 
@@ -70,7 +70,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_passesDefinitionsToServer() = runTest {
+    fun `setup passes the definitions to the server`() = runTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
 
@@ -81,7 +81,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_publishesServices() = runTest {
+    fun `setup publishes the services`() = runTest {
         val fixture = Fixture(this)
         assertTrue(fixture.manager.services.value.isEmpty())
         val services = fixture.setup()
@@ -89,7 +89,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_characteristicsKeepPropertiesAndParents() = runTest {
+    fun `setup keeps the properties and parents of the characteristics`() = runTest {
         val fixture = Fixture(this)
         val services = fixture.setup()
 
@@ -106,7 +106,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_instanceIdsAreUnique() = runTest {
+    fun `setup assigns unique instance ids`() = runTest {
         val fixture = Fixture(this)
         val services = fixture.setup()
 
@@ -126,7 +126,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_addsCccdForNotifyAndIndicate() = runTest {
+    fun `setup adds a CCCD for notify and indicate`() = runTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
 
@@ -137,7 +137,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_cccdInitialValueIsZero() = runTest {
+    fun `initial value of a CCCD is zero`() = runTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
 
@@ -145,7 +145,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_cudValueIsDescription() = runTest {
+    fun `value of a CUD is the description`() = runTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
 
@@ -155,7 +155,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_cepdValueIsExtendedProperties() = runTest {
+    fun `value of a CEPD is the extended properties`() = runTest {
         val manager = LocalServerImpl<String>(backgroundScope, FakeGattServer())
         val services = manager.setup {
             Service(SERVICE_UUID) {
@@ -176,7 +176,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_customDescriptorHasEmptyValue() = runTest {
+    fun `custom descriptor has an empty value`() = runTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
 
@@ -185,7 +185,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_includedServiceReferencesParent() = runTest {
+    fun `included service references its parent`() = runTest {
         val fixture = Fixture(this)
         val services = fixture.setup()
 
@@ -196,7 +196,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_nestedIncludedServices() = runTest {
+    fun `setup supports nested included services`() = runTest {
         val manager = LocalServerImpl<String>(backgroundScope, FakeGattServer())
         val services = manager.setup {
             Service(SERVICE_UUID) {
@@ -215,7 +215,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_multipleServices() = runTest {
+    fun `setup supports multiple services`() = runTest {
         val manager = LocalServerImpl<String>(backgroundScope, FakeGattServer())
         val services = manager.setup {
             Service(SERVICE_UUID)
@@ -225,7 +225,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_replacesAndInvalidatesPreviousServices() = runTest {
+    fun `setup replaces and invalidates the previous services`() = runTest {
         val fixture = Fixture(this)
         val old = fixture.setup()
         val oldIncluded = old[0].includedServices[0]
@@ -243,7 +243,7 @@ class SetupTest {
     }
 
     @Test
-    fun removeServices_removesAndInvalidatesTheServices() = runTest {
+    fun `removeServices removes and invalidates the services`() = runTest {
         val fixture = Fixture(this)
         val old = fixture.setup()
 
@@ -256,7 +256,7 @@ class SetupTest {
     }
 
     @Test
-    fun removeServices_serverCanHostServicesAgain() = runTest {
+    fun `server can host services again after removeServices`() = runTest {
         val fixture = Fixture(this)
         val _ = fixture.setup()
         fixture.manager.removeServices()
@@ -268,7 +268,7 @@ class SetupTest {
     }
 
     @Test
-    fun removeServices_withoutServicesDoesNothing() = runTest {
+    fun `removeServices without services does nothing`() = runTest {
         val fixture = Fixture(this)
 
         fixture.manager.removeServices()
@@ -277,7 +277,7 @@ class SetupTest {
     }
 
     @Test
-    fun removeServices_onClosedManagerThrows() = runTest {
+    fun `removeServices on a closed manager throws`() = runTest {
         val fixture = Fixture(this)
         fixture.manager.close()
 
@@ -285,7 +285,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_failureKeepsPreviousServices() = runTest {
+    fun `failed setup keeps the previous services`() = runTest {
         val fixture = Fixture(this)
         val old = fixture.setup()
         fixture.server.setServicesError = IllegalStateException("Failed")
@@ -299,7 +299,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_concurrentCallsAreSerialized() = runTest {
+    fun `concurrent setup calls are serialized`() = runTest {
         val fixture = Fixture(this)
         val results = mutableListOf<List<LocalService>>()
         val jobs = List(5) { index ->
@@ -321,7 +321,7 @@ class SetupTest {
     }
 
     @Test
-    fun setup_whenClosed_throws() = runTest {
+    fun `setup on a closed manager throws`() = runTest {
         val fixture = Fixture(this)
         fixture.manager.close()
 

@@ -48,7 +48,7 @@ import kotlin.test.assertTrue
 class LifecycleTest {
 
     @Test
-    fun state_delegatesToServer() = runTest {
+    fun `state is delegated to the server`() = runTest {
         val fixture = Fixture(this)
 
         assertEquals(Manager.State.POWERED_ON, fixture.manager.state.value)
@@ -57,7 +57,7 @@ class LifecycleTest {
     }
 
     @Test
-    fun close_closesServer() = runTest {
+    fun `close closes the server`() = runTest {
         val fixture = Fixture(this)
 
         fixture.manager.close()
@@ -66,7 +66,7 @@ class LifecycleTest {
     }
 
     @Test
-    fun close_isIdempotent() = runTest {
+    fun `close is idempotent`() = runTest {
         val fixture = Fixture(this)
 
         fixture.manager.close()
@@ -77,7 +77,7 @@ class LifecycleTest {
     }
 
     @Test
-    fun close_invalidatesServices() = runTest {
+    fun `close invalidates the services`() = runTest {
         val fixture = Fixture(this)
         val services = fixture.setup()
 
@@ -89,7 +89,7 @@ class LifecycleTest {
     }
 
     @Test
-    fun close_clearsSubscribers() = runTest {
+    fun `close clears the subscribers`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
         val notify = fixture.notify
@@ -100,7 +100,7 @@ class LifecycleTest {
     }
 
     @Test
-    fun close_stopsProcessingEvents() = runTest {
+    fun `close stops processing events`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val rw = fixture.rw
         fixture.manager.close()
@@ -113,7 +113,7 @@ class LifecycleTest {
     }
 
     @Test
-    fun close_update_throws() = runTest {
+    fun `update after close throws`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         fixture.subscribe(fixture.notify)
         val notify = fixture.notify
@@ -123,7 +123,7 @@ class LifecycleTest {
     }
 
     @Test
-    fun close_setupThrows() = runTest {
+    fun `setup after close throws`() = runTest {
         val fixture = Fixture(this)
         fixture.manager.close()
 
@@ -131,7 +131,7 @@ class LifecycleTest {
     }
 
     @Test
-    fun setup_closedWhileSettingServices_throws() = runTest {
+    fun `setup throws when closed while setting the services`() = runTest {
         val fixture = Fixture(this)
         val manager = fixture.manager
         // Close the manager from within the platform call.
@@ -142,7 +142,7 @@ class LifecycleTest {
     }
 
     @Test
-    fun scopeCancelled_closesManager() = runTest {
+    fun `cancelling the scope closes the manager`() = runTest {
         val job = Job()
         val scope = CoroutineScope(StandardTestDispatcher(testScheduler) + job)
         val server = FakeGattServer()
@@ -159,7 +159,7 @@ class LifecycleTest {
     }
 
     @Test
-    fun close_doesNotCancelTheParentScope() = runTest {
+    fun `close does not cancel the parent scope`() = runTest {
         val job = Job()
         val scope = CoroutineScope(StandardTestDispatcher(testScheduler) + job)
         val manager = LocalServerImpl<String>(scope, FakeGattServer())
@@ -172,7 +172,7 @@ class LifecycleTest {
     }
 
     @Test
-    fun events_areProcessedInOrder() = runTest {
+    fun `events are processed in order`() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         val order = mutableListOf<Int>()
         fixture.ro.onRead {
@@ -198,7 +198,7 @@ class LifecycleTest {
     }
 
     @Test
-    fun eventsBeforeSetup_areRejected() = runTest {
+    fun `events before setup are rejected`() = runTest {
         val fixture = Fixture(this)
 
         val response = fixture.write(1, bytes(1))
@@ -207,7 +207,7 @@ class LifecycleTest {
     }
 
     @Test
-    fun serverRespondFailure_doesNotKillEventLoop() = runTest {
+    fun `failure of respond does not kill the event loop`() = runTest {
         val server = FakeGattServer()
         val manager = LocalServerImpl<String>(backgroundScope, server)
         val client = FakeClient("AA")

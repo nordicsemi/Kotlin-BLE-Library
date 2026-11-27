@@ -85,7 +85,7 @@ private class LocalProfile(
 class ProfileTest {
 
     @Test
-    fun profile_waitsForServices() = runTest {
+    fun `profile waits for the services`() = runTest {
         val fixture = Fixture(this)
         val profile = LocalProfile(SERVICE_UUID)
         fixture.manager.profile(backgroundScope, profile)
@@ -100,7 +100,7 @@ class ProfileTest {
     }
 
     @Test
-    fun profile_isRestartedWhenServicesAreReplaced() = runTest {
+    fun `profile is restarted when the services are replaced`() = runTest {
         val fixture = Fixture(this)
         val profile = LocalProfile(SERVICE_UUID)
         val _ = fixture.setup()
@@ -116,7 +116,7 @@ class ProfileTest {
     }
 
     @Test
-    fun profile_isNotStartedWithoutItsService() = runTest {
+    fun `profile is not started without its service`() = runTest {
         val fixture = Fixture(this)
         val profile = LocalProfile(Uuid.random())
         val _ = fixture.setup()
@@ -128,7 +128,7 @@ class ProfileTest {
     }
 
     @Test
-    fun profile_rejectingServicesIsUnsupported() = runTest {
+    fun `profile rejecting the services is unsupported`() = runTest {
         val fixture = Fixture(this)
         val profile = LocalProfile(SERVICE_UUID).apply { reject = true }
         val _ = fixture.setup()
@@ -140,7 +140,7 @@ class ProfileTest {
     }
 
     @Test
-    fun profile_isCancelledWithTheJob() = runTest {
+    fun `profile is cancelled with the job`() = runTest {
         val fixture = Fixture(this)
         val profile = LocalProfile(SERVICE_UUID)
         val _ = fixture.setup()
@@ -186,7 +186,7 @@ class ProfileTest {
     }
 
     @Test
-    fun simpleProfile_isGivenItsService() = runTest {
+    fun `simple profile is given its service`() = runTest {
         val fixture = Fixture(this)
         val profile = SimpleProfile()
         fixture.manager.profile(backgroundScope, profile)
@@ -201,7 +201,7 @@ class ProfileTest {
     }
 
     @Test
-    fun simpleProfile_rejectingTheServiceIsUnsupported() = runTest {
+    fun `simple profile rejecting the service is unsupported`() = runTest {
         val fixture = Fixture(this)
         val profile = SimpleProfile(reject = true)
         val _ = fixture.setup()
@@ -213,7 +213,7 @@ class ProfileTest {
     }
 
     @Test
-    fun multiServiceProfile_isGivenItsServices() = runTest {
+    fun `multi service profile is given its services`() = runTest {
         val fixture = Fixture(this)
         val profile = Multi()
         assertNull(profile.services)
