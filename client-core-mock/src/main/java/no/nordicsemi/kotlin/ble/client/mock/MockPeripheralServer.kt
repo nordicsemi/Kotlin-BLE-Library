@@ -426,24 +426,15 @@ sealed class PrepareWriteResponse {
      * The Prepare Write operation succeeded.
      *
      * @param value Confirmation of the value to written to the characteristic. This should be
-     * the same as the value sent in the a Prepare Write request if
-     * the value was received correctly, or different to indicate a transmission error.
+     * the same as the value sent in the Prepare Write request if the value was received correctly,
+     * or different to indicate a transmission error.
      */
-    data class Success(val value: ByteArray) : PrepareWriteResponse() {
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Success
-
-            return value.contentEquals(other.value)
-        }
-
-        override fun hashCode(): Int {
-            return value.contentHashCode()
-        }
+    class Success(val value: ByteArray) : PrepareWriteResponse() {
+        override fun equals(other: Any?) = other is Success && value.contentEquals(other.value)
+        override fun hashCode() = value.contentHashCode()
+        override fun toString() = "Success(${value.size} bytes)"
     }
+
     /**
      * The Prepare Write operation failed.
      *
@@ -451,9 +442,7 @@ sealed class PrepareWriteResponse {
      *
      * @param status The status of the failed operation.
      */
-    data class Failure(val status: OperationStatus) : PrepareWriteResponse() {
-        override fun toString(): String = status.toString()
-    }
+    data class Failure(val status: OperationStatus) : PrepareWriteResponse()
 }
 
 /**
