@@ -93,6 +93,7 @@ import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
 import no.nordicsemi.kotlin.ble.core.mock.AdvertisingDataScope
 import no.nordicsemi.kotlin.ble.core.mock.MockEnvironment
 import no.nordicsemi.kotlin.ble.core.mock.internal.AdvertisingDataScopeImpl
+import no.nordicsemi.kotlin.ble.server.WriteResponse
 import org.jetbrains.annotations.Range
 import kotlin.math.ceil
 import kotlin.math.min

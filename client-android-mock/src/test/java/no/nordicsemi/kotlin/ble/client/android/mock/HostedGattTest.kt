@@ -667,7 +667,7 @@ class HostedGattTest {
      * and returns the characteristic.
      */
     private suspend fun TestScope.handlerBasedCharacteristic(value: ByteArray) = gattSingleCharacteristic(
-        GattHandler().apply { readHandler = { no.nordicsemi.kotlin.ble.client.mock.ReadResponse.Success(value) } },
+        GattHandler().apply { readHandler = { no.nordicsemi.kotlin.ble.server.ReadResponse.Success(value) } },
         properties = readWrite,
         permissions = readWritePermissions,
     ).characteristic()
@@ -733,7 +733,7 @@ class HostedGattTest {
             hosted.local().onWrite { WriteResponse.Failure(OperationStatus.ValueNotAllowed) }
             val hostedCharacteristic = hosted.remote()
             val handler = GattHandler().apply {
-                writeHandler = { _, _ -> no.nordicsemi.kotlin.ble.client.mock.WriteResponse.Failure(OperationStatus.ValueNotAllowed) }
+                writeHandler = { _, _ -> no.nordicsemi.kotlin.ble.server.WriteResponse.Failure(OperationStatus.ValueNotAllowed) }
             }
             val handlerBased = gattSingleCharacteristic(
                 handler,

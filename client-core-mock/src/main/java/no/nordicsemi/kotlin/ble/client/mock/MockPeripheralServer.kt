@@ -47,6 +47,8 @@ import no.nordicsemi.kotlin.ble.core.ServerScope
 import no.nordicsemi.kotlin.ble.core.Service
 import no.nordicsemi.kotlin.ble.core.internal.CCCD
 import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
+import no.nordicsemi.kotlin.ble.server.ReadResponse
+import no.nordicsemi.kotlin.ble.server.WriteResponse
 import no.nordicsemi.kotlin.ble.server.Client
 import no.nordicsemi.kotlin.ble.server.LocalCharacteristic
 import no.nordicsemi.kotlin.ble.server.internal.LocalServerImpl
@@ -404,6 +406,53 @@ internal class SimulatedGattServer: MockGattServer<String>() {
                 reportNotification(client, OperationStatus.RequestFailed)
             }
         }
+    }
+}
+
+/**
+ * The response of a Prepare Write request.
+ *
+ * Prepare Write is used in *Long Write* procedure and in *Reliable Write* procedure. A response
+ * to this request replies back the data that was sent in the request to confirm that it was received
+ * correctly. Returning different data indicates a transmission error, and the client will cancel
+ * the write operation using Execute Write request with `execute` flag set to `false`.
+ *
+ * On contrary to how Bluetooth LE works, this mock implementation sends all prepared writes
+ * in a single request. This is done to simplify the implementation and avoid the need for
+ * queuing multiple requests.
+ */
+sealed class PrepareWriteResponse {
+    /**
+     * The Prepare Write operation succeeded.
+     *
+     * @param value Confirmation of the value to written to the characteristic. This should be
+     * the same as the value sent in the a Prepare Write request if
+     * the value was received correctly, or different to indicate a transmission error.
+     */
+    data class Success(val value: ByteArray) : PrepareWriteResponse() {
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Success
+
+            return value.contentEquals(other.value)
+        }
+
+        override fun hashCode(): Int {
+            return value.contentHashCode()
+        }
+    }
+    /**
+     * The Prepare Write operation failed.
+     *
+     * This response indicates an error on the peripheral side.
+     *
+     * @param status The status of the failed operation.
+     */
+    data class Failure(val status: OperationStatus) : PrepareWriteResponse() {
+        override fun toString(): String = status.toString()
     }
 }
 

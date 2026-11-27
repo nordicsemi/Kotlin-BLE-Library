@@ -76,8 +76,10 @@ The handler still handles the events that do not concern the GATT server: `onCon
 parameter of `connectable` and `connected` is now optional, so a handler is needed only to change
 the default behavior (connections are accepted, bonding is rejected).
 
-`ReadResponse` and `WriteResponse` of the handlers are now the types of the server,
-`no.nordicsemi.kotlin.ble.server.ReadResponse` and `...WriteResponse`.
+`ReadResponse` and `WriteResponse` of the `no.nordicsemi.kotlin.ble.client.mock` package have been
+removed. Use `no.nordicsemi.kotlin.ble.server.ReadResponse` and `...WriteResponse`, which have the same
+subtypes (`Success`, `Failure(status)`). They are also returned by the `GattInterceptor`.
+`PrepareWriteResponse` remains, as it is used by the interceptor only.
 
 Before:
 ```kotlin
