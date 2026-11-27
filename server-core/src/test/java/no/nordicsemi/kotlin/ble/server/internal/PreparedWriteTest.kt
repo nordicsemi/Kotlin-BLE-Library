@@ -208,6 +208,22 @@ class PreparedWriteTest {
     }
 
     @Test
+    fun disconnect_dropsTheQueueOfTheClientOnly() = runTest {
+        val fixture = Fixture(this).apply { val _ = setup() }
+        val _ = fixture.write(fixture.rw.instanceId, bytes(1, 2), prepared = true, from = fixture.client)
+        val _ = fixture.write(fixture.wo.instanceId, bytes(9), prepared = true, from = fixture.client2)
+
+        fixture.emit(GattServerEvent.ClientDisconnected(fixture.client))
+
+        // The same client connecting again starts with an empty queue.
+        assertEquals(OperationStatus.Success, fixture.execute(from = fixture.client).status)
+        assertTrue(fixture.rw.value.value.isEmpty())
+        // The queue of the other client is not affected.
+        assertEquals(OperationStatus.Success, fixture.execute(from = fixture.client2).status)
+        assertContentEquals(bytes(9), fixture.wo.value.value)
+    }
+
+    @Test
     fun prepared_queueFull() = runTest {
         val fixture = Fixture(this).apply { val _ = setup() }
         var last: Response? = null
