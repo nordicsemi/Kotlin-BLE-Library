@@ -45,8 +45,8 @@ import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.ConnectionPriority
 import no.nordicsemi.kotlin.ble.client.android.EncryptionState
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
-import no.nordicsemi.kotlin.ble.client.internal.OperationMutex
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
+import no.nordicsemi.kotlin.ble.client.internal.OperationMutex
 import no.nordicsemi.kotlin.ble.core.ATT_MTU_DEFAULT
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.ConnectionState.Disconnected.Reason

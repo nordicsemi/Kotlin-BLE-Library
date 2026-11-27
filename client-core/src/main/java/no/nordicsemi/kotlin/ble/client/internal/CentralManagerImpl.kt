@@ -49,6 +49,7 @@ import no.nordicsemi.kotlin.ble.client.ScanResult
 import no.nordicsemi.kotlin.ble.core.Environment
 import no.nordicsemi.kotlin.ble.core.Manager
 import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
+import no.nordicsemi.kotlin.ble.server.LocalServer
 
 /**
  * Base implementation of [CentralManager].
@@ -69,7 +70,25 @@ abstract class CentralManagerImpl<
 >(
     protected val scope: CoroutineScope,
     private val environment: Environment,
+    /** The local GATT server of this device, or `null` to create one when it is needed. */
+    private val givenServer: LocalServer<ID>? = null,
 ): CentralManager<ID, P, EX, F, SR> {
+    /** The server created by [createServer], which is closed together with the manager. */
+    private var ownedServer: LocalServer<ID>? = null
+
+    /**
+     * Creates the local GATT server when [server] is accessed and no server was given to the
+     * manager. It is called at most once.
+     *
+     * @throws UnsupportedOperationException if the platform does not support the server.
+     */
+    protected open fun createServer(): LocalServer<ID> =
+        throw UnsupportedOperationException("This central manager has no local GATT server")
+
+    override val server: LocalServer<ID> by lazy {
+        givenServer ?: createServer().also { ownedServer = it }
+    }
+
     /**
      * The scope of the jobs of this manager, e.g. closing the peripherals.
      *
@@ -116,6 +135,7 @@ abstract class CentralManagerImpl<
      */
     protected fun addPeripheral(id: ID, peripheral: P) {
         synchronized(peripheralsLock) {
+            peripheral.serverProvider = { server }
             managedPeripherals[id] = peripheral
         }
     }
@@ -149,6 +169,7 @@ abstract class CentralManagerImpl<
     protected fun peripheral(id: ID, factory: (ID) -> P): P = synchronized(peripheralsLock) {
         managedPeripherals.getOrPut(id) {
             factory(id).also { newPeripheral ->
+                newPeripheral.serverProvider = { server }
                 // Make sure the new peripheral is closed when the manager gets closed or
                 // the scope gets canceled.
                 state
@@ -194,6 +215,13 @@ abstract class CentralManagerImpl<
             } catch (_: Exception) {
                 // Make sure that the other peripherals are closed.
             }
+        }
+
+        // Close the server, if it was created by this manager.
+        try {
+            ownedServer?.close()
+        } catch (_: Exception) {
+            // Ignore.
         }
 
         // Cancel the jobs of this manager. The scope given to the manager is not affected.

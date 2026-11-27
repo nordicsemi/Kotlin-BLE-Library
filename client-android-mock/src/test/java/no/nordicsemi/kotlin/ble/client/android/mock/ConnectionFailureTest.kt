@@ -33,9 +33,9 @@ package no.nordicsemi.kotlin.ble.client.android.mock
 
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -55,8 +55,8 @@ import no.nordicsemi.kotlin.ble.client.mock.Proximity
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.ConnectionState.Disconnected.Reason
 import no.nordicsemi.kotlin.ble.core.LegacyAdvertisingSetParameters
-import no.nordicsemi.kotlin.ble.core.WriteType
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
+import no.nordicsemi.kotlin.ble.core.WriteType
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -64,8 +64,8 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds

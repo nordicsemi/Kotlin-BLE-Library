@@ -64,6 +64,9 @@ import no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException
 import no.nordicsemi.kotlin.ble.core.log.Layer
 import no.nordicsemi.kotlin.ble.environment.android.mock.LatestApi
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
+import no.nordicsemi.kotlin.ble.server.android.LocalServer
+import no.nordicsemi.kotlin.ble.server.android.mock.MockLocalServer
+import no.nordicsemi.kotlin.ble.server.android.mock.mock
 import no.nordicsemi.kotlin.log.Log
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -79,8 +82,15 @@ open class MockCentralManagerImpl(
     scope: CoroutineScope,
     private val environment: MockAndroidEnvironment = LatestApi(),
     clock: Clock = Clock.System,
-): MockCentralManager, CentralManagerImpl(scope, environment) {
+    server: MockLocalServer? = null,
+): MockCentralManager, CentralManagerImpl(scope, environment, server) {
+
+    override val server: MockLocalServer
+        get() = super.server as MockLocalServer
+
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
+
+    override fun createServer(): MockLocalServer = LocalServer.mock(environment, internalScope)
 
     /** The number of scans (flows returned by [scan]) that are currently collected. */
     internal val activeScans = MutableStateFlow(0)
@@ -114,6 +124,7 @@ open class MockCentralManagerImpl(
                             environment = environment,
                             advertisements = mockAdvertiser.events,
                             scope = scope,
+                            serverProvider = { server },
                         )
                     )
                 )
@@ -163,6 +174,7 @@ open class MockCentralManagerImpl(
                         environment = environment,
                         advertisements = mockAdvertiser.events,
                         scope = scope,
+                        serverProvider = { server },
                     ).also { p -> p.logger = logger }
                 )
             }
@@ -340,6 +352,7 @@ open class MockCentralManagerImpl(
                                     environment = environment,
                                     advertisements = mockAdvertiser.events,
                                     scope = scope,
+                                    serverProvider = { server },
                                 )
                             ).also { p -> p.logger = logger }
                         }
@@ -385,7 +398,7 @@ open class MockCentralManagerImpl(
     companion object {
         private const val ADDRESS_LENGTH = 17
 
-        // This implementation is copied from BluetoothAdapter.checkBluetoothAddress(address)..
+        // This implementation is copied from BluetoothAdapter.checkBluetoothAddress(address).
         private fun checkBluetoothAddress(address: String): Boolean {
             if (address.length != ADDRESS_LENGTH) {
                 return false

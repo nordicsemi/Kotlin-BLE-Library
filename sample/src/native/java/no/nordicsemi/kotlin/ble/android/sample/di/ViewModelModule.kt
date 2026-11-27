@@ -46,6 +46,8 @@ import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.native
 import no.nordicsemi.kotlin.ble.core.log.Layer
 import no.nordicsemi.kotlin.ble.environment.android.NativeAndroidEnvironment
+import no.nordicsemi.kotlin.ble.server.android.LocalServer
+import no.nordicsemi.kotlin.ble.server.android.native
 import no.nordicsemi.kotlin.log.Log
 import no.nordicsemi.kotlin.log.timber.Timber
 
@@ -79,5 +81,11 @@ object ViewModelModule {
                 // Don't log RSSI events
                 logger = Log.Sink.Timber { layer, _ -> layer != Layer.LINK }
             }
+    }
+
+    @ViewModelScoped
+    @Provides
+    fun provideLocalServer(environment: NativeAndroidEnvironment, scope: CoroutineScope): LocalServer {
+        return LocalServer.native(environment, scope)
     }
 }

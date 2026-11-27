@@ -47,11 +47,11 @@ import no.nordicsemi.kotlin.ble.client.RangeEvent
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
 import no.nordicsemi.kotlin.ble.client.android.mock.internal.MockCentralManagerImpl
-import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import no.nordicsemi.kotlin.ble.client.mock.AddressType
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.Proximity
 import no.nordicsemi.kotlin.ble.core.LegacyAdvertisingSetParameters
+import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -327,8 +327,8 @@ class MonitoringTest {
         val manager = CentralManager.mock(scope = backgroundScope)
         val addresses = addresses(5)
         manager.simulatePeripherals(addresses.map { spec(it) })
-        monitor(manager)
-        addresses.forEach { range(manager, checkNotNull(manager.getPeripheralById(it))) }
+        val _ = monitor(manager)
+        addresses.forEach { val _ = range(manager, checkNotNull(manager.getPeripheralById(it))) }
 
         advanceTimeBy(3.seconds)
 

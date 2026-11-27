@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -29,23 +29,18 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-@file:Suppress("MemberVisibilityCanBePrivate", "unused")
+package no.nordicsemi.kotlin.ble.server.exception
 
-package no.nordicsemi.kotlin.ble.server.android
-
-import kotlinx.coroutines.flow.Flow
-import no.nordicsemi.kotlin.ble.server.PeripheralManager
+import no.nordicsemi.kotlin.ble.core.OperationStatus
+import no.nordicsemi.kotlin.ble.core.exception.GattException
 
 /**
- * A Android Peripheral Manager extends the [PeripheralManager] interface with additional
- * Android-specific features.
+ * Thrown when a GATT server operation, like adding services or sending a notification, failed.
+ *
+ * @property reason The reason of the failure.
+ * @property cause The underlying cause of the failure.
  */
-interface PeripheralManager: PeripheralManager<String, Central> {
-
-    /**
-     * Returns a cold flow of connection events.
-     *
-     * Every time a device connects or disconnects, a new event will be emitted.
-     */
-    val connectionEvents: Flow<ConnectionEvent>
-}
+class OperationFailedException(
+    val reason: OperationStatus,
+    cause: Throwable? = null,
+): GattException(reason.toString(), cause)

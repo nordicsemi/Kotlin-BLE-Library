@@ -57,12 +57,13 @@ import no.nordicsemi.kotlin.ble.client.ConnectionParametersChanged
 import no.nordicsemi.kotlin.ble.client.ConnectionStateChanged
 import no.nordicsemi.kotlin.ble.client.GattEvent
 import no.nordicsemi.kotlin.ble.client.MtuChanged
+import no.nordicsemi.kotlin.ble.client.Peripheral
 import no.nordicsemi.kotlin.ble.client.PhyChanged
 import no.nordicsemi.kotlin.ble.client.ReliableWriteCompleted
 import no.nordicsemi.kotlin.ble.client.RemoteService
 import no.nordicsemi.kotlin.ble.client.RemoteServices
-import no.nordicsemi.kotlin.ble.client.ServiceDiscoveryFailed
 import no.nordicsemi.kotlin.ble.client.RssiRead
+import no.nordicsemi.kotlin.ble.client.ServiceDiscoveryFailed
 import no.nordicsemi.kotlin.ble.client.ServicesChanged
 import no.nordicsemi.kotlin.ble.client.ServicesDiscovered
 import no.nordicsemi.kotlin.ble.client.internal.CharacteristicChanged
@@ -76,7 +77,6 @@ import no.nordicsemi.kotlin.ble.core.Characteristic
 import no.nordicsemi.kotlin.ble.core.ConnectionParameters
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.ConnectionState.Disconnected.Reason
-import no.nordicsemi.kotlin.ble.core.Descriptor
 import no.nordicsemi.kotlin.ble.core.LL_MTU_DEFAULT
 import no.nordicsemi.kotlin.ble.core.LL_MTU_MAX
 import no.nordicsemi.kotlin.ble.core.LegacyAdvertisingSetParameters
@@ -93,6 +93,7 @@ import no.nordicsemi.kotlin.ble.core.internal.ServiceDefinition
 import no.nordicsemi.kotlin.ble.core.mock.AdvertisingDataScope
 import no.nordicsemi.kotlin.ble.core.mock.MockEnvironment
 import no.nordicsemi.kotlin.ble.core.mock.internal.AdvertisingDataScopeImpl
+import no.nordicsemi.kotlin.ble.server.WriteResponse
 import org.jetbrains.annotations.Range
 import kotlin.math.ceil
 import kotlin.math.min
@@ -130,7 +131,10 @@ import kotlin.uuid.Uuid
  * @param advertisingSets List of advertisement configurations.
  * @param eventHandler The event handler that will be called for every event emulating
  * a real peripheral.
- * @param services The services available after service discovery.
+ * @param server The GATT server hosted by the peripheral, which answers the requests of
+ * the clients, or `null` if the peripheral is not connectable.
+ * @param clientRole The block that uses the GATT server of the phone while the peripheral is
+ * connected, or `null`, see [Builder.client].
  * @param cachedServices The services cached on the client side.
  * @param isServiceCacheValid Whether the cached services are valid.
  */
@@ -153,10 +157,17 @@ class PeripheralSpec<ID: Any> private constructor(
     peripheralHasBond: Boolean,
     internal val advertisingSets: List<MockAdvertisingSet>?,
     internal val eventHandler: PeripheralSpecEventHandler?,
-    private var services: List<ServiceDefinition>?,
+    val server: MockPeripheralServer?,
+    internal val clientRole: (suspend CoroutineScope.(server: Peripheral<String, *>) -> Unit)?,
     private val cachedServices: List<ServiceDefinition>?,
     isServiceCacheValid: Boolean,
 ): MockPeripheral {
+    /**
+     * The services available after service discovery: the services of the hosted [server], if any.
+     */
+    private val actualServices: List<ServiceDefinition>?
+        get() = server?.definitions
+
     /** A flow of GATT events emitted by the peripheral. */
     val events: SharedFlow<GattEvent>
         field = MutableSharedFlow<GattEvent>(extraBufferCapacity = 64)
@@ -206,6 +217,7 @@ class PeripheralSpec<ID: Any> private constructor(
      * Work of a single connection runs in the scope of the manager that created it instead,
      * see [Api].
      */
+    @IgnorableReturnValue
     private fun launchShared(block: suspend CoroutineScope.() -> Unit): Job {
         val context = synchronized(lock) {
             val newest = simulations.lastOrNull() ?: return@synchronized null
@@ -396,6 +408,8 @@ class PeripheralSpec<ID: Any> private constructor(
                 setDefaultConnectionState(PhyInUse.PHY_LE_1M)
                 updateEncryptionState()
             }
+            // The hosted server's central is connected as long as the peripheral is.
+            server?.onConnectionChanged(connected = field > 0, mtu = mtu)
         }
 
     /** Current connection parameters. */
@@ -404,7 +418,13 @@ class PeripheralSpec<ID: Any> private constructor(
 
     /** Current ATT MTU. */
     var mtu: Int? = null
-        private set
+        private set(value) {
+            field = value
+            // The maximum length of updates sent by the hosted server follows the MTU.
+            if (value != null) {
+                server?.onMtuChanged(value)
+            }
+        }
 
     /** Current Link Layer MTU. */
     var llMtu: Int? = null
@@ -423,6 +443,10 @@ class PeripheralSpec<ID: Any> private constructor(
         if (activePhy != null) {
             setDefaultConnectionState(activePhy)
             updateEncryptionState()
+        }
+        server?.let {
+            it.bind(this)
+            it.onConnectionChanged(connected = isConnected, mtu = mtu)
         }
     }
 
@@ -714,6 +738,7 @@ class PeripheralSpec<ID: Any> private constructor(
          *         }
          *     }
          * }
+         * ```
          *
          * @param identifier The peripheral identifier.
          * @param addressType The address type of the peripheral, default is [AddressType.RANDOM_STATIC].
@@ -1044,6 +1069,48 @@ class PeripheralSpec<ID: Any> private constructor(
     }
 
     /**
+     * Sends a notification or an indication of the hosted server to the clients.
+     *
+     * The update is delivered after the time it takes to transfer it, estimated like for
+     * [simulateValueUpdate], and after the updates sent earlier. An indication is confirmed one
+     * connection interval after that. The method suspends until then.
+     *
+     * Does nothing if the peripheral is not connected.
+     *
+     * @param handle The handle of the characteristic.
+     * @param value The new value of the characteristic, which fits in the MTU.
+     * @param indication Whether it is an indication, which needs a confirmation.
+     */
+    internal suspend fun deliverUpdate(handle: Int, value: ByteArray, indication: Boolean) {
+        if (!isConnected) return
+
+        val transferDuration = estimateTransferDuration(
+            value = value,
+            isWrite = true,
+            withResponse = false,
+            isFromPeripheral = true,
+        )
+        val delivery = synchronized(lock) {
+            val previous = lastNotification
+            launchShared {
+                previous?.join()
+                delay(transferDuration)
+
+                // If any client is still connected, emit the event.
+                if (isConnected) {
+                    events.emit(CharacteristicChanged(handle, value))
+                }
+            }.also { lastNotification = it }
+        }
+        delivery.join()
+
+        // The confirmation is sent by the client in the next connection interval.
+        if (indication && isConnected) {
+            delay(checkNotNull(connectionParameters).connectionIntervalMillis.milliseconds)
+        }
+    }
+
+    /**
      * Simulates a change in the services offered by the peripheral.
      *
      * This will replace the existing services with new ones defined in [newServices].
@@ -1051,22 +1118,14 @@ class PeripheralSpec<ID: Any> private constructor(
      * @param newServices A builder for the set of services.
      */
     override fun simulateServiceChange(newServices: MockServerScope.() -> Unit) {
-        val oldServices = services
-
-        // Replace the services with new ones.
-        services = MockServerScopeImpl().apply(newServices).build()
+        // Replace the services with new ones. With a hosted server, they are replaced there.
+        val isServiceChangedEnabled = checkNotNull(server) { "The peripheral is not connectable." }.replaceServices(newServices)
         isServiceCacheValid = false
 
         val connectionInterval = connectionParameters?.connectionIntervalMillis?.milliseconds ?: return
 
         // If the indications on Service Changed characteristic are enabled, notify clients about the change.
-        val serviceChangedCharacteristicCccd = oldServices
-            ?.firstOrNull { it.uuid == Service.GENERIC_ATTRIBUTE_UUID }
-            ?.characteristics
-            ?.firstOrNull { it.uuid == Characteristic.SERVICE_CHANGED }
-            ?.descriptors
-            ?.firstOrNull { it.uuid == Descriptor.CLIENT_CHAR_CONF_UUID } as? CCCD
-        if (serviceChangedCharacteristicCccd?.enabled == true) {
+        if (isServiceChangedEnabled) {
             launchShared {
                 // Simulate delay for sending indication.
                 delay(connectionInterval)
@@ -1445,7 +1504,7 @@ class PeripheralSpec<ID: Any> private constructor(
          * discovered again.
          */
         internal var cachedServices: List<RemoteService>? = when (isServiceCacheValid) {
-            true -> services
+            true -> actualServices
             false -> this@PeripheralSpec.cachedServices
         }?.map { MockRemoteService(this@PeripheralSpec, it, clientEvents) }
             private set
@@ -1577,14 +1636,14 @@ class PeripheralSpec<ID: Any> private constructor(
                     // The duration is arbitrary, but depends on the number of services.
                     // Android switches to 7.5 ms connection interval during the service discovery.
                     // TODO iOS doesn't change interval, but only discovers requested services.
-                    val serviceDiscoveryDuration = services!!
+                    val serviceDiscoveryDuration = actualServices!!
                         .fold(connectionInterval * 2) { acc, service ->
                             acc + 10.milliseconds * (service.characteristics.size + service.includedServices.size)
                         }
                     delay(serviceDiscoveryDuration)
                     // TODO iOS returns only requested services. Filtering is also done later, but should be here?
                     // TODO iOS does not return Generic Access and Generic Attribute services. Filter out, or leave for the PeripheralSpec?
-                    val discoveredServices = services!!.map { MockRemoteService(this@PeripheralSpec, it, clientEvents) }
+                    val discoveredServices = actualServices!!.map { MockRemoteService(this@PeripheralSpec, it, clientEvents) }
                     // An empty result is a failure, so it's not cached.
                     if (discoveredServices.isNotEmpty()) {
                         isServiceCacheValid = true
@@ -1785,7 +1844,8 @@ class PeripheralSpec<ID: Any> private constructor(
             delay(connectionParameters.connectionIntervalMillis.milliseconds)
 
             val eventHandler = checkNotNull(eventHandler)
-            when (val response = eventHandler.onExecuteWriteRequest(this@PeripheralSpec, execute)) {
+            val result = checkNotNull(server).executeWrite(execute)
+            when (val response = result) {
                 is WriteResponse.Success -> {
                     events.emit(ReliableWriteCompleted(OperationStatus.Success))
                 }
@@ -1814,9 +1874,11 @@ class PeripheralSpec<ID: Any> private constructor(
         private var advertisingSets: List<MockAdvertisingSet>? = null
         private var name: String? = null
         private var appearance: Int? = null
-        private var services: List<ServiceDefinition>? = null
+        private var serverBlock: (MockServerScope.() -> Unit)? = null
         private var cachedServices: List<ServiceDefinition>? = null
         private var eventHandler: PeripheralSpecEventHandler? = null
+        private var server: MockPeripheralServer? = null
+        private var clientRole: (suspend CoroutineScope.(server: Peripheral<String, *>) -> Unit)? = null
         private var preferredConnectionInterval: @Range(from = 6L, to = 3200L) IntRange? = null
         private var preferredSlaveLatency: @Range(from = 0, to = 499) Int? = null
         private var preferredSupervisionTimeout: @Range(from = 10, to = 3200) Int? = null
@@ -1913,7 +1975,8 @@ class PeripheralSpec<ID: Any> private constructor(
          * @param isPhyLe2MSupported Whether the device supports PHY LE 2M.
          * @param isPhyCodedSupported Whether the device supports PHY LE Coded.
          * @param eventHandler The event handler that will be called for every event emulating
-         * a real peripheral.
+         * a real peripheral. By default, the connections are accepted and the bonding is rejected,
+         * see [PeripheralSpecEventHandler].
          * @param services The services available after service discovery.
          */
         fun connectable(
@@ -1926,7 +1989,7 @@ class PeripheralSpec<ID: Any> private constructor(
             maxL2capMtu: @Range(from = 27L, to = 251L) Int = 27,
             isPhyLe2MSupported: Boolean = false,
             isPhyCodedSupported: Boolean = false,
-            eventHandler: PeripheralSpecEventHandler,
+            eventHandler: PeripheralSpecEventHandler = DefaultEventHandler,
             services: MockServerScope.() -> Unit,
         ) = setConnectionParameters(
             preferredConnectionInterval = preferredConnectionInterval,
@@ -1940,7 +2003,7 @@ class PeripheralSpec<ID: Any> private constructor(
             require(this.name == null) { "Device is already configured as connectable." }
             this.name = name
             this.appearance = appearance
-            this.services = MockServerScopeImpl().apply(services).build()
+            this.serverBlock = services
             this.eventHandler = eventHandler
         }
 
@@ -1972,7 +2035,8 @@ class PeripheralSpec<ID: Any> private constructor(
          * @param peripheralHasBond Whether the peripheral has the bond information of the phone.
          * By default, the same as [isBonded].
          * @param eventHandler The event handler that will be called for every event emulating
-         * a real peripheral.
+         * a real peripheral. By default, the connections are accepted and the bonding is rejected,
+         * see [PeripheralSpecEventHandler].
          * @param actualServices The services available after service discovery. If `null` (default),
          * they are set to be equal to [cachedServices].
          * @param cachedServices The services that are cached and will be returned immediately
@@ -1991,7 +2055,7 @@ class PeripheralSpec<ID: Any> private constructor(
             isPhyCodedSupported: Boolean = false,
             isBonded: Boolean = false,
             peripheralHasBond: Boolean = isBonded,
-            eventHandler: PeripheralSpecEventHandler,
+            eventHandler: PeripheralSpecEventHandler = DefaultEventHandler,
             actualServices: (MockServerScope.() -> Unit)? = null,
             cachedServices: (MockServerScope.() -> Unit),
         ) = setConnectionParameters(
@@ -2008,7 +2072,7 @@ class PeripheralSpec<ID: Any> private constructor(
             this.appearance = appearance
             this.eventHandler = eventHandler
             this.cachedServices = MockServerScopeImpl().apply(cachedServices).build()
-            this.services = actualServices?.let { MockServerScopeImpl().apply(it).build() } ?: this.cachedServices
+            this.serverBlock = actualServices ?: cachedServices
             // If the actual services were are specified, mark cache as invalid.
             // Accessing cached services will result in INVALID_HANDLE error and a new service
             // discovery will have to be performed
@@ -2048,7 +2112,8 @@ class PeripheralSpec<ID: Any> private constructor(
          * @param peripheralHasBond Whether the peripheral has the bond information of the phone.
          * By default, the same as [isBonded].
          * @param eventHandler The event handler that will be called for every event emulating
-         * a real peripheral.
+         * a real peripheral. By default, the connections are accepted and the bonding is rejected,
+         * see [PeripheralSpecEventHandler].
          * @param actualServices The services available after service discovery. If `null` (default),
          * they are set to be equal to [cachedServices].
          * @param cachedServices The services that are cached and will be returned immediately
@@ -2068,7 +2133,7 @@ class PeripheralSpec<ID: Any> private constructor(
             activePhy: PhyInUse = PhyInUse.PHY_LE_1M,
             isBonded: Boolean = false,
             peripheralHasBond: Boolean = isBonded,
-            eventHandler: PeripheralSpecEventHandler,
+            eventHandler: PeripheralSpecEventHandler = DefaultEventHandler,
             actualServices: (MockServerScope.() -> Unit)? = null,
             cachedServices: (MockServerScope.() -> Unit),
         ) = setConnectionParameters(
@@ -2085,7 +2150,7 @@ class PeripheralSpec<ID: Any> private constructor(
             this.appearance = appearance
             this.eventHandler = eventHandler
             this.cachedServices = MockServerScopeImpl().apply(cachedServices).build()
-            this.services = actualServices?.let { MockServerScopeImpl().apply(it).build() } ?: this.cachedServices
+            this.serverBlock = actualServices ?: cachedServices
             // If the actual services were are specified, mark cache as invalid.
             // Accessing cached services will result in INVALID_HANDLE error and a new service
             // discovery will have to be performed
@@ -2093,6 +2158,197 @@ class PeripheralSpec<ID: Any> private constructor(
             this.isKnown = true
             this.isBonded = isBonded
             this.peripheralHasBond = peripheralHasBond
+            // Note: The PHY here may be unsupported. This is checked in build(), as
+            // `highSpeed` may be called later and add supported PHYs.
+            this.activePhy = activePhy
+        }
+
+        /**
+         * Makes the device connectable, with the GATT server hosted by a [MockPeripheralServer].
+         *
+         * The services of the peripheral are the ones defined in the [server], and its behavior is
+         * implemented with the same API that is used by apps to implement the peripheral role:
+         * handlers, values and `update()` of the local characteristics. The [eventHandler] is called
+         * for the events that do not concern GATT: connection requests, bonding, loss of
+         * the connection, reset and service discovery.
+         *
+         * Define the services in the [server] before a client discovers them, for example:
+         * ```kotlin
+         * val server = MockPeripheralServer(scope = backgroundScope)
+         * val services = server.setup {
+         *     GenericAccessService()
+         *     GenericAttributeService()
+         *     Service(SERVICE_UUID) {
+         *         Characteristic(
+         *             uuid = LED_UUID,
+         *             properties = CharacteristicProperty.READ and CharacteristicProperty.WRITE,
+         *             permissions = Permission.READ and Permission.WRITE,
+         *         )
+         *     }
+         * }
+         * services.single { it.uuid == SERVICE_UUID }
+         *     .characteristics
+         *     .first { it.uuid == LED_UUID }
+         *     .onWrite { WriteResponse.Success }
+         *
+         * val mock = PeripheralSpec.simulatePeripheral("01:02:03:04:05:06") {
+         *     advertising { CompleteLocalName("Hosted") }
+         *     connectable(name = "Hosted", server = server)
+         * }
+         * ```
+         *
+         * See [MockPeripheralServer] for details.
+         *
+         * By default, the peripheral is seen for the first time: it has not been scanned, bonded or
+         * connected before, and no services are cached on the client side. Use [isBonded] and
+         * [isServiceCached] to simulate a device that is known to the phone.
+         *
+         * @param name The name of the peripheral, available from Device Name characteristic.
+         * @param appearance The appearance of the peripheral, available from Appearance characteristic.
+         * See Bluetooth Assigned Numbers:
+         * [link](https://www.bluetooth.com/specifications/assigned-numbers/), 2.6 Appearance Values.
+         * @param preferredConnectionInterval The min and max connection interval, in 1.25 ms units.
+         * Valid range is from 6 (7.5ms) to 3200 (4000ms). Default is 25-40 (30-50 ms).
+         * @param preferredSlaveLatency Slave latency. Valid range is from 0 to 499. Default is 0.
+         * @param preferredSupervisionTimeout Supervision timeout in 10 ms units. Valid range
+         * is from 10 (0.1s) to 3200 (32s). Default is 400 (4 s).
+         * @param maxAttMtu The maximum supported ATT MTU (Maximum Transfer Unit).
+         * This value must be in range 23..517.
+         * @param maxL2capMtu The maximum supported L2CAP MTU (Maximum Transfer Unit used on L2CAP
+         * Layer using Data Length Extension (DLE)). This value must be in range 27..251.
+         * @param isPhyLe2MSupported Whether the device supports PHY LE 2M.
+         * @param isPhyCodedSupported Whether the device supports PHY LE Coded.
+         * @param isBonded Whether the phone has the bond information of the peripheral. A bonded
+         * device is also known to the phone, so it can be connected without scanning.
+         * @param peripheralHasBond Whether the peripheral has the bond information of the phone.
+         * By default, the same as [isBonded].
+         * @param isServiceCached Whether the client has the services of the [server] cached, so
+         * they are returned immediately on service discovery. The device is known to the phone.
+         * @param cachedServices The services that are cached on the client side, when they
+         * differ from the ones of the [server]. The cache is invalid, so accessing the cached
+         * services results in INVALID_HANDLE error, until a new service discovery is performed.
+         * The device is known to the phone.
+         * @param eventHandler The event handler that will be called for the events that do not
+         * concern the GATT server. By default, the connections are accepted and the bonding is rejected,
+         * see [PeripheralSpecEventHandler].
+         * @param server The GATT server hosted by the peripheral. A server can be used by one
+         * peripheral only.
+         */
+        fun connectable(
+            name: String,
+            appearance: Int = 0x0000,
+            preferredConnectionInterval: @Range(from = 6L, to = 3200L) IntRange = IntRange(25, 40), // 30-50 ms
+            preferredSlaveLatency: @Range(from = 0, to = 499) Int = 0,
+            preferredSupervisionTimeout: @Range(from = 10, to = 3200) Int = 400, // 4 s
+            maxAttMtu: @Range(from = 23L, to = 517L) Int = 23,
+            maxL2capMtu: @Range(from = 27L, to = 251L) Int = 27,
+            isPhyLe2MSupported: Boolean = false,
+            isPhyCodedSupported: Boolean = false,
+            isBonded: Boolean = false,
+            peripheralHasBond: Boolean = isBonded,
+            isServiceCached: Boolean = false,
+            cachedServices: (MockServerScope.() -> Unit)? = null,
+            eventHandler: PeripheralSpecEventHandler = DefaultEventHandler,
+            server: MockPeripheralServer,
+        ) = setConnectionParameters(
+            preferredConnectionInterval = preferredConnectionInterval,
+            preferredSlaveLatency = preferredSlaveLatency,
+            preferredSupervisionTimeout = preferredSupervisionTimeout,
+            maxAttMtu = maxAttMtu,
+            maxL2capMtu = maxL2capMtu,
+            isPhyLe2MSupported = isPhyLe2MSupported,
+            isPhyCodedSupported = isPhyCodedSupported,
+        ).also {
+            require(this.name == null) { "Device is already configured as connectable." }
+            require(isServiceCached || cachedServices == null) {
+                "Stale cached services require isServiceCached to be set."
+            }
+            this.name = name
+            this.appearance = appearance
+            this.eventHandler = eventHandler
+            this.server = server
+            this.isBonded = isBonded
+            this.peripheralHasBond = peripheralHasBond
+            this.cachedServices = cachedServices?.let { MockServerScopeImpl().apply(it).build() }
+            // If the cached services are stale, mark cache as invalid.
+            // Accessing cached services will result in INVALID_HANDLE error and a new service
+            // discovery will have to be performed.
+            this.isServiceCacheValid = isServiceCached && cachedServices == null
+            // A bonded device, or one with services cached, was for sure scanned before.
+            this.isKnown = isBonded || isServiceCached
+        }
+
+        /**
+         * Makes the device connectable and already connected to the device at the moment
+         * of initialization (if it's in range), with the GATT server hosted by
+         * a [MockPeripheralServer].
+         *
+         * This is the same as [connectable] with the `server` parameter, for a peripheral that
+         * was connected before, so the services are cached on the client side. Connected devices
+         * are also allowed for retrieval using [CentralManager.getPeripheralById].
+         *
+         * @param name The name of the peripheral, available from Device Name characteristic.
+         * @param appearance The appearance of the peripheral, available from Appearance characteristic.
+         * See Bluetooth Assigned Numbers:
+         * [link](https://www.bluetooth.com/specifications/assigned-numbers/), 2.6 Appearance Values.
+         * @param preferredConnectionInterval The min and max connection interval, in 1.25 ms units.
+         * Valid range is from 6 (7.5ms) to 3200 (4000ms). Default is 25-40 (30-50 ms).
+         * @param preferredSlaveLatency Slave latency. Valid range is from 0 to 499. Default is 0.
+         * @param preferredSupervisionTimeout Supervision timeout in 10 ms units. Valid range
+         * is from 10 (0.1s) to 3200 (32s). Default is 400 (4 s).
+         * @param maxAttMtu The maximum supported ATT MTU (Maximum Transfer Unit).
+         * This value must be in range 23..517.
+         * @param maxL2capMtu The maximum supported L2CAP MTU (Maximum Transfer Unit used on L2CAP
+         * Layer using Data Length Extension (DLE)). This value must be in range 27..251.
+         * @param isPhyLe2MSupported Whether the device supports PHY LE 2M.
+         * @param isPhyCodedSupported Whether the device supports PHY LE Coded.
+         * @param activePhy The PHYs (TX and RX) used by the existing connection. Both must be
+         * supported, so to use LE 2M or LE Coded set [isPhyLe2MSupported] or [isPhyCodedSupported] too.
+         * Ignored if the peripheral is out of range, as it is not connected then.
+         * @param isBonded Whether the phone has the bond information of the peripheral.
+         * @param peripheralHasBond Whether the peripheral has the bond information of the phone.
+         * By default, the same as [isBonded].
+         * @param cachedServices The services that are cached on the client side, when they
+         * differ from the ones of the [server]. By default, the services of the [server] are cached.
+         * @param eventHandler The event handler that will be called for the events that do not
+         * concern the GATT server. By default, the connections are accepted and the bonding is rejected,
+         * see [PeripheralSpecEventHandler].
+         * @param server The GATT server hosted by the peripheral. A server can be used by one
+         * peripheral only.
+         */
+        fun connected(
+            name: String,
+            appearance: Int = 0x0000,
+            preferredConnectionInterval: @Range(from = 6L, to = 3200L) IntRange = IntRange(25, 40), // 30-50 ms
+            preferredSlaveLatency: @Range(from = 0, to = 499) Int = 0,
+            preferredSupervisionTimeout: @Range(from = 10, to = 3200) Int = 400, // 4 s
+            maxAttMtu: @Range(from = 23L, to = 517L) Int = 23,
+            maxL2capMtu: @Range(from = 27L, to = 251L) Int = 27,
+            isPhyLe2MSupported: Boolean = false,
+            isPhyCodedSupported: Boolean = false,
+            activePhy: PhyInUse = PhyInUse.PHY_LE_1M,
+            isBonded: Boolean = false,
+            peripheralHasBond: Boolean = isBonded,
+            cachedServices: (MockServerScope.() -> Unit)? = null,
+            eventHandler: PeripheralSpecEventHandler = DefaultEventHandler,
+            server: MockPeripheralServer,
+        ) = connectable(
+            name = name,
+            appearance = appearance,
+            preferredConnectionInterval = preferredConnectionInterval,
+            preferredSlaveLatency = preferredSlaveLatency,
+            preferredSupervisionTimeout = preferredSupervisionTimeout,
+            maxAttMtu = maxAttMtu,
+            maxL2capMtu = maxL2capMtu,
+            isPhyLe2MSupported = isPhyLe2MSupported,
+            isPhyCodedSupported = isPhyCodedSupported,
+            isBonded = isBonded,
+            peripheralHasBond = peripheralHasBond,
+            isServiceCached = true,
+            cachedServices = cachedServices,
+            eventHandler = eventHandler,
+            server = server,
+        ).also {
             // Note: The PHY here may be unsupported. This is checked in build(), as
             // `highSpeed` may be called later and add supported PHYs.
             this.activePhy = activePhy
@@ -2187,10 +2443,55 @@ class PeripheralSpec<ID: Any> private constructor(
             peripheralHasBond = peripheralHasBond,
             advertisingSets = advertisingSets,
             eventHandler = eventHandler,
-            services = services,
+            server = server ?: serverBlock?.let { block ->
+                // The services defined with the DSL are hosted by an internal server.
+                MockPeripheralServer(CoroutineScope(SupervisorJob() + Dispatchers.Unconfined))
+                    .also { it.setupBlocking(block) }
+            },
+            clientRole = clientRole,
             cachedServices = cachedServices,
             isServiceCacheValid = isServiceCacheValid,
         )
+
+        /**
+         * Makes the peripheral a client of the GATT server of the phone, that is of the local
+         * server of the central manager (see `CentralManager.mock(server = ...)`).
+         *
+         * Every time the peripheral is connected to the phone, the [block] is called in the scope
+         * of the central manager. Its parameter is the GATT server of the phone, with the same API
+         * as a peripheral has on the client side: [Peripheral.services] discovers the services,
+         * and the characteristics and descriptors can be read, written and subscribed to.
+         * The block is cancelled when the connection ends, and called again after reconnection.
+         *
+         * ```kotlin
+         * val tag = PeripheralSpec.simulatePeripheral("01:02:03:04:05:06") {
+         *     advertising { CompleteLocalName("Tag") }
+         *     connectable(name = "Tag") { }
+         *     client { server ->
+         *         val discovered = server.services(listOf(IMMEDIATE_ALERT_SERVICE_UUID))
+         *             .filterIsInstance<RemoteServices.Discovered>()
+         *             .first()
+         *         discovered.services.single()
+         *             .characteristics.first { it.uuid == ALERT_LEVEL_UUID }
+         *             .write(byteArrayOf(2), WriteType.WITHOUT_RESPONSE)
+         *     }
+         * }
+         * ```
+         *
+         * The services of the phone have to be set up before the central manager connects, or
+         * the discovery reports no services until they are, and the services are discovered
+         * again when they change. The requests are sent without simulating the transfer time,
+         * and reliable writes are not supported.
+         *
+         * The central manager has to be a mock one, as the server it creates, or the one given to
+         * it, has to be a mock local server (`LocalServer.mock(...)`), which simulates the client.
+         * For other servers the block is not called.
+         *
+         * @param block The block using the server.
+         */
+        fun client(block: suspend CoroutineScope.(server: Peripheral<String, *>) -> Unit) {
+            clientRole = block
+        }
 
         // Implementation
 
@@ -2254,3 +2555,6 @@ class PeripheralSpec<ID: Any> private constructor(
         }
     }
 }
+
+/** The event handler of peripherals with a hosted server, which does not have to handle any event. */
+private object DefaultEventHandler: PeripheralSpecEventHandler

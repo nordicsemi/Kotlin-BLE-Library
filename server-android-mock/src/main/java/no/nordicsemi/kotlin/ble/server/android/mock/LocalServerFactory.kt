@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -31,24 +31,37 @@
 
 @file:Suppress("unused")
 
-package no.nordicsemi.kotlin.ble.server
+package no.nordicsemi.kotlin.ble.server.android.mock
 
-import no.nordicsemi.kotlin.ble.core.Peer
+import kotlinx.coroutines.CoroutineScope
+import no.nordicsemi.kotlin.ble.environment.android.mock.LatestApi
+import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
+import no.nordicsemi.kotlin.ble.server.android.LocalServer
+import no.nordicsemi.kotlin.ble.server.android.mock.internal.MockLocalServerImpl
+import kotlin.random.Random
 
 /**
- * A remote device connected to a local app, which is acting as a peripheral.
+ * Creates a mock implementation of a [LocalServer], which hosts a simulated GATT server.
  *
- * The [Central] class represents remote central devices (or centrals) that have connected to
- * an app implementing the peripheral role on a local device.
+ * Use [MockLocalServer.simulateClient] to simulate clients that connect to the server and
+ * send requests to it.
+ *
+ * Background work of the manager, like handling of requests, runs in the given [scope]. A scope
+ * backed by a test dispatcher, e.g. `backgroundScope` of `runTest`, makes it follow the test
+ * scheduler and its virtual time.
+ *
+ * @param environment The environment to use for the mock, defaults to the latest supported API.
+ * Bluetooth state and permissions are taken from it.
+ * @param scope The coroutine scope.
  */
-interface Central<ID: Any>: Peer<ID> {
+fun LocalServer.Factory.mock(
+    environment: MockAndroidEnvironment = LatestApi(),
+    scope: CoroutineScope,
+): MockLocalServer = MockLocalServerImpl(scope, environment)
 
-    /**
-     * The maximum amount of data, in bytes, that the central can receive in a single
-     * notification or indication.
-     *
-     * This is equal to Maximum Transmission Unit (ATT MTU) minus 3 bytes, which are used for the
-     * ATT opcode and the attribute handle by the GATT layer.
-     */
-    val maximumUpdateValueLength: Int
-}
+/**
+ * Generates a random MAC address in the form `AA:BB:CC:DD:EE:FF`.
+ */
+internal fun randomMacAddress(): String =
+    Random.nextBytes(6)
+        .joinToString(separator = ":") { (it.toInt() and 0xFF).toString(16).uppercase().padStart(2, '0') }

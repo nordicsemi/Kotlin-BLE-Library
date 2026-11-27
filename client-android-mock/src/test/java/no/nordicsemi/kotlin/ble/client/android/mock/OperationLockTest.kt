@@ -29,7 +29,6 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 package no.nordicsemi.kotlin.ble.client.android.mock
 
 import kotlinx.coroutines.async
@@ -46,7 +45,7 @@ import no.nordicsemi.kotlin.ble.client.android.CentralManager.ConnectionOptions
 import no.nordicsemi.kotlin.ble.client.mock.AddressType
 import no.nordicsemi.kotlin.ble.client.mock.BondResult
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
-import no.nordicsemi.kotlin.ble.client.mock.ReadResponse
+import no.nordicsemi.kotlin.ble.server.ReadResponse
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.Permission
 import kotlin.test.Test
@@ -90,7 +89,7 @@ class OperationLockTest {
                 )
             }
         }
-    }
+    }.also { handler.attach(checkNotNull(it.server)) }
 
     private suspend fun CentralManager.characteristicOf(address: String): RemoteCharacteristic {
         val peripheral = checkNotNull(getPeripheralById(address))

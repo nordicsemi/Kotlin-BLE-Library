@@ -36,7 +36,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
-import kotlin.time.Duration.Companion.seconds
 import no.nordicsemi.kotlin.ble.client.RemoteCharacteristic
 import no.nordicsemi.kotlin.ble.client.RemoteDescriptor
 import no.nordicsemi.kotlin.ble.client.RemoteService
@@ -46,20 +45,22 @@ import no.nordicsemi.kotlin.ble.client.android.Peripheral
 import no.nordicsemi.kotlin.ble.client.mock.AddressType
 import no.nordicsemi.kotlin.ble.client.mock.BondResult
 import no.nordicsemi.kotlin.ble.client.mock.ConnectionResult
-import no.nordicsemi.kotlin.ble.client.mock.MockServerScope
+import no.nordicsemi.kotlin.ble.client.mock.GattInterceptor
 import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
+import no.nordicsemi.kotlin.ble.client.mock.MockPeripheralServer
+import no.nordicsemi.kotlin.ble.client.mock.MockServerScope
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.client.mock.PrepareWriteResponse
-import no.nordicsemi.kotlin.ble.client.mock.ReadResponse
+import no.nordicsemi.kotlin.ble.server.ReadResponse
 import no.nordicsemi.kotlin.ble.client.mock.ServiceDiscoveryResult
-import no.nordicsemi.kotlin.ble.client.mock.WriteResponse
-import no.nordicsemi.kotlin.ble.client.mock.internal.MockRemoteCharacteristic
-import no.nordicsemi.kotlin.ble.client.mock.internal.MockRemoteDescriptor
+import no.nordicsemi.kotlin.ble.server.WriteResponse
+import no.nordicsemi.kotlin.ble.core.Descriptor
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
 import no.nordicsemi.kotlin.ble.core.util.fromShortUuid
 import no.nordicsemi.kotlin.ble.environment.android.mock.LatestApi
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
+import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 
 // Test support for the Gatt*Test classes. Everything here is prefixed with "Gatt" / "GATT_".
@@ -76,19 +77,22 @@ internal val GATT_DESCRIPTOR_UUID: Uuid = Uuid.fromShortUuid(0xA0D1)
  *
  * Handlers are lambdas that tests may replace; every request is also recorded.
  */
-internal class GattHandler : PeripheralSpecEventHandler {
-    var readHandler: (MockRemoteCharacteristic) -> ReadResponse =
+internal class GattHandler : PeripheralSpecEventHandler, GattInterceptor {
+    /** A reference to the attribute a request is for. */
+    class Ref(val uuid: Uuid, val instanceId: Int)
+
+    var readHandler: (Ref) -> ReadResponse =
         { ReadResponse.Success(byteArrayOf()) }
-    var descriptorReadHandler: (MockRemoteDescriptor) -> ReadResponse =
+    var descriptorReadHandler: (Ref) -> ReadResponse =
         { ReadResponse.Success(byteArrayOf()) }
-    var writeHandler: (MockRemoteCharacteristic, ByteArray) -> WriteResponse =
+    var writeHandler: (Ref, ByteArray) -> WriteResponse =
         { _, _ -> WriteResponse.Success }
-    var commandHandler: (MockRemoteCharacteristic, ByteArray) -> Unit = { _, _ -> }
-    var descriptorWriteHandler: (MockRemoteDescriptor, ByteArray) -> WriteResponse =
+    var commandHandler: (Ref, ByteArray) -> Unit = { _, _ -> }
+    var descriptorWriteHandler: (Ref, ByteArray) -> WriteResponse =
         { _, _ -> WriteResponse.Success }
-    var prepareHandler: (MockRemoteCharacteristic, ByteArray) -> PrepareWriteResponse =
+    var prepareHandler: (Ref, ByteArray) -> PrepareWriteResponse =
         { _, value -> PrepareWriteResponse.Success(value) }
-    var descriptorPrepareHandler: (MockRemoteDescriptor, ByteArray) -> PrepareWriteResponse =
+    var descriptorPrepareHandler: (Ref, ByteArray) -> PrepareWriteResponse =
         { _, value -> PrepareWriteResponse.Success(value) }
     var executeHandler: (Boolean) -> WriteResponse = { WriteResponse.Success }
     var discoveryResult: ServiceDiscoveryResult = ServiceDiscoveryResult.Success
@@ -105,6 +109,74 @@ internal class GattHandler : PeripheralSpecEventHandler {
     val discoveryRequests = mutableListOf<List<Uuid>>()
     var bondRequests = 0
 
+    private lateinit var server: MockPeripheralServer
+
+    /** Makes the handler answer the requests of the clients to the server of the peripheral. */
+    fun attach(server: MockPeripheralServer) {
+        this.server = server
+        server.interceptor = this
+    }
+
+    private class Found(val ref: Ref, val isDescriptor: Boolean)
+
+    private fun find(attribute: Int): Found? {
+        for (service in server.services.value) for (c in service.characteristics) {
+            if (c.instanceId == attribute) return Found(Ref(c.uuid, attribute), false)
+            for (d in c.descriptors) if (d.instanceId == attribute) return Found(Ref(d.uuid, attribute), true)
+        }
+        return null
+    }
+
+    // Descriptors with their values defined in the services, and CCCDs, are handled by the server.
+    private fun Found.isHandledByServer() = isDescriptor && ref.uuid in setOf(
+        Descriptor.CLIENT_CHAR_CONF_UUID,
+        Descriptor.CHAR_USER_DESC_UUID,
+        Descriptor.CHAR_EXT_PROP_UUID,
+    )
+
+    override suspend fun onRead(attribute: Int): ReadResponse? {
+        val found = find(attribute) ?: return null
+        if (found.isDescriptor) {
+            descriptorReads += found.ref.uuid
+            return if (found.isHandledByServer()) null else descriptorReadHandler(found.ref)
+        }
+        reads += found.ref.uuid
+        return readHandler(found.ref)
+    }
+
+    override suspend fun onWrite(attribute: Int, value: ByteArray): WriteResponse? {
+        val found = find(attribute) ?: return null
+        if (found.isDescriptor) {
+            descriptorWrites += found.ref.uuid to value
+            val response = descriptorWriteHandler(found.ref, value)
+            return if (found.isHandledByServer() && response is WriteResponse.Success) null else response
+        }
+        writeRequests += value
+        return writeHandler(found.ref, value)
+    }
+
+    override suspend fun onWriteCommand(attribute: Int, value: ByteArray): Unit? {
+        val found = find(attribute) ?: return null
+        writeCommands += value
+        commandHandler(found.ref, value)
+        return Unit
+    }
+
+    override suspend fun onPrepareWrite(attribute: Int, value: ByteArray): PrepareWriteResponse? {
+        val found = find(attribute) ?: return null
+        if (found.isDescriptor) {
+            descriptorPrepareWrites += found.ref.uuid to value
+            return descriptorPrepareHandler(found.ref, value)
+        }
+        prepareWrites += value
+        return prepareHandler(found.ref, value)
+    }
+
+    override suspend fun onExecuteWrite(execute: Boolean): WriteResponse? {
+        executeWrites += execute
+        return executeHandler(execute)
+    }
+
     override fun onConnectionRequest(peripheral: MockPeripheral, phy: PrimaryPhy) = ConnectionResult.Accept
 
     override fun onBondRequest(peripheral: MockPeripheral): BondResult {
@@ -116,46 +188,6 @@ internal class GattHandler : PeripheralSpecEventHandler {
         discoveryRequests += uuids
         return discoveryResult
     }
-
-    override fun onReadRequest(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic): ReadResponse {
-        reads += characteristic.uuid
-        return readHandler(characteristic)
-    }
-
-    override fun onReadRequest(peripheral: MockPeripheral, descriptor: MockRemoteDescriptor): ReadResponse {
-        descriptorReads += descriptor.uuid
-        return descriptorReadHandler(descriptor)
-    }
-
-    override fun onWriteRequest(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic, value: ByteArray): WriteResponse {
-        writeRequests += value
-        return writeHandler(characteristic, value)
-    }
-
-    override fun onWriteCommand(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic, value: ByteArray) {
-        writeCommands += value
-        commandHandler(characteristic, value)
-    }
-
-    override fun onPrepareWriteRequest(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic, value: ByteArray): PrepareWriteResponse {
-        prepareWrites += value
-        return prepareHandler(characteristic, value)
-    }
-
-    override fun onWriteRequest(peripheral: MockPeripheral, descriptor: MockRemoteDescriptor, value: ByteArray): WriteResponse {
-        descriptorWrites += descriptor.uuid to value
-        return descriptorWriteHandler(descriptor, value)
-    }
-
-    override fun onPrepareWriteRequest(peripheral: MockPeripheral, descriptor: MockRemoteDescriptor, value: ByteArray): PrepareWriteResponse {
-        descriptorPrepareWrites += descriptor.uuid to value
-        return descriptorPrepareHandler(descriptor, value)
-    }
-
-    override fun onExecuteWriteRequest(peripheral: MockPeripheral, execute: Boolean): WriteResponse {
-        executeWrites += execute
-        return executeHandler(execute)
-    }
 }
 
 /** A simulated peripheral together with the mock central manager that sees it. */
@@ -165,6 +197,10 @@ internal class GattFixture(
     val handler: GattHandler,
 ) {
     lateinit var peripheral: Peripheral
+
+    init {
+        handler.attach(checkNotNull(spec.server))
+    }
 
     /** Connects to the peripheral (or reconnects, using a fresh [Peripheral] instance). */
     @IgnorableReturnValue
@@ -268,7 +304,6 @@ internal fun TestScope.gattSingleCharacteristic(
 
 /** Returns [size] bytes with predictable content. */
 internal fun gattBytes(size: Int, seed: Int = 0): ByteArray = ByteArray(size) { (it + seed).toByte() }
-
 
 /**
  * Lets the simulation work that is already due run.

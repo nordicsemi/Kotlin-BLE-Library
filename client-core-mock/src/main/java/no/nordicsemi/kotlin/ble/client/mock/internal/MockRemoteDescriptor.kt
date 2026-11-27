@@ -44,8 +44,8 @@ import no.nordicsemi.kotlin.ble.client.internal.OperationEvent
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec.Authentication
 import no.nordicsemi.kotlin.ble.client.mock.PrepareWriteResponse
-import no.nordicsemi.kotlin.ble.client.mock.ReadResponse
-import no.nordicsemi.kotlin.ble.client.mock.WriteResponse
+import no.nordicsemi.kotlin.ble.server.ReadResponse
+import no.nordicsemi.kotlin.ble.server.WriteResponse
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.Permission
@@ -65,7 +65,7 @@ class MockRemoteDescriptor(
     override val instanceId: Int = descriptor.instanceId
 
     override suspend fun FlowCollector<GattEvent>.executeRead() {
-        val eventHandler = checkNotNull(peripheralSpec.eventHandler)
+        val server = checkNotNull(peripheralSpec.server)
         check(peripheralSpec.isConnected) { "Peripheral not connected" }
 
         // Ensure that the services are valid.
@@ -108,12 +108,9 @@ class MockRemoteDescriptor(
             return
         }
 
-        val result = when (descriptor) {
-            is CCCD -> ReadResponse.Success(descriptor.value)
-            is CUD -> ReadResponse.Success(descriptor.value)
-            is CEPD -> ReadResponse.Success(descriptor.value)
-            else -> eventHandler.onReadRequest(peripheralSpec, this@MockRemoteDescriptor)
-        }
+        // With a hosted GATT server, all the descriptors are read from the server, which keeps
+        // the state of the Client Characteristic Configuration descriptor of the central.
+        val result = server.read(instanceId)
         when (result) {
             is ReadResponse.Success -> {
                 // Bluetooth Core Specification 6.2, Vol 3 (Host), Part F (ATT), 3.2.9. Long attribute values:
@@ -142,7 +139,7 @@ class MockRemoteDescriptor(
     }
 
     override suspend fun FlowCollector<GattEvent>.executeWrite(data: ByteArray) {
-        val eventHandler = checkNotNull(peripheralSpec.eventHandler)
+        val server = checkNotNull(peripheralSpec.server)
         check(peripheralSpec.isConnected) { "Peripheral not connected" }
 
         // Ensure that the services are valid.
@@ -205,7 +202,7 @@ class MockRemoteDescriptor(
         // so only one connection interval delay is added below in case of failure.
         when (useLongWrite) {
             true -> {
-                val result = eventHandler.onPrepareWriteRequest(peripheralSpec, this@MockRemoteDescriptor, truncatedData)
+                val result = server.prepareWrite(instanceId, truncatedData, reliable = false)
                 when (result) {
                     is PrepareWriteResponse.Success -> {
                         // Writing descriptor value takes time depending on the size of the value
@@ -214,7 +211,7 @@ class MockRemoteDescriptor(
                         // Validate received data. In case of an incorrect data, throw an exception.
                         val match = truncatedData.contentEquals(result.value)
                         // Long Write automatically executes or aborts all prepared writes.
-                        val result = eventHandler.onExecuteWriteRequest(peripheralSpec, match)
+                        val result = server.executeWrite(match)
                         peripheralSpec.emulateDelay()
                         if (!match) {
                             throw ValueDoesNotMatchException()
@@ -246,14 +243,7 @@ class MockRemoteDescriptor(
                 }
             }
             false -> {
-                val result = eventHandler.onWriteRequest(peripheralSpec, this@MockRemoteDescriptor, truncatedData)
-                // Values 0x01-00 and 0x02-00 are used to enable notifications and indications, respectively.
-                // Value 0x00-00 is used to disable both.
-                // Any other value is RFU and ignored.
-                if (descriptor is CCCD && result is WriteResponse.Success &&
-                    data.size == 2 && data[0] in 0..2 && data[1] == 0.toByte()) {
-                    descriptor.enabled = data[0] > 0
-                }
+                val result = server.write(instanceId, truncatedData)
                 when (result) {
                     is WriteResponse.Success -> {
                         // Writing descriptor value takes time depending on the size of the value

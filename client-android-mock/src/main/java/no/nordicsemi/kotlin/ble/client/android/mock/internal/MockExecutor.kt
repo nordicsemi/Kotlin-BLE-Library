@@ -52,10 +52,10 @@ import no.nordicsemi.kotlin.ble.core.ConnectionParameters
 import no.nordicsemi.kotlin.ble.core.PeripheralType
 import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PhyOption
-import no.nordicsemi.kotlin.ble.core.PrimaryPhy
 import no.nordicsemi.kotlin.ble.core.android.AndroidEnvironment
 import no.nordicsemi.kotlin.ble.core.mock.BondingFailure
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
+import no.nordicsemi.kotlin.ble.server.LocalServer
 import org.jetbrains.annotations.Range
 import kotlin.time.Duration.Companion.seconds
 
@@ -68,6 +68,8 @@ import kotlin.time.Duration.Companion.seconds
  * @param environment The mock environment.
  * @param advertisements A flow of advertisements emitted by the mock advertiser.
  * @param scope The scope of the mock central manager, in which the connection runs its jobs.
+ * @param serverProvider Gives the local GATT server of the phone, which may be used by the
+ * peripheral as a client.
  */
 open class MockExecutor(
     peripheralSpec: PeripheralSpec<String>,
@@ -75,7 +77,8 @@ open class MockExecutor(
     override val environment: MockAndroidEnvironment,
     advertisements: Flow<MockScanResult<String>>,
     scope: CoroutineScope,
-): MockExecutor(peripheralSpec, name, environment, advertisements, scope), Peripheral.Executor {
+    serverProvider: (() -> LocalServer<String>)? = null,
+): MockExecutor(peripheralSpec, name, environment, advertisements, scope, serverProvider), Peripheral.Executor {
     override val type: PeripheralType = peripheralSpec.type
 
     // The bond state follows the spec right away (Unconfined), so that a change is visible as soon

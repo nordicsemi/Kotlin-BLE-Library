@@ -43,11 +43,11 @@ Current status:
        - [x] Basic GATT operations
        - [x] Advanced GATT operations
        - [x] Bonding
-- [ ] Peripheral role
+- [x] Peripheral role
     - [x] Advertising
-    - [ ] Setting up GATT server
-    - [ ] GATT operations
-    - [ ] Mock implementation
+    - [x] Setting up GATT server
+    - [x] GATT operations
+    - [x] Mock implementation
 
 ## Documentation
 

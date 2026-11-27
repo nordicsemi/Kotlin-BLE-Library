@@ -50,6 +50,7 @@ nordicPublishing {
 
 dependencies {
     api(project(":core"))
+    api(project(":server-core"))
 
     api(libs.kotlinx.datetime)
 
@@ -63,6 +64,15 @@ dependencies {
 dokka {
     dokkaSourceSets.configureEach {
         includes.from("Module.md")
+
+        // The sources of core give Dokka the documentation of the members that Profile inherits,
+        // including @hide of those that are called by the library only. The packages of core are
+        // documented in its own module.
+        sourceRoots.from(project(":core").file("src/main/java"))
+        perPackageOption {
+            matchingRegex.set("no\\.nordicsemi\\.kotlin\\.ble\\.core(\\..*)?")
+            suppress.set(true)
+        }
 
         // Profile (and Peripheral) expose `protected` methods that subclasses are meant to
         // override - e.g. Profile.prepare/initialize/unsupported/failed. Dokka only documents

@@ -32,8 +32,8 @@
 package no.nordicsemi.kotlin.ble.core.android.internal
 
 import no.nordicsemi.kotlin.ble.core.android.AdvertisingDataDefinition
-import no.nordicsemi.kotlin.ble.core.internal.AdvertisingDataScopeImpl
 import no.nordicsemi.kotlin.ble.core.android.AdvertisingDataScope
+import no.nordicsemi.kotlin.ble.core.internal.AdvertisingDataScopeImpl
 import no.nordicsemi.kotlin.ble.core.util.fromShortUuid
 import kotlin.uuid.Uuid
 

@@ -49,6 +49,7 @@ nordicPublishing {
 dependencies {
     api(project(":client-core"))
     api(project(":core-android"))
+    api(project(":server-core-android"))
 
     testImplementation(libs.kotlin.test)
     testImplementation(libs.truth)

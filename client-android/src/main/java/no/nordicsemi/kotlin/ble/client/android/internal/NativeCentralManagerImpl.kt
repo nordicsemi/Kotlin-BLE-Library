@@ -58,9 +58,9 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.CentralManager.ScanOptions
-import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.client.android.ConjunctionFilterScope
 import no.nordicsemi.kotlin.ble.client.android.EncryptionState
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
@@ -72,6 +72,8 @@ import no.nordicsemi.kotlin.ble.core.exception.BluetoothUnavailableException
 import no.nordicsemi.kotlin.ble.core.internal.CallSiteException
 import no.nordicsemi.kotlin.ble.core.log.Layer
 import no.nordicsemi.kotlin.ble.environment.android.NativeAndroidEnvironment
+import no.nordicsemi.kotlin.ble.server.android.LocalServer
+import no.nordicsemi.kotlin.ble.server.android.native
 import no.nordicsemi.kotlin.log.Log
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -102,12 +104,16 @@ private const val NATIVE_SCAN_RESULTS_BUFFER_SIZE = 512
  *
  * @param scope The coroutine scope.
  * @param environment Native Android environment object.
+ * @param server The local GATT server, or `null` to create it when it is first accessed.
  */
 internal class NativeCentralManagerImpl(
     scope: CoroutineScope,
     private val environment: NativeAndroidEnvironment,
-): CentralManagerImpl(scope, environment) {
+    server: LocalServer? = null,
+): CentralManagerImpl(scope, environment, server) {
     override var logger: Log.Sink<Layer>? = Log.Sink.Null
+
+    override fun createServer(): LocalServer = LocalServer.native(environment, internalScope)
     override val state = environment.bluetoothState
 
     /** A change of the bond state of the device with the given [address]. */

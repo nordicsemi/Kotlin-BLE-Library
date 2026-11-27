@@ -37,6 +37,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,10 +49,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.async
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.onSubscription
@@ -59,6 +58,7 @@ import kotlinx.coroutines.flow.timeout
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import no.nordicsemi.kotlin.ble.client.ConnectionParametersChanged
@@ -68,7 +68,6 @@ import no.nordicsemi.kotlin.ble.client.MtuChanged
 import no.nordicsemi.kotlin.ble.client.Peripheral
 import no.nordicsemi.kotlin.ble.client.PhyChanged
 import no.nordicsemi.kotlin.ble.client.ReliableWriteCompleted
-import no.nordicsemi.kotlin.ble.client.RemoteServices
 import no.nordicsemi.kotlin.ble.client.ServicesChanged
 import no.nordicsemi.kotlin.ble.client.android.Peripheral.Executor
 import no.nordicsemi.kotlin.ble.client.android.exception.BondingFailedException

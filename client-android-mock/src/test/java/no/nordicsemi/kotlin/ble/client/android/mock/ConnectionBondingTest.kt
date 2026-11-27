@@ -38,6 +38,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.CentralManager.ConnectionOptions
 import no.nordicsemi.kotlin.ble.client.android.exception.BondingFailedException
@@ -48,11 +49,10 @@ import no.nordicsemi.kotlin.ble.client.mock.MockBondState
 import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
-import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.core.ConnectionState
 import no.nordicsemi.kotlin.ble.core.LegacyAdvertisingSetParameters
-import no.nordicsemi.kotlin.ble.core.mock.BondingFailure
 import no.nordicsemi.kotlin.ble.core.exception.ManagerClosedException
+import no.nordicsemi.kotlin.ble.core.mock.BondingFailure
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import kotlin.test.Test
 import kotlin.test.assertEquals

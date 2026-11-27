@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -29,27 +29,18 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-@file:Suppress("unused")
-
-package no.nordicsemi.kotlin.ble.server.android
-
-import kotlinx.coroutines.flow.StateFlow
-import no.nordicsemi.kotlin.ble.core.ConnectionState
-import no.nordicsemi.kotlin.ble.core.PhyInUse
-import no.nordicsemi.kotlin.ble.server.Central
+package no.nordicsemi.kotlin.ble.server.mock
 
 /**
- * Android-specific Central interface.
+ * Marks the low-level API of the simulated client: requests that identify attributes by their
+ * instance IDs, like the ATT protocol does.
  *
- * @property state The connection state of the central device.
+ * It is the transport used by the mock modules. To simulate a client in tests, use
+ * [MockClient.server], which has the same API as a peripheral has on the client side.
  */
-interface Central: Central<String> {
-    val state: StateFlow<ConnectionState>
-
-    /**
-     * Read the current transmitter PHY and receiver PHY of the connection.
-     *
-     * @return The PHY in use for transmitting and receiving data.
-     */
-    suspend fun readPhy(): PhyInUse
-}
+@RequiresOptIn(
+    message = "This is a low-level API of the mock transport. Use MockClient.server instead.",
+    level = RequiresOptIn.Level.ERROR,
+)
+@Retention(AnnotationRetention.BINARY)
+annotation class LowLevelMockApi

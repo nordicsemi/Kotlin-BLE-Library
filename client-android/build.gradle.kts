@@ -57,6 +57,7 @@ android {
 
 dependencies {
     api(project(":client-core-android"))
+    implementation(project(":server-android"))
     api(project(":environment-android"))
 
     api(libs.androidx.annotation)

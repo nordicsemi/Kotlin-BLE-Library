@@ -38,7 +38,6 @@ import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.Peripheral
 import no.nordicsemi.kotlin.ble.client.exception.PeripheralNotConnectedException
 import no.nordicsemi.kotlin.ble.client.mock.AddressType
-import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.core.LegacyAdvertisingSetParameters
@@ -46,7 +45,6 @@ import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PhyInUse
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import kotlin.test.Test
-import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull

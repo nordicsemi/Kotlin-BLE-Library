@@ -32,13 +32,13 @@
 package no.nordicsemi.kotlin.ble.client.android.mock
 
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.test.runTest
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.ConjunctionFilterScope

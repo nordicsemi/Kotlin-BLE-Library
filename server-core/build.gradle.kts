@@ -1,5 +1,7 @@
+import org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier
+
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -38,14 +40,43 @@ group = "no.nordicsemi.kotlin.ble"
 
 nordicPublishing {
     POM_ARTIFACT_ID = "server-core"
-    POM_NAME = "Nordic Kotlin BLE library"
-    POM_DESCRIPTION = "Nordic Kotlin BLE library"
-    POM_URL = "https://github.com/nordicsemi/Kotlin-BLE-Library"
-    POM_SCM_URL = "https://github.com/nordicsemi/Kotlin-BLE-Library"
+    POM_NAME = "Core Server Module"
+    POM_DESCRIPTION = "A part of Kotlin BLE Library providing core, platform-independent functionality for the Bluetooth LE peripheral role (GATT server)."
+    POM_URL = "https://github.com/nordicsemi/Kotlin-BLE-Library/"
+    POM_SCM_URL = "https://github.com/nordicsemi/Kotlin-BLE-Library/"
     POM_SCM_CONNECTION = "scm:git@github.com:nordicsemi/Kotlin-BLE-Library.git"
     POM_SCM_DEV_CONNECTION = "scm:git@github.com:nordicsemi/Kotlin-BLE-Library.git"
 }
 
 dependencies {
     api(project(":core"))
+
+    // Adds @hide annotation to exclude internal classes from the documentation.
+    dokkaPlugin(libs.dokka.android.gradlePlugin)
+
+    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlinx.coroutines.test)
+}
+
+dokka {
+    dokkaSourceSets.configureEach {
+        includes.from("Module.md")
+
+        // The sources of core give Dokka the documentation of the members that LocalProfile
+        // inherits, including @hide of those that are called by the library only. The packages
+        // of core are documented in its own module.
+        sourceRoots.from(project(":core").file("src/main/java"))
+        perPackageOption {
+            matchingRegex.set("no\\.nordicsemi\\.kotlin\\.ble\\.core(\\..*)?")
+            suppress.set(true)
+        }
+
+        // Profile (and Peripheral) expose `protected` methods that subclasses are meant to
+        // override - e.g. Profile.prepare/initialize/unsupported/failed. Dokka only documents
+        // `public` members by default, so without this those methods are silently omitted.
+        documentedVisibilities(
+            VisibilityModifier.Public,
+            VisibilityModifier.Protected,
+        )
+    }
 }

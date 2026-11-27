@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -29,27 +29,35 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-@file:Suppress("unused")
+package no.nordicsemi.kotlin.ble.client.mock.internal
 
-package no.nordicsemi.kotlin.ble.server.android
-
-/**
- * An event indicating a connection event.
- */
-sealed class ConnectionEvent (
-    val device: Central
-)
+import kotlinx.coroutines.flow.StateFlow
+import no.nordicsemi.kotlin.ble.client.mock.SimulatedClient
+import no.nordicsemi.kotlin.ble.core.ConnectionState
+import no.nordicsemi.kotlin.ble.server.mock.MockClient
+import no.nordicsemi.kotlin.ble.server.mock.MockGattServer
 
 /**
- * An event indicating that a device has connected to the local GATT server.
+ * The simulated client of a [no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec] with
+ * a hosted GATT server.
  *
- * @param device The central device that has connected.
+ * It is a [MockClient], which sends the requests of the client to the server.
+ * The [no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec] connects and disconnects it, and
+ * keeps its MTU in sync with the connection.
  */
-class ConnectionEstablished(device: Central): ConnectionEvent(device)
+internal class SimulatedClientImpl(
+    server: MockGattServer<String>,
+): MockClient<String>(IDENTIFIER, server), SimulatedClient {
 
-/**
- * An event indicating that a device has disconnected from the local GATT server.
- *
- * @param device The central device that has disconnected.
- */
-class ConnectionLost(device: Central): ConnectionEvent(device)
+    override val state: StateFlow<ConnectionState>
+        get() = connectionState
+
+    override val mtu: StateFlow<Int>
+        get() = attMtu
+
+    override fun toString() = "SimulatedClient(state=${connectionState.value}, mtu=${attMtu.value})"
+
+    private companion object {
+        const val IDENTIFIER = "MOCK-CENTRAL"
+    }
+}

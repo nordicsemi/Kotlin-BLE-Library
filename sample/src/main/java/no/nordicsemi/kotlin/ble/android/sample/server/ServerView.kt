@@ -1,0 +1,449 @@
+/*
+ * Copyright (c) 2026, Nordic Semiconductor
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this list of
+ * conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice, this list
+ * of conditions and the following disclaimer in the documentation and/or other materials
+ * provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its contributors may be
+ * used to endorse or promote products derived from this software without specific prior
+ * written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+ * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+ * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+package no.nordicsemi.kotlin.ble.android.sample.server
+
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import no.nordicsemi.kotlin.ble.android.sample.common.InfoChip
+import no.nordicsemi.kotlin.ble.android.sample.common.format
+import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
+import no.nordicsemi.kotlin.ble.android.sample.theme.Nordic
+import no.nordicsemi.kotlin.ble.core.ConnectionParameters
+import no.nordicsemi.kotlin.ble.core.ConnectionState
+import no.nordicsemi.kotlin.ble.core.Phy
+import no.nordicsemi.kotlin.ble.core.PhyInUse
+
+@Composable
+fun ServerView(
+    isRunning: Boolean,
+    isAdvertising: Boolean,
+    isLedOn: Boolean,
+    isButtonPressed: Boolean,
+    subscribersCount: Int,
+    clients: List<ClientInfo>,
+    errorMessage: String?,
+    onButtonPressedChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .navigationBarsPadding()
+            .padding(top = 8.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        errorMessage?.let {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                ),
+            ) {
+                Text(
+                    text = it,
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+        }
+
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Text(
+                    text = "Nordic LED Button Service",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    InfoChip("Server", if (isRunning) "Running" else "Stopped")
+                    InfoChip("Advertising", if (isAdvertising) "Yes" else "No")
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Max),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    LedPanel(
+                        isOn = isLedOn,
+                        enabled = isRunning,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                    )
+                    ButtonPanel(
+                        enabled = isRunning,
+                        isPressed = isButtonPressed,
+                        subscribersCount = subscribersCount,
+                        onPressedChanged = onButtonPressedChanged,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                    )
+                }
+            }
+        }
+
+        Text(
+            text = "Connected clients",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 4.dp),
+        )
+        if (clients.isEmpty()) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                ),
+            ) {
+                Text(
+                    text = "No clients connected",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+        }
+        clients.forEach { client ->
+            ClientItem(client)
+        }
+    }
+}
+
+/** A card with the address of a client, its connection state and the parameters of the connection. */
+@Composable
+private fun ClientItem(
+    client: ClientInfo,
+    modifier: Modifier = Modifier,
+) {
+    val color by animateColorAsState(
+        animationSpec = tween(durationMillis = 500),
+        targetValue = when (client.state) {
+            is ConnectionState.Connected -> Nordic.Color.Lake
+            is ConnectionState.Connecting -> Nordic.Color.Blue
+            else -> Nordic.Color.MiddleGrey
+        },
+        label = "client color animation",
+    )
+    Column(modifier = modifier.fillMaxWidth()) {
+        ElevatedCard(
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ),
+            modifier = Modifier.zIndex(1.0f),
+        ) {
+            ListItem(
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                headlineContent = { Text(text = client.address) },
+                supportingContent = { Text(text = client.state.toString()) },
+                trailingContent = {
+                    // The client subscribed to the Button, so it is notified about its changes.
+                    if (client.isSubscribed) {
+                        Icon(
+                            imageVector = Nordic.Icons.Link,
+                            contentDescription = "Subscribed to the button",
+                            tint = Nordic.Color.Lake,
+                        )
+                    }
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Nordic.Icons.Bluetooth,
+                        contentDescription = "Client Icon",
+                        tint = Color.White,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(color)
+                            .padding(4.dp),
+                    )
+                },
+            )
+        }
+        // The details "expand" from the card above, which is drawn in front of them.
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset(y = (-2).dp)
+                .padding(start = 16.dp, end = 8.dp),
+            shape = MaterialTheme.shapes.medium.copy(
+                topStart = CornerSize(0.dp),
+                topEnd = CornerSize(0.dp),
+            ),
+        ) {
+            FlowRow(
+                modifier = Modifier.padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                val parameters = client.connectionParameters
+                InfoChip("MTU", client.mtu?.let { "$it bytes" })
+                InfoChip("PHY", client.phy?.format())
+                InfoChip("Interval", parameters?.let { "${it.connectionIntervalMillis} ms" })
+                InfoChip("Latency", parameters?.latency?.toString())
+                InfoChip("Timeout", parameters?.let { "${it.supervisionTimeoutMillis} ms" })
+            }
+        }
+    }
+}
+
+/** A panel with the image of the LED, which lights up when the client turns it on. */
+@Composable
+private fun LedPanel(
+    isOn: Boolean,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val tint by animateColorAsState(
+        targetValue = when {
+            isOn -> Nordic.Color.Sun
+            enabled -> Nordic.Color.MiddleGrey
+            else -> Nordic.Color.LightGrey
+        },
+        label = "LED",
+    )
+    val glow by animateFloatAsState(
+        targetValue = if (isOn) 1f else 0f,
+        label = "LED glow",
+    )
+    Panel(
+        title = "LED",
+        modifier = modifier,
+        image = {
+            Box(
+                modifier = Modifier
+                    .size(128.dp)
+                    // The light fades out from the bulb, like a glow.
+                    .background(
+                        brush = Brush.radialGradient(
+                            0.0f to Nordic.Color.Sun.copy(alpha = 0.55f * glow),
+                            0.45f to Nordic.Color.Sun.copy(alpha = 0.30f * glow),
+                            1.0f to Nordic.Color.Sun.copy(alpha = 0f),
+                        ),
+                        shape = CircleShape,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Nordic.Icons.Led,
+                    contentDescription = if (isOn) "LED on" else "LED off",
+                    tint = tint,
+                    modifier = Modifier.size(80.dp),
+                )
+            }
+        },
+    )
+}
+
+/** A panel with the image of a button, which is pressed as long as the user is holding it. */
+@Composable
+private fun ButtonPanel(
+    enabled: Boolean,
+    isPressed: Boolean,
+    subscribersCount: Int,
+    onPressedChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val currentOnPressedChanged by rememberUpdatedState(onPressedChanged)
+    val tint by animateColorAsState(
+        targetValue = when {
+            !enabled -> Nordic.Color.LightGrey
+            isPressed -> Nordic.Color.Lake
+            else -> Nordic.Color.Blue
+        },
+        label = "Button",
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.88f else 1f,
+        label = "Button scale",
+    )
+    Panel(
+        title = "Button",
+        modifier = modifier,
+        image = {
+            Box(
+                modifier = Modifier
+                    .size(112.dp)
+                    .clip(CircleShape)
+                    .pointerInput(enabled) {
+                        if (enabled) {
+                            detectTapGestures(
+                                onPress = {
+                                    currentOnPressedChanged(true)
+                                    try {
+                                        tryAwaitRelease()
+                                    } finally {
+                                        currentOnPressedChanged(false)
+                                    }
+                                },
+                            )
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Nordic.Icons.PushButton,
+                    contentDescription = if (isPressed) "Button pressed" else "Hold to press the button",
+                    tint = tint,
+                    modifier = Modifier
+                        .size(88.dp)
+                        .scale(scale),
+                )
+            }
+        },
+        chips = { InfoChip("Subscribers", subscribersCount.toString()) },
+    )
+}
+
+/** A panel with an image, a title and a few chips below. */
+@Composable
+private fun Panel(
+    title: String,
+    image: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    chips: @Composable () -> Unit = {},
+) {
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            image()
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                chips()
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun ServerViewPreview() {
+    AppTheme {
+        ServerView(
+            isRunning = true,
+            isAdvertising = true,
+            isLedOn = true,
+            isButtonPressed = false,
+            subscribersCount = 1,
+            clients = listOf(
+                ClientInfo(
+                    address = "AA:BB:CC:DD:EE:FF",
+                    state = ConnectionState.Connected,
+                    mtu = 247,
+                    phy = PhyInUse(txPhy = Phy.PHY_LE_2M, rxPhy = Phy.PHY_LE_2M),
+                    connectionParameters = ConnectionParameters.Specified(
+                        connectionInterval = 24,
+                        latency = 0,
+                        supervisionTimeout = 400,
+                    ),
+                    isSubscribed = true,
+                ),
+            ),
+            errorMessage = null,
+            onButtonPressedChanged = { },
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun ServerViewStoppedPreview() {
+    AppTheme {
+        ServerView(
+            isRunning = false,
+            isAdvertising = false,
+            isLedOn = false,
+            isButtonPressed = false,
+            subscribersCount = 0,
+            clients = emptyList(),
+            errorMessage = "Bluetooth is turned off",
+            onButtonPressedChanged = { },
+        )
+    }
+}

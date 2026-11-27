@@ -42,14 +42,14 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.RemoteServices
+import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.CentralManager.ConnectionOptions
 import no.nordicsemi.kotlin.ble.client.mock.AddressType
 import no.nordicsemi.kotlin.ble.client.mock.ConnectionResult
 import no.nordicsemi.kotlin.ble.client.mock.DisconnectionReason
-import no.nordicsemi.kotlin.ble.client.mock.MockServerScope
 import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
+import no.nordicsemi.kotlin.ble.client.mock.MockServerScope
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.core.ConnectionState

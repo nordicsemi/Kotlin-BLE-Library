@@ -53,38 +53,50 @@ import no.nordicsemi.kotlin.ble.client.mock.MockPeripheral
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpec
 import no.nordicsemi.kotlin.ble.client.mock.PeripheralSpecEventHandler
 import no.nordicsemi.kotlin.ble.client.mock.Proximity
-import no.nordicsemi.kotlin.ble.client.mock.ReadResponse
 import no.nordicsemi.kotlin.ble.client.mock.ServiceDiscoveryResult
-import no.nordicsemi.kotlin.ble.client.mock.WriteResponse
-import no.nordicsemi.kotlin.ble.client.mock.internal.MockRemoteCharacteristic
 import no.nordicsemi.kotlin.ble.core.AdvertisingDataFlag
-import no.nordicsemi.kotlin.ble.core.mock.AdvertisingDataScope
 import no.nordicsemi.kotlin.ble.core.Bluetooth5AdvertisingSetParameters
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.ConnectionParameters
 import no.nordicsemi.kotlin.ble.core.LegacyAdvertisingSetParameters
-import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.Permission
 import no.nordicsemi.kotlin.ble.core.Phy
 import no.nordicsemi.kotlin.ble.core.PrimaryPhy
 import no.nordicsemi.kotlin.ble.core.TxPowerLevel
 import no.nordicsemi.kotlin.ble.core.and
+import no.nordicsemi.kotlin.ble.core.mock.AdvertisingDataScope
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
+import no.nordicsemi.kotlin.ble.server.android.LocalServer
+import no.nordicsemi.kotlin.ble.server.android.mock.mock
 import no.nordicsemi.kotlin.log.Log
 import no.nordicsemi.kotlin.log.timber.Timber
 import timber.log.Timber
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
+import no.nordicsemi.kotlin.ble.server.WriteResponse as ServerWriteResponse
 
 @Module
 @InstallIn(ViewModelComponent::class)
 object ViewModelModule {
-    /** Handle of the Button characteristic. */
-    private var buttonHandle: Int? = null
+    private val LBS_UUID = Uuid.parse("00001523-1212-EFDE-1523-785FEABCD123")
+    private val BUTTON_UUID = Uuid.parse("00001524-1212-EFDE-1523-785FEABCD123")
+    private val LED_UUID = Uuid.parse("00001525-1212-EFDE-1523-785FEABCD123")
 
-    /** Handle of the LED characteristic. */
-    private var ledHandle: Int? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /**
+     * Counts how many times the LED characteristic was written to with response.
+     *
+     * Used to simulate a service change after 5 writes with response.
+     */
+    private var blinkCount = 0
+
+    /** Checks whether the byte array represents "ON" state. */
+    private fun ByteArray.isOn() = isNotEmpty() && this[0] != 0.toByte()
+    /** Converts the Boolean to a byte array. */
+    private fun Boolean.toBytes(): ByteArray =
+        if (this) byteArrayOf(0x01) else byteArrayOf(0x00)
 
     /**
      * Implementation of the Blinky peripheral behavior.
@@ -93,38 +105,73 @@ object ViewModelModule {
      * (LED Button Service) from Nordic SDK.
      *
      * The device has one characteristic for the Button (read/notify) and one for the LED (read/write).
+     * Reads are answered from the values of the characteristics, which are kept by the server
+     * hosted by the peripheral.
      */
-    private val blinkyImpl: PeripheralSpecEventHandler = object : PeripheralSpecEventHandler {
-        /** Checks whether the byte array represents "ON" state. */
-        private fun ByteArray.isOn() = isNotEmpty() && this[0] != 0.toByte()
-        /** Converts the Boolean to a byte array. */
-        private fun Boolean.toBytes(): ByteArray =
-            if (this) byteArrayOf(0x01) else byteArrayOf(0x00)
+    private fun bindBlinky() {
+        val lbs = blinky.server!!.services.value.first { it.uuid == LBS_UUID }
+        val button = lbs.characteristics.first { it.uuid == BUTTON_UUID }
+        val led = lbs.characteristics.first { it.uuid == LED_UUID }
+        button.setValue(false.toBytes())
+        led.setValue(false.toBytes())
+        led.onWrite {
+            val on = value.isOn()
+            Timber.i("[Blinky] LED ${if (on) "ON" else "OFF"}")
+            if (withResponse) {
+                // After 5 writes with response, simulate a service change.
+                // Note, that the counter isn't reset, so the change happens only once.
+                if (blinkCount++ == 5) changeServices()
+                // Send a Button notification when LED characteristic is written to.
+                Timber.i("[Blinky] Simulating Button ${if (on) "clicked" else "released"}")
+                scope.launch { button.update(on.toBytes()) }
+            }
+            ServerWriteResponse.Success
+        }
+    }
 
-        /** Current state of the LED. */
-        private var isLedOn: Boolean = false
-        /**
-         * Current state of the Button.
-         *
-         * Changing the state will simulate a notification being sent to the connected clients.
-         */
-        private var isButtonPressed = false
-            set(value) {
-                field = value
-                buttonHandle?.let {
-                    Timber.i("[Blinky] Simulating Button ${if (value) "clicked" else "released"}")
-                    blinky.simulateValueUpdate(it, value.toBytes())
+    /** Replaces the services and makes the device disconnect after a while. */
+    private fun changeServices() {
+        Timber.i("[Blinky] Changing services")
+        blinky.simulateServiceChange {
+            GenericAccessService()
+            GenericAttributeService()
+            // Add LED Button Service (Blinky)
+            Service(uuid = LBS_UUID) {
+                Characteristic(
+                    uuid = BUTTON_UUID,
+                    properties = CharacteristicProperty.READ and CharacteristicProperty.NOTIFY,
+                    permission = Permission.READ,
+                )
+                Characteristic(
+                    uuid = LED_UUID,
+                    properties = CharacteristicProperty.READ and CharacteristicProperty.WRITE,
+                    permissions = Permission.READ and Permission.WRITE,
+                ) {
+                    // CCCD is added automatically
+                    CharacteristicUserDescriptionDescriptor("LED 2")
                 }
             }
-        /**
-         * Counts how many times the LED characteristic was written to.
-         *
-         * Used to simulate a service change after 5 writes with response.
-         */
-        private var blinkCount = 0
+        }
+        bindBlinky()
+        scope.launch {
+            // Request shorter supervision timeout.
+            delay(5.seconds)
+            blinky.simulateConnectionParametersRequest(
+                ConnectionParameters(
+                    connectionInterval = 30.milliseconds,
+                    latency = 4,
+                    supervisionTimeout = 1.seconds,
+                )
+            )
+            // Simulate a reset after a while. The Peripheral should get disconnection
+            // event after 1 second (supervision timeout).
+            delay(2.seconds)
+            blinky.simulateReset()
+        }
+    }
 
-        // Event handlers implementation
-
+    /** Events of the Blinky peripheral that are not related to the GATT server. */
+    private val blinkyImpl: PeripheralSpecEventHandler = object : PeripheralSpecEventHandler {
         override fun onConnectionRequest(peripheral: MockPeripheral, phy: PrimaryPhy): ConnectionResult {
             Timber.i("[Blinky] Connection request received on PHY: $phy")
             return ConnectionResult.Accept
@@ -137,83 +184,13 @@ object ViewModelModule {
         override fun onReset(peripheral: MockPeripheral) {
             Timber.i("[Blinky] --- Booting up ---")
             blinkCount = 0
-            isLedOn = false
-            isButtonPressed = false
+            bindBlinky()
         }
 
         override fun onServiceDiscoveryRequest(peripheral: MockPeripheral, uuids: List<Uuid>): ServiceDiscoveryResult {
             Timber.i("[Blinky] Service discovery requested for UUIDs: $uuids")
             return super.onServiceDiscoveryRequest(peripheral, uuids)
         }
-
-        override fun onWriteRequest(
-            peripheral: MockPeripheral,
-            characteristic: MockRemoteCharacteristic,
-            value: ByteArray
-        ): WriteResponse {
-            onWriteCommand(peripheral, characteristic, value)
-
-            // After 5 writes with response, simulate a service change.
-            // Note, that the counter isn't reset, so the change happens only once.
-            if (blinkCount++ == 5) {
-                Timber.i("[Blinky] Changing services")
-                blinky.simulateServiceChange {
-                    GenericAccessService()
-                    GenericAttributeService()
-                    // Add LED Button Service (Blinky)
-                    Service(
-                        uuid = Uuid.parse("00001523-1212-EFDE-1523-785FEABCD123")
-                    ) {
-                        buttonHandle = Characteristic(
-                            uuid = Uuid.parse("00001524-1212-EFDE-1523-785FEABCD123"),
-                            properties = CharacteristicProperty.READ and CharacteristicProperty.NOTIFY,
-                            permission = Permission.READ,
-                        )
-                        ledHandle = Characteristic(
-                            uuid = Uuid.parse("00001525-1212-EFDE-1523-785FEABCD123"),
-                            properties = CharacteristicProperty.READ and CharacteristicProperty.WRITE,//_WITHOUT_RESPONSE,
-                            permissions = Permission.READ and Permission.WRITE,
-                        ) {
-                            // CCCD is added automatically
-                            CharacteristicUserDescriptionDescriptor("LED 2")
-                        }
-                    }
-                }
-                CoroutineScope(Dispatchers.IO).launch {
-                    // Request shorter supervision timeout.
-                    delay(5.seconds)
-                    blinky.simulateConnectionParametersRequest(
-                        ConnectionParameters(
-                            connectionInterval = 30.milliseconds,
-                            latency = 4,
-                            supervisionTimeout = 1.seconds,
-                        )
-                    )
-                    // Simulate a reset after a while. The Peripheral should get disconnection
-                    // event after 1 second (supervision timeout).
-                    delay(2.seconds)
-                    blinky.simulateReset()
-                }
-            }
-
-            // Send a Button notification when LED characteristic is written to.
-            isButtonPressed = value.isOn()
-
-            return WriteResponse.Success
-        }
-
-        override fun onWriteCommand(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic, value: ByteArray) {
-            val on = value.isOn()
-            isLedOn = on
-            Timber.i("[Blinky] LED ${if (on) "ON" else "OFF"}")
-        }
-
-        override fun onReadRequest(peripheral: MockPeripheral, characteristic: MockRemoteCharacteristic): ReadResponse =
-            when (characteristic.instanceId) {
-                buttonHandle -> ReadResponse.Success(isButtonPressed.toBytes())
-                ledHandle -> ReadResponse.Success(isLedOn.toBytes())
-                else -> ReadResponse.Failure(OperationStatus.ReadNotPermitted)
-            }
     }
 
     /** Definition of the Blinky device. */
@@ -275,7 +252,7 @@ object ViewModelModule {
                 Service(
                     uuid = Uuid.parse("00001523-1212-EFDE-1523-785FEABCD123")
                 ) {
-                    buttonHandle = Characteristic(
+                    Characteristic(
                         uuid = Uuid.parse("00001524-1212-EFDE-1523-785FEABCD123"),
                         properties = CharacteristicProperty.READ and CharacteristicProperty.NOTIFY,
                         permission = Permission.READ,
@@ -293,7 +270,7 @@ object ViewModelModule {
                         // TODO Reading this should trigger bonding
                         Descriptor(Uuid.random(), permission = Permission.READ_ENCRYPTED)
                     }
-                    ledHandle = Characteristic(
+                    Characteristic(
                         uuid = Uuid.parse("00001525-1212-EFDE-1523-785FEABCD123"),
                         properties = CharacteristicProperty.READ and CharacteristicProperty.WRITE,
                         permissions = Permission.READ and Permission.WRITE,
@@ -304,6 +281,10 @@ object ViewModelModule {
                 }
             }
         }
+
+    init {
+        bindBlinky()
+    }
 
     private val beacon = PeripheralSpec.simulatePeripheral(
         identifier = "11:22:33:44:55:66",
@@ -398,4 +379,12 @@ object ViewModelModule {
             }
         }
 
+    @ViewModelScoped
+    @Provides
+    fun provideLocalServer(
+        environment: MockAndroidEnvironment,
+        scope: CoroutineScope,
+    ): LocalServer = LocalServer.mock(environment, scope)
+        // A simulated client that connects, toggles the LED and receives button notifications.
+        .also { it.simulateLedButtonClient(scope) }
 }

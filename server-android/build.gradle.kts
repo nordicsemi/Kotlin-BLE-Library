@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -39,21 +39,37 @@ group = "no.nordicsemi.kotlin.ble"
 
 nordicPublishing {
     POM_ARTIFACT_ID = "server-android"
-    POM_NAME = "Nordic Kotlin BLE library"
-    POM_DESCRIPTION = "Nordic Kotlin BLE library"
-    POM_URL = "https://github.com/NordicPlayground/Kotlin-BLE-Library"
-    POM_SCM_URL = "https://github.com/NordicPlayground/Kotlin-BLE-Library"
-    POM_SCM_CONNECTION = "scm:git@github.com:NordicPlayground/Kotlin-BLE-Library.git"
-    POM_SCM_DEV_CONNECTION = "scm:git@github.com:NordicPlayground/Kotlin-BLE-Library.git"
+    POM_NAME = "Bluetooth LE Server Module for Android"
+    POM_DESCRIPTION = "A main module of Kotlin BLE Library providing Android-specific functionality for the Bluetooth LE peripheral role: hosting a GATT server and serving connected centrals."
+    POM_URL = "https://github.com/nordicsemi/Kotlin-BLE-Library/"
+    POM_SCM_URL = "https://github.com/nordicsemi/Kotlin-BLE-Library/"
+    POM_SCM_CONNECTION = "scm:git@github.com:nordicsemi/Kotlin-BLE-Library.git"
+    POM_SCM_DEV_CONNECTION = "scm:git@github.com:nordicsemi/Kotlin-BLE-Library.git"
 }
 
 android {
     namespace = "no.nordicsemi.kotlin.ble.server.android"
+
+    defaultConfig {
+        minSdk = 18
+    }
 }
 
 dependencies {
     api(project(":server-core-android"))
+    api(project(":environment-android"))
 
     api(libs.androidx.annotation)
     api(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.core.ktx)
+
+    testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+}
+
+dokka {
+    dokkaSourceSets.configureEach {
+        includes.from("Module.md")
+    }
 }

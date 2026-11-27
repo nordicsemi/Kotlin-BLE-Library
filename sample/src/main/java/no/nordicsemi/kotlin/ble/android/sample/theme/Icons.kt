@@ -333,6 +333,52 @@ object Nordic {
                 .build()
         }
 
+        /** Material icon "link". */
+        val Link: ImageVector by lazy {
+            materialIcon(
+                name = "link",
+                pathData = "M3.9,12c0,-1.71 1.39,-3.1 3.1,-3.1h4L11,7L7,7c-2.76,0 -5,2.24 -5,5s2.24,5 5,5h4v-1.9L7,15.1c-1.71,0 -3.1,-1.39 -3.1,-3.1zM8,13h8v-2L8,11v2zM17,7h-4v1.9h4c1.71,0 3.1,1.39 3.1,3.1s-1.39,3.1 -3.1,3.1h-4L13,17h4c2.76,0 5,-2.24 5,-5s-2.24,-5 -5,-5z",
+            )
+        }
+
+        /** Material icon "lightbulb". */
+        val Led: ImageVector by lazy {
+            materialIcon(
+                name = "led",
+                pathData = "M9,21c0,0.55 0.45,1 1,1h4c0.55,0 1,-0.45 1,-1v-1L9,20v1zM12,2C8.14,2 5,5.14 5,9c0,2.38 1.19,4.47 3,5.74L8,17c0,0.55 0.45,1 1,1h6c0.55,0 1,-0.45 1,-1v-2.26c1.81,-1.27 3,-3.36 3,-5.74 0,-3.86 -3.14,-7 -7,-7z",
+            )
+        }
+
+        /** A push button: a ring around a disc. */
+        val PushButton: ImageVector by lazy {
+            ImageVector.Builder(
+                name = "push_button",
+                defaultWidth = 24.dp,
+                defaultHeight = 24.dp,
+                viewportWidth = 24f,
+                viewportHeight = 24f,
+            )
+                .apply {
+                    path(
+                        fill = null,
+                        stroke = SolidColor(Color.Black),
+                        strokeLineWidth = 1.6f,
+                    ) {
+                        moveTo(2.8f, 12f)
+                        arcTo(9.2f, 9.2f, 0f, isMoreThanHalf = true, isPositiveArc = false, x1 = 21.2f, y1 = 12f)
+                        arcTo(9.2f, 9.2f, 0f, isMoreThanHalf = true, isPositiveArc = false, x1 = 2.8f, y1 = 12f)
+                        close()
+                    }
+                    path(fill = SolidColor(Color.Black)) {
+                        moveTo(5.8f, 12f)
+                        arcTo(6.2f, 6.2f, 0f, isMoreThanHalf = true, isPositiveArc = true, x1 = 18.2f, y1 = 12f)
+                        arcTo(6.2f, 6.2f, 0f, isMoreThanHalf = true, isPositiveArc = true, x1 = 5.8f, y1 = 12f)
+                        close()
+                    }
+                }
+                .build()
+        }
+
         private fun materialIcon(name: String, pathData: String): ImageVector =
             ImageVector.Builder(
                 name = name,

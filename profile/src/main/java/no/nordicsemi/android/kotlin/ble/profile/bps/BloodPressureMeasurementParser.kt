@@ -39,7 +39,6 @@ import no.nordicsemi.kotlin.data.FloatFormat
 import no.nordicsemi.kotlin.data.IntFormat
 import no.nordicsemi.kotlin.data.getFloat
 import no.nordicsemi.kotlin.data.getInt
-import no.nordicsemi.kotlin.data.getUShort
 import no.nordicsemi.kotlin.data.hasBitSet
 import java.nio.ByteOrder
 import java.util.Calendar

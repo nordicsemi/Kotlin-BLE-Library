@@ -39,7 +39,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import no.nordicsemi.kotlin.ble.client.RemoteServices
 import no.nordicsemi.kotlin.ble.client.mock.ServiceDiscoveryResult
-import no.nordicsemi.kotlin.ble.client.mock.WriteResponse
+import no.nordicsemi.kotlin.ble.server.WriteResponse
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.Descriptor
 import no.nordicsemi.kotlin.ble.core.OperationStatus
@@ -258,7 +258,7 @@ class GattServiceDiscoveryTest {
             val handler = GattHandler().apply {
                 readHandler = { characteristic ->
                     // Respond with the handle, so that it is known which instance was read.
-                    no.nordicsemi.kotlin.ble.client.mock.ReadResponse.Success(
+                    no.nordicsemi.kotlin.ble.server.ReadResponse.Success(
                         byteArrayOf(characteristic.instanceId.toByte())
                     )
                 }

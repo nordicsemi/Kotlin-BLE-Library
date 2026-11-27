@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -33,109 +33,112 @@
 
 package no.nordicsemi.kotlin.ble.server
 
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import no.nordicsemi.kotlin.ble.core.Characteristic
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
+import no.nordicsemi.kotlin.ble.core.Peer
 
 /**
- * A local characteristic is a characteristic that is hosted on the local GATT server and can be
- * accessed by the remote [Central] device.
+ * A characteristic hosted by the local GATT server, which remote clients can read, write to and
+ * subscribe to.
  *
- * @property subscribedCentrals A flow of subscription events for the characteristic. Events will
- * be emitted for characteristics that have the [NOTIFY][CharacteristicProperty.NOTIFY]
- * or [INDICATE][CharacteristicProperty.INDICATE] property set.
+ * By default, read requests return [value], and write requests are stored and emitted in
+ * [writes]. Use [onRead]
+ * and [onWrite] to handle requests dynamically, for example to validate data or to return
+ * a different value for each client.
+ *
  */
 interface LocalCharacteristic: Characteristic<LocalDescriptor> {
     override val service: AnyLocalService
-    override val owner: Central<*>?
-        get() = service.owner
 
-    val subscribedCentrals: Flow<SubscriptionEvent>
-
-    /**
-     * Updates the value of the characteristic and notifies the subscribed [Central] device of
-     * a value change.
-     *
-     * @param data The data to be written.
-     */
-    suspend fun updateValue(data: ByteArray)
+    /** Local attributes are not owned by a remote peer, so this is always `null`. */
+    override val owner: Peer<*>?
+        get() = null
 
     /**
-     * Sets a value provider for the characteristic.
+     * The current value of the characteristic, which is sent in response to read requests
+     * unless a handler set with [onRead] provides one. Empty initially.
      *
-     * Every time a read request is received, the provider will be called to get the current value
-     * of the characteristic to be sent back to the [Central] device.
-     *
-     * If the length of the value is longer than the maximum update value length, the provider will
-     * automatically use Long Read Procedure. Maximum data length is 512 bytes.
-     *
-     * @param onRead The callback that will be called to get the current value of the
-     *        characteristic.
-     * @see [waitForReadRequest] to wait for a single read request.
+     * It changes when a write request is accepted, and when [update] or [setValue] is called.
      */
-    fun provideValue(onRead: () -> ByteArray)
+    val value: StateFlow<ByteArray>
 
     /**
-     * Subscribes for write requests for the characteristic from the [Central] device.
+     * Clients that have enabled notifications or indications of this characteristic.
      *
-     * As this is a "local" characteristic, the [Central] device may update its value by writing
-     * the value. The returned cold flow will emit the written values.
-     *
-     * Multiple subscribers may subscribe to the same characteristic. // TODO check if this is true
-     *
-     * @return The flow of packets written to the characteristic by the [Central] device.
+     * Always empty if the characteristic does not have the [CharacteristicProperty.NOTIFY] or
+     * [CharacteristicProperty.INDICATE] property. The Client Characteristic Configuration
+     * descriptor is handled by the library.
      */
-    fun subscribe(): Flow<ByteArray>
+    val subscribers: StateFlow<Set<Client<*>>>
 
     /**
-     * Waits for the [Central] device to read the value of the characteristic.
+     * Write requests accepted by the characteristic, that is requests for which the handler set with
+     * [onWrite], or the default one, returned [WriteResponse.Success].
      *
-     * This method has higher priority then [provideValue], which means that even if the value
-     * provider is set, this method will be used to provide the value. // TODO check if this is true
-     *
-     * If there are multiple objects awaiting a read on a single characteristic instance,
-     * they will be queued. // TODO check if this is true
-     *
-     * If the length of the value is longer than the maximum update value length, the provider will
-     * automatically use Long Read Procedure. Maximum data length is 512 bytes.
-     *
-     * @param response A callback called when the read request has been received. It should return
-     *        the value to be sent back to the requesting device.
+     * It is a hot flow with no replay. Rejected write requests are not emitted.
      */
-    suspend fun waitForReadRequest(response: () -> ByteArray)
+    val writes: SharedFlow<WriteRequest>
 
     /**
-     * Waits for the [Central] device to write the value of the characteristic and returns the
-     * written value.
+     * Sets a handler for read requests, or removes it when `null`.
      *
-     * If there are multiple objects awaiting a write on a single characteristic instance,
-     * they will be queued. // TODO check if this is true
-     *
-     * @return The value sent to the characteristic.
+     * The handler must return the whole value of the characteristic. If the value is longer than
+     * what fits in a single response, the library serves it using long read procedure.
+     * Only one handler can be set; a new one replaces the previous.
      */
-    suspend fun waitForWriteRequest(): ByteArray
+    fun onRead(handler: (suspend ReadRequest.() -> ReadResponse)?)
+
+    /**
+     * Sets a provider of the value returned for each read request, or removes it when `null`.
+     *
+     * The provider is called for every read request, so the value does not have to be set before
+     * each read. It is a shorthand for [onRead] which always succeeds. Only one handler can be
+     * set, so it replaces the one set with [onRead].
+     *
+     * ```kotlin
+     * characteristic.provideValue { batteryLevel().toByteArray() }
+     * ```
+     */
+    fun provideValue(provider: (suspend ReadRequest.() -> ByteArray)?) =
+        onRead(provider?.let { p -> { ReadResponse.Success(p()) } })
+
+    /**
+     * Sets a handler for write requests, or removes it when `null`.
+     *
+     * The handler decides whether the write request is accepted. If it returns [WriteResponse.Success],
+     * the value is stored and emitted in [writes]. Only one handler can be set; a new one
+     * replaces the previous.
+     */
+    fun onWrite(handler: (suspend WriteRequest.() -> WriteResponse)?)
+
+    /**
+     * Sets the value of the characteristic without notifying anyone.
+     *
+     * @param value The new value. Maximum length is 512 bytes.
+     * @throws IllegalArgumentException if the value is too long.
+     */
+    fun setValue(value: ByteArray)
+
+    /**
+     * Sets the value of the characteristic and sends a notification, or an indication, to
+     * subscribed clients.
+     *
+     * The services of [LocalServer.services] notify all [subscribers]. The services returned by
+     * [LocalServer.services] for a given client notify only that client, which must be
+     * subscribed.
+     *
+     * A notification is used if the characteristic has the [CharacteristicProperty.NOTIFY]
+     * property, otherwise an indication. The method suspends until the value has been sent
+     * to all targets, or in case of an indication, confirmed by them.
+     *
+     * @param value The new value.
+     * @throws IllegalArgumentException if the value is longer than the maximum update value length
+     * of any of the targets, see [Client.maximumUpdateValueLength].
+     * @throws IllegalStateException if the characteristic does not support notifications or
+     * indications, or the characteristic belongs to the services of a client that is not
+     * subscribed.
+     */
+    suspend fun update(value: ByteArray)
 }
-
-/**
- * A characteristic subscription event.
- *
- * Events may only be emitted for characteristics that have the [CharacteristicProperty.NOTIFY]
- * or [CharacteristicProperty.INDICATE] property set.
- */
-sealed interface SubscriptionEvent
-
-/**
- * A subscription event that indicates that the [Central] device has subscribed to the
- * characteristic value updates.
- *
- * @param central The [Central] device that has subscribed.
- */
-class CentralSubscribed(val central: Central<*>): SubscriptionEvent
-
-/**
- * A subscription event that indicates that the [Central] device has unsubscribed from the
- * characteristic value updates.
- *
- * @param central The [Central] device that has unsubscribed.
- */
-class CentralUnsubscribed(val central: Central<*>): SubscriptionEvent

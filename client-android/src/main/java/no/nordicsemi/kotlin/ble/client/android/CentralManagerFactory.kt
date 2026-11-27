@@ -34,6 +34,7 @@ package no.nordicsemi.kotlin.ble.client.android
 import kotlinx.coroutines.CoroutineScope
 import no.nordicsemi.kotlin.ble.client.android.internal.NativeCentralManagerImpl
 import no.nordicsemi.kotlin.ble.environment.android.NativeAndroidEnvironment
+import no.nordicsemi.kotlin.ble.server.android.LocalServer
 
 /**
  * Creates a [CentralManager] implementation which is using native Android API to
@@ -42,8 +43,12 @@ import no.nordicsemi.kotlin.ble.environment.android.NativeAndroidEnvironment
  * @param environment Native Android environment object. Use [NativeAndroidEnvironment.instance].
  * Remember to call [NativeAndroidEnvironment.close] to unregister the broadcast receiver.
  * @param scope The coroutine scope.
+ * @param server The local GATT server of this device. Its services are available to the profiles
+ * registered on peripherals, see `Peripheral.profile`. If not set, and [CentralManager.server] is
+ * accessed, the server will be automatically created.
  */
 fun CentralManager.Factory.native(
     environment: NativeAndroidEnvironment,
     scope: CoroutineScope,
-): CentralManager = NativeCentralManagerImpl(scope, environment)
+    server: LocalServer? = null,
+): CentralManager = NativeCentralManagerImpl(scope, environment, server)

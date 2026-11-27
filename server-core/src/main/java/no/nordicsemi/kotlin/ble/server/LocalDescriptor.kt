@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Nordic Semiconductor
+ * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification, are
@@ -33,64 +33,52 @@
 
 package no.nordicsemi.kotlin.ble.server
 
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import no.nordicsemi.kotlin.ble.core.Descriptor
+import no.nordicsemi.kotlin.ble.core.Peer
 
+/**
+ * A descriptor hosted by the local GATT server.
+ *
+ * It behaves like [LocalCharacteristic]: read requests return [value], and write requests are stored and
+ * emitted in [writes], unless handlers are set. Descriptors are always written with response.
+ *
+ * The Client Characteristic Configuration descriptor is handled by the library. Setting
+ * a handler on it throws [IllegalStateException].
+ *
+ */
 interface LocalDescriptor: Descriptor {
     override val characteristic: LocalCharacteristic
-    override val owner: Central<*>?
-        get() = characteristic.owner
+
+    /** Local attributes are not owned by a remote peer, so this is always `null`. */
+    override val owner: Peer<*>?
+        get() = null
+
+    /** The current value of the descriptor. Empty initially, unless defined by the service definition. */
+    val value: StateFlow<ByteArray>
+
+    /** Write requests accepted by the descriptor. Rejected ones are not emitted. */
+    val writes: SharedFlow<WriteRequest>
+
+    /** Sets a handler for read requests, or removes it when `null`. See [LocalCharacteristic.onRead]. */
+    fun onRead(handler: (suspend ReadRequest.() -> ReadResponse)?)
 
     /**
-     * Sets a value provider for the descriptor.
+     * Sets a provider of the value returned for each read request, or removes it when `null`.
      *
-     * Every time a read request is received, the provider will be called to get the current value
-     * of the descriptor to be sent back to the [Central] device.
-     *
-     * As descriptors are always written with response, the maximum data length is 512 bytes.
-     *
-     * @param onRead The callback that will be called to get the current value of the
-     *        descriptor.
-     * @see [waitForReadRequest] to wait for a single read request.
+     * It is a shorthand for [onRead] which always succeeds.
      */
-    fun provideValue(onRead: () -> ByteArray)
+    fun provideValue(provider: (suspend ReadRequest.() -> ByteArray)?) =
+        onRead(provider?.let { p -> { ReadResponse.Success(p()) } })
+
+    /** Sets a handler for write requests, or removes it when `null`. See [LocalCharacteristic.onWrite]. */
+    fun onWrite(handler: (suspend WriteRequest.() -> WriteResponse)?)
 
     /**
-     * Subscribes for write requests for the descriptor from the [Central] device.
+     * Sets the value of the descriptor.
      *
-     * As this is a "local" descriptor, the [Central] device may update its value by writing
-     * to it. The returned cold flow will emit the written value.
-     *
-     * Multiple subscribers may subscribe to the same descriptor. // TODO check if this is true
-     *
-     * @return The flow of packets written to the descriptor by the [Central] device.
+     * @throws IllegalArgumentException if the value is longer than 512 bytes.
      */
-    fun subscribe(): Flow<ByteArray>
-
-    /**
-     * Waits for the [Central] device to read the value of the descriptor.
-     *
-     * This method has higher priority then [provideValue], which means that even if the value
-     * provider is set, this method will be used to provide the value. // TODO check if this is true
-     *
-     * If there are multiple objects awaiting a read on a single descriptor instance,
-     * they will be queued. // TODO check if this is true
-     *
-     * As descriptors are always written with response, the maximum data length is 512 bytes.
-     *
-     * @param response A callback called when the read request has been received. It should return
-     *        the value to be sent back to the requesting device.
-     */
-    suspend fun waitForReadRequest(response: () -> ByteArray)
-
-    /**
-     * Waits for the [Central] device to write the value of the descriptor and returns the
-     * written value.
-     *
-     * If there are multiple objects awaiting a write on a single descriptor instance,
-     * they will be queued. // TODO check if this is true
-     *
-     * @return The value sent to the descriptor.
-     */
-    suspend fun waitForWriteRequest(): ByteArray
+    fun setValue(value: ByteArray)
 }

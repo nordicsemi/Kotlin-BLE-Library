@@ -43,7 +43,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import no.nordicsemi.kotlin.ble.client.RemoteCharacteristic
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
-import no.nordicsemi.kotlin.ble.client.mock.WriteResponse
+import no.nordicsemi.kotlin.ble.server.WriteResponse
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.Descriptor
 import no.nordicsemi.kotlin.ble.core.OperationStatus

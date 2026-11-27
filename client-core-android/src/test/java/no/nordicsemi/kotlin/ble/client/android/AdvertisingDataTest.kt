@@ -31,9 +31,9 @@
 
 package no.nordicsemi.kotlin.ble.client.android
 
-import kotlin.test.Test
 import com.google.common.truth.Truth
 import no.nordicsemi.kotlin.ble.core.AdvertisingDataFlag
+import kotlin.test.Test
 import kotlin.uuid.Uuid
 
 class AdvertisingDataTest {

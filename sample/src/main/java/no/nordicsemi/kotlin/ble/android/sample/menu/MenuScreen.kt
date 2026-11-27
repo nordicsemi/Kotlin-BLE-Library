@@ -33,10 +33,10 @@ package no.nordicsemi.kotlin.ble.android.sample.menu
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
@@ -53,6 +53,7 @@ import no.nordicsemi.kotlin.ble.android.sample.NAV_ADVERTISER
 import no.nordicsemi.kotlin.ble.android.sample.NAV_GRAPH
 import no.nordicsemi.kotlin.ble.android.sample.NAV_PROXIMITY
 import no.nordicsemi.kotlin.ble.android.sample.NAV_SCANNER
+import no.nordicsemi.kotlin.ble.android.sample.NAV_SERVER
 import no.nordicsemi.kotlin.ble.android.sample.theme.AppTheme
 import no.nordicsemi.kotlin.ble.android.sample.theme.Nordic
 
@@ -81,6 +82,11 @@ fun MenuScreen(
             title = NAV_PROXIMITY,
             icon = Nordic.Icons.Radar,
             onClick = { onMenuClicked(NAV_PROXIMITY) },
+        )
+        MenuItem(
+            title = NAV_SERVER,
+            icon = Nordic.Icons.Bluetooth,
+            onClick = { onMenuClicked(NAV_SERVER) },
         )
         MenuItem(
             title = NAV_GRAPH,

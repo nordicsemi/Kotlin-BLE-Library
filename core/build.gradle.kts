@@ -1,3 +1,5 @@
+import org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier
+
 /*
  * Copyright (c) 2026, Nordic Semiconductor
  * All rights reserved.
@@ -68,6 +70,19 @@ kotlin {
     }
 }
 
+// Used only by Dokka, to resolve links to the modules that depend on this one.
+val dokkaOnly by configurations.creating {
+    isCanBeConsumed = false
+}
+
+dependencies {
+    dokkaOnly(project(":client-core"))
+    dokkaOnly(project(":server-core"))
+
+    // Adds @hide annotation to exclude internal classes from the documentation.
+    dokkaPlugin(libs.dokka.android.gradlePlugin)
+}
+
 nordicPublishing {
     POM_ARTIFACT_ID = "core"
     POM_NAME = "Kotlin BLE Library Core Module"
@@ -81,5 +96,14 @@ nordicPublishing {
 dokka {
     dokkaSourceSets.configureEach {
         includes.from("Module.md")
+        classpath.from(dokkaOnly)
+
+        // Profile exposes `protected` methods that subclasses are meant to override, e.g.
+        // Profile.prepare/initialize/unsupported/failed. Dokka only documents `public` members
+        // by default, so without this those methods are silently omitted.
+        documentedVisibilities(
+            VisibilityModifier.Public,
+            VisibilityModifier.Protected,
+        )
     }
 }

@@ -63,28 +63,7 @@ interface MockServerScope: ServerScope {
      * Note: The 3 characteristics mentioned above will be handled automatically.
      */
     @Suppress("FunctionName")
-    fun GenericAccessService(builder: ServiceScope.() -> Unit = {}) {
-        Service(
-            uuid = Service.GENERIC_ACCESS_UUID,
-        ) {
-            Characteristic(
-                uuid = Characteristic.DEVICE_NAME,
-                properties = CharacteristicProperty.READ and CharacteristicProperty.WRITE,
-                permissions = Permission.READ and Permission.WRITE
-            )
-            Characteristic(
-                uuid = Characteristic.APPEARANCE,
-                property = CharacteristicProperty.READ,
-                permission = Permission.READ
-            )
-            Characteristic(
-                uuid = Characteristic.PERIPHERAL_PREFERRED_CONNECTION_PARAMETERS,
-                property = CharacteristicProperty.READ,
-                permission = Permission.READ
-            )
-            builder()
-        }
-    }
+    fun GenericAccessService(builder: ServiceScope.() -> Unit = {}) = addGenericAccessService(builder)
 
     /**
      * Declares the Generic Attribute Service (GATT) with the Service Changed characteristic.
@@ -96,16 +75,72 @@ interface MockServerScope: ServerScope {
      * for the Service Changed characteristic will be initially enabled.
      */
     @Suppress("FunctionName")
-    fun GenericAttributeService(initiallyEnabled: Boolean = true) {
-        Service(
-            uuid = Service.GENERIC_ATTRIBUTE_UUID,
+    fun GenericAttributeService(initiallyEnabled: Boolean = true) = addGenericAttributeService(initiallyEnabled)
+}
+
+/**
+ * Declares the Generic Access Service (GAS) with common characteristics, like
+ * [MockServerScope.GenericAccessService], in any [ServerScope].
+ *
+ * It is meant for services of a [MockPeripheralServer], which are defined using
+ * [no.nordicsemi.kotlin.ble.server.LocalServer.setup], where the receiver is a plain
+ * [ServerScope].
+ *
+ * The Device Name, Appearance and Peripheral Preferred Connection Parameters characteristics are
+ * handled by the [PeripheralSpec] using the values given in the builder. Handlers set on them are
+ * not used for reading.
+ *
+ * @param builder Allows to add more characteristics to the service.
+ */
+@Suppress("FunctionName")
+fun ServerScope.GenericAccessService(builder: ServiceScope.() -> Unit = {}) = addGenericAccessService(builder)
+
+/**
+ * Declares the Generic Attribute Service (GATT) with the Service Changed characteristic, like
+ * [MockServerScope.GenericAttributeService], in any [ServerScope].
+ *
+ * The Service Changed characteristic is handled automatically. Use
+ * [PeripheralSpec.simulateServiceChange] to simulate a service change.
+ *
+ * @param initiallyEnabled If true, the client is subscribed to indications of the Service Changed
+ * characteristic whenever it connects.
+ */
+@Suppress("FunctionName")
+fun ServerScope.GenericAttributeService(initiallyEnabled: Boolean = true) =
+    addGenericAttributeService(initiallyEnabled)
+
+private fun ServerScope.addGenericAccessService(builder: ServiceScope.() -> Unit) {
+    Service(
+        uuid = Service.GENERIC_ACCESS_UUID,
+    ) {
+        Characteristic(
+            uuid = Characteristic.DEVICE_NAME,
+            properties = CharacteristicProperty.READ and CharacteristicProperty.WRITE,
+            permissions = Permission.READ and Permission.WRITE
+        )
+        Characteristic(
+            uuid = Characteristic.APPEARANCE,
+            property = CharacteristicProperty.READ,
+            permission = Permission.READ
+        )
+        Characteristic(
+            uuid = Characteristic.PERIPHERAL_PREFERRED_CONNECTION_PARAMETERS,
+            property = CharacteristicProperty.READ,
+            permission = Permission.READ
+        )
+        builder()
+    }
+}
+
+private fun ServerScope.addGenericAttributeService(initiallyEnabled: Boolean) {
+    Service(
+        uuid = Service.GENERIC_ATTRIBUTE_UUID,
+    ) {
+        Characteristic(
+            uuid = Characteristic.SERVICE_CHANGED,
+            property = CharacteristicProperty.INDICATE,
         ) {
-            Characteristic(
-                uuid = Characteristic.SERVICE_CHANGED,
-                property = CharacteristicProperty.INDICATE,
-            ) {
-                ClientCharacteristicConfigurationDescriptor(enabled = initiallyEnabled)
-            }
+            ClientCharacteristicConfigurationDescriptor(enabled = initiallyEnabled)
         }
     }
 }

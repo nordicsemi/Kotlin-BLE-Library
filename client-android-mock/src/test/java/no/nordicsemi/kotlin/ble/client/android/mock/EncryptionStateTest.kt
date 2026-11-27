@@ -38,20 +38,20 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
+import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.client.android.CentralManager
 import no.nordicsemi.kotlin.ble.client.android.EncryptionState
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
 import no.nordicsemi.kotlin.ble.client.mock.MockBondState
 import no.nordicsemi.kotlin.ble.client.mock.MockEncryptionState
-import no.nordicsemi.kotlin.ble.client.android.BondState
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.Permission
 import no.nordicsemi.kotlin.ble.environment.android.mock.MockAndroidEnvironment
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertIs
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.time.Duration.Companion.seconds
 
 private val ENCRYPTED: EncryptionState = EncryptionState.Encrypted(EncryptionState.Algorithm.AES, keySize = 16)

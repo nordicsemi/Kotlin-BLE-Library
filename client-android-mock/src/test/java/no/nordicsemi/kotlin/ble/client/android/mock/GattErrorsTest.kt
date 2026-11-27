@@ -41,14 +41,13 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import no.nordicsemi.kotlin.ble.client.exception.InvalidAttributeException
 import no.nordicsemi.kotlin.ble.client.exception.OperationFailedException
-import no.nordicsemi.kotlin.ble.client.mock.ReadResponse
+import no.nordicsemi.kotlin.ble.server.ReadResponse
 import no.nordicsemi.kotlin.ble.core.CharacteristicProperty
 import no.nordicsemi.kotlin.ble.core.OperationStatus
 import no.nordicsemi.kotlin.ble.core.Permission
 import no.nordicsemi.kotlin.ble.core.WriteType
 import no.nordicsemi.kotlin.ble.core.and
 import kotlin.test.Test
-import kotlin.test.Ignore
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -342,7 +341,7 @@ class GattErrorsTest {
                 }
                 writeHandler = { _, _ ->
                     events += "write"
-                    no.nordicsemi.kotlin.ble.client.mock.WriteResponse.Success
+                    no.nordicsemi.kotlin.ble.server.WriteResponse.Success
                 }
             }
             val fixture = readWriteFixture(handler)

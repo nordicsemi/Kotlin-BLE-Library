@@ -102,11 +102,11 @@ include(":client-core-android")
 include(":client-android")
 include(":client-android-mock")
 
-// These are not implemented yet. Hiding them to make an alpha release of what is currently working.
-//include(":server-core")
-//include(":server-core-android")
-//include(":server-android")
-//include(":server-android-mock")
+include(":server-core")
+include(":server-core-mock")
+include(":server-core-android")
+include(":server-android")
+include(":server-android-mock")
 
 // These are not migrated to BLEK 2.0 yet.
 //include(":profile")
