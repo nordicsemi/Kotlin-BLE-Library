@@ -130,8 +130,8 @@ import kotlin.uuid.Uuid
  * @param advertisingSets List of advertisement configurations.
  * @param eventHandler The event handler that will be called for every event emulating
  * a real peripheral.
- * @param server The GATT server hosted by the peripheral, instead of the GATT callbacks of
- * the [eventHandler], or `null`.
+ * @param server The GATT server hosted by the peripheral, which answers the requests of
+ * the clients, or `null` if the peripheral is not connectable.
  * @param clientRole The block that uses the GATT server of the phone while the peripheral is
  * connected, or `null`, see [Builder.client].
  * @param cachedServices The services cached on the client side.
@@ -2169,8 +2169,7 @@ class PeripheralSpec<ID: Any> private constructor(
          * implemented with the same API that is used by apps to implement the peripheral role:
          * handlers, values and `update()` of the local characteristics. The [eventHandler] is called
          * for the events that do not concern GATT: connection requests, bonding, loss of
-         * the connection, reset and service discovery. Its GATT callbacks (reads and writes) are not
-         * called.
+         * the connection, reset and service discovery.
          *
          * Define the services in the [server] before a client discovers them, for example:
          * ```kotlin
